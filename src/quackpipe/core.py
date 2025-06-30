@@ -10,14 +10,16 @@ import yaml
 
 from .config import SourceConfig, SourceType
 from .exceptions import ConfigError
-from .sources import s3, postgres, ducklake
+from .sources import s3, postgres, ducklake, sqlite
 
 # The registry now stores the handler CLASSES, not instances.
 SOURCE_HANDLER_REGISTRY = {
     SourceType.POSTGRES: postgres.PostgresHandler,
     SourceType.S3: s3.S3Handler,
     SourceType.DUCKLAKE: ducklake.DuckLakeHandler,
+    SourceType.SQLITE: sqlite.SQLiteHandler,
 }
+
 
 def _parse_config_from_yaml(path: str) -> List[SourceConfig]:
     """Loads a YAML file and parses it into a list of SourceConfig objects."""
@@ -48,6 +50,7 @@ def _parse_config_from_yaml(path: str) -> List[SourceConfig]:
         ))
     return source_configs
 
+
 def _prepare_connection(con: duckdb.DuckDBPyConnection, configs: List[SourceConfig]):
     """Configures a DuckDB connection from a list of SourceConfig objects."""
     if not configs:
@@ -61,7 +64,6 @@ def _prepare_connection(con: duckdb.DuckDBPyConnection, configs: List[SourceConf
             print(f"Warning: No handler class found for source type '{cfg.type.value}'. Skipping.")
             continue
 
-        # Create the full context dictionary for the handler's __init__
         full_context = {
             **cfg.config,
             "connection_name": cfg.name,
@@ -73,7 +75,6 @@ def _prepare_connection(con: duckdb.DuckDBPyConnection, configs: List[SourceConf
     # 2. Gather all required plugins from the instantiated handlers
     required_plugins = set()
     for handler in instantiated_handlers:
-        # This now calls the dynamic property on the instance
         required_plugins.update(handler.required_plugins)
 
     # 3. Install and load all extensions
@@ -83,15 +84,15 @@ def _prepare_connection(con: duckdb.DuckDBPyConnection, configs: List[SourceConf
 
     # 4. Render and execute the setup SQL for each handler
     for handler in instantiated_handlers:
-        # render_sql() no longer takes an argument
         setup_sql = handler.render_sql()
         con.execute(setup_sql)
 
+
 @contextmanager
 def session(
-    config_path: Optional[str] = None,
-    configs: Optional[List[SourceConfig]] = None,
-    sources: Optional[List[str]] = None
+        config_path: Optional[str] = None,
+        configs: Optional[List[SourceConfig]] = None,
+        sources: Optional[List[str]] = None
 ) -> Generator[duckdb.DuckDBPyConnection, None, None]:
     """
     A context manager providing a pre-configured DuckDB connection.
@@ -114,12 +115,16 @@ def session(
     finally:
         con.close()
 
+
 def with_session(**session_kwargs):
     """A decorator to inject a pre-configured DuckDB connection."""
+
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
             with session(**session_kwargs) as con:
                 return func(con, *args, **kwargs)
+
         return wrapper
+
     return decorator

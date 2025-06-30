@@ -10,6 +10,7 @@ class SourceType(Enum):
     POSTGRES = "postgres"
     S3 = "s3"
     DUCKLAKE = "ducklake"
+    SQLITE = "sqlite"
     PARQUET = "parquet"
     CSV = "csv"
 
