@@ -7,12 +7,17 @@ from typing import List, Dict, Any
 class BaseSourceHandler(ABC):
     """
     Abstract base class for a data source handler.
-
-    Each handler is responsible for:
-    1. Declaring the DuckDB plugins it requires.
-    2. Providing a SQL template for its setup.
-    3. Rendering the template with configuration and secrets.
+    It is initialized with a context dictionary containing all its configuration.
     """
+    def __init__(self, context: Dict[str, Any]):
+        """
+        Initializes the handler with its specific configuration context.
+
+        Args:
+            context: A dictionary containing the combined config and secrets.
+        """
+        self.context = context
+
     @property
     @abstractmethod
     def source_type(self) -> str:
@@ -22,17 +27,13 @@ class BaseSourceHandler(ABC):
     @property
     @abstractmethod
     def required_plugins(self) -> List[str]:
-        """List of DuckDB extensions needed, e.g., ['postgres', 'httpfs']."""
+        """A list of DuckDB extensions needed for this source."""
         pass
 
     @abstractmethod
-    def render_sql(self, context: Dict[str, Any]) -> str:
+    def render_sql(self) -> str:
         """
-        Renders the setup SQL by populating the template with config and secrets.
-        Subclasses can override this for more complex rendering logic.
-
-        Args:
-            context: A dictionary containing the combined config and secrets.
+        Renders the setup SQL using the stored context.
 
         Returns:
             The final, executable SQL string.

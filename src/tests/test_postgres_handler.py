@@ -8,62 +8,69 @@ like parametrize and fixtures for setup.
 import pytest
 from quackpipe.sources.postgres import PostgresHandler
 
+
 def test_postgres_handler_properties():
     """Verify that the handler correctly reports its static properties."""
     # Arrange
-    handler = PostgresHandler()
+    handler = PostgresHandler({
+        "connection_name": "pg_test",
+        "secret_name": "pg_creds",
+        "port": 5433
+        # read_only defaults to True
+    })
 
     # Assert
     assert handler.required_plugins == ["postgres"]
     assert handler.source_type == "postgres"
 
+
 @pytest.mark.parametrize(
     "test_id, context, expected_sql_parts, unexpected_sql_parts",
     [
         (
-            "basic_config_is_readonly",
-            {
-                "connection_name": "pg_test",
-                "secret_name": "pg_creds",
-                "port": 5433
-                # read_only defaults to True
-            },
-            [
-                "CREATE OR REPLACE SECRET pg_test_secret",
-                "ATTACH 'dbname=testdb' AS pg_test (TYPE POSTGRES, SECRET 'pg_test_secret', READ_ONLY);"
-            ],
-            [] # No unexpected parts
+                "basic_config_is_readonly",
+                {
+                    "connection_name": "pg_test",
+                    "secret_name": "pg_creds",
+                    "port": 5433
+                    # read_only defaults to True
+                },
+                [
+                    "CREATE OR REPLACE SECRET pg_test_secret",
+                    "ATTACH 'dbname=testdb' AS pg_test (TYPE POSTGRES, SECRET 'pg_test_secret', READ_ONLY);"
+                ],
+                []  # No unexpected parts
         ),
         (
-            "read_write_config",
-            {
-                "connection_name": "pg_rw",
-                "secret_name": "pg_creds",
-                "port": 5432,
-                "read_only": False # Explicitly set to read-write
-            },
-            [
-                "CREATE OR REPLACE SECRET pg_rw_secret",
-                "ATTACH 'dbname=testdb' AS pg_rw (TYPE POSTGRES, SECRET 'pg_rw_secret');"
-            ],
-            ["READ_ONLY"] # Should NOT contain the READ_ONLY flag
+                "read_write_config",
+                {
+                    "connection_name": "pg_rw",
+                    "secret_name": "pg_creds",
+                    "port": 5432,
+                    "read_only": False  # Explicitly set to read-write
+                },
+                [
+                    "CREATE OR REPLACE SECRET pg_rw_secret",
+                    "ATTACH 'dbname=testdb' AS pg_rw (TYPE POSTGRES, SECRET 'pg_rw_secret');"
+                ],
+                ["READ_ONLY"]  # Should NOT contain the READ_ONLY flag
         ),
         (
-            "with_table_views",
-            {
-                "connection_name": "pg_views",
-                "secret_name": "pg_creds",
-                "port": 5432,
-                "tables": ["users", "products"]
-            },
-            [
-                "CREATE OR REPLACE SECRET pg_views_secret",
-                "ATTACH 'dbname=testdb' AS pg_views",
-                "READ_ONLY", # Default is read-only
-                "CREATE OR REPLACE VIEW pg_views_users AS SELECT * FROM pg_views.users;",
-                "CREATE OR REPLACE VIEW pg_views_products AS SELECT * FROM pg_views.products;"
-            ],
-            []
+                "with_table_views",
+                {
+                    "connection_name": "pg_views",
+                    "secret_name": "pg_creds",
+                    "port": 5432,
+                    "tables": ["users", "products"]
+                },
+                [
+                    "CREATE OR REPLACE SECRET pg_views_secret",
+                    "ATTACH 'dbname=testdb' AS pg_views",
+                    "READ_ONLY",  # Default is read-only
+                    "CREATE OR REPLACE VIEW pg_views_users AS SELECT * FROM pg_views.users;",
+                    "CREATE OR REPLACE VIEW pg_views_products AS SELECT * FROM pg_views.products;"
+                ],
+                []
         ),
     ]
 )
@@ -73,7 +80,7 @@ def test_postgres_render_sql(monkeypatch, test_id, context, expected_sql_parts, 
     a CREATE SECRET statement followed by an ATTACH statement.
     """
     # Arrange
-    handler = PostgresHandler()
+    handler = PostgresHandler(context)
     secret_name = context["secret_name"]
 
     # Use monkeypatch to set the environment variables for the secret bundle.
@@ -83,7 +90,7 @@ def test_postgres_render_sql(monkeypatch, test_id, context, expected_sql_parts, 
     monkeypatch.setenv(f"{secret_name.upper()}_HOST", "localhost")
 
     # Act
-    generated_sql = handler.render_sql(context)
+    generated_sql = handler.render_sql()
 
     # Assert
     # Normalize whitespace for robust comparison
@@ -99,7 +106,6 @@ def test_postgres_render_sql(monkeypatch, test_id, context, expected_sql_parts, 
 
 def test_postgres_handler_render_sql():
     """Test PostgresHandler SQL rendering."""
-    handler = PostgresHandler()
 
     context = {
         'database': 'testdb',
@@ -111,8 +117,9 @@ def test_postgres_handler_render_sql():
         'read_only': True,
         'tables': ['users', 'orders']
     }
+    handler = PostgresHandler(context)
 
-    sql = handler.render_sql(context)
+    sql = handler.render_sql()
 
     assert "ATTACH" in sql
     assert "pg_main" in sql
@@ -124,7 +131,6 @@ def test_postgres_handler_render_sql():
 
 def test_postgres_handler_no_tables():
     """Test PostgresHandler without tables."""
-    handler = PostgresHandler()
 
     context = {
         'database': 'testdb',
@@ -136,7 +142,7 @@ def test_postgres_handler_no_tables():
         'read_only': False
     }
 
-    sql = handler.render_sql(context)
+    sql = PostgresHandler(context).render_sql()
 
     assert "ATTACH" in sql
     assert "READ_ONLY" not in sql

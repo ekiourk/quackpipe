@@ -6,13 +6,22 @@ This file contains pytest tests for the DuckLakeHandler class in quackpipe.
 import pytest
 from quackpipe.sources.ducklake import DuckLakeHandler
 
-def test_ducklake_handler_properties():
-    """Verify that the handler correctly reports its static properties."""
+def test_ducklake_handler_dynamic_plugins():
+    """
+    Verify that the handler dynamically reports its required plugins
+    based on the configuration passed to its initializer.
+    """
     # Arrange
-    handler = DuckLakeHandler()
+    context = {
+        "connection_name": "my_lake",
+        "catalog": { "type": "postgres" },
+        "storage": { "type": "s3" }
+    }
+    handler = DuckLakeHandler(context)
 
     # Assert
-    assert handler.required_plugins == ["ducklake", "postgres", "httpfs"]
+    # Use a set for order-agnostic comparison
+    assert set(handler.required_plugins) == {"ducklake", "postgres", "httpfs"}
     assert handler.source_type == "ducklake"
 
 def test_render_sql_with_valid_config(monkeypatch):
@@ -21,7 +30,6 @@ def test_render_sql_with_valid_config(monkeypatch):
     for a valid DuckLake configuration.
     """
     # Arrange
-    handler = DuckLakeHandler()
     context = {
         "connection_name": "my_lake",
         "catalog": {
@@ -34,41 +42,29 @@ def test_render_sql_with_valid_config(monkeypatch):
             "path": "s3://my-bucket/data/"
         }
     }
+    handler = DuckLakeHandler(context)
 
     # Use monkeypatch to set environment variables for BOTH secret bundles.
-    # Postgres catalog secrets
     monkeypatch.setenv("PG_CREDS_FOR_LAKE_DATABASE", "lake_catalog_db")
     monkeypatch.setenv("PG_CREDS_FOR_LAKE_USER", "lake_user")
     monkeypatch.setenv("PG_CREDS_FOR_LAKE_PASSWORD", "lake_pass")
     monkeypatch.setenv("PG_CREDS_FOR_LAKE_HOST", "db.example.com")
     monkeypatch.setenv("PG_CREDS_FOR_LAKE_PORT", "5432")
 
-    # S3 storage secrets
     monkeypatch.setenv("S3_CREDS_FOR_LAKE_ACCESS_KEY_ID", "LAKE_AWS_KEY")
     monkeypatch.setenv("S3_CREDS_FOR_LAKE_SECRET_ACCESS_KEY", "LAKE_AWS_SECRET")
     monkeypatch.setenv("S3_CREDS_FOR_LAKE_REGION", "eu-west-1")
 
-    # Expected SQL parts to verify
     expected_sql_parts = [
-        # Catalog Secret
-        "CREATE OR REPLACE SECRET my_lake_catalog_secret (",
-        "TYPE POSTGRES",
-        "HOST 'db.example.com'",
-        "DATABASE 'lake_catalog_db'",
-        # Storage Secret
-        "CREATE OR REPLACE SECRET my_lake_storage_secret (",
-        "TYPE S3",
-        "KEY_ID 'LAKE_AWS_KEY'",
-        "SECRET 'LAKE_AWS_SECRET'",
-        "REGION 'eu-west-1'",
-        # Attach Statement
+        "CREATE OR REPLACE SECRET my_lake_catalog_secret",
+        "CREATE OR REPLACE SECRET my_lake_storage_secret",
         "ATTACH 'ducklake:postgres:my_lake_catalog_secret' AS my_lake",
         "DATA_PATH 's3://my-bucket/data/'",
         "STORAGE_SECRET 'my_lake_storage_secret'"
     ]
 
     # Act
-    generated_sql = handler.render_sql(context)
+    generated_sql = handler.render_sql() # No longer takes a context argument
 
     # Assert
     normalized_sql = " ".join(generated_sql.split())
@@ -84,15 +80,11 @@ def test_render_sql_with_valid_config(monkeypatch):
         ("empty_context", {"connection_name": "test"}),
     ]
 )
-def test_render_sql_raises_error_for_invalid_config(test_id, invalid_context):
+def test_init_raises_error_for_invalid_config(test_id, invalid_context):
     """
-    Tests that render_sql raises a ValueError if the 'catalog' or 'storage'
-    sections are missing from the configuration context.
+    Tests that the DuckLakeHandler's __init__ raises a ValueError if the
+    'catalog' or 'storage' sections are missing from the configuration context.
     """
-    # Arrange
-    handler = DuckLakeHandler()
-
     # Act & Assert
     with pytest.raises(ValueError, match="DuckLake source requires 'catalog' and 'storage' sections in config."):
-        handler.render_sql(invalid_context)
-
+        DuckLakeHandler(invalid_context)

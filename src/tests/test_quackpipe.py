@@ -6,7 +6,6 @@ This test file covers:
 - Secret management with multiple providers
 - Builder API functionality
 - Core session management
-- Source handlers
 - ETL utilities
 - Error handling
 """
@@ -29,7 +28,6 @@ from quackpipe.secrets import (
 )
 from quackpipe.builder import QuackpipeBuilder
 from quackpipe.core import session, _parse_config_from_yaml, _prepare_connection
-from quackpipe.sources.postgres import PostgresHandler
 from quackpipe.utils import ETLUtils
 from quackpipe.exceptions import QuackpipeError, ConfigError, SecretError
 
@@ -146,6 +144,7 @@ def test_source_type_enum():
     """Test SourceType enum values."""
     assert SourceType.POSTGRES.value == "postgres"
     assert SourceType.S3.value == "s3"
+    assert SourceType.DUCKLAKE.value == "ducklake"
     assert SourceType.PARQUET.value == "parquet"
     assert SourceType.CSV.value == "csv"
 
@@ -599,19 +598,6 @@ def test_secret_error_inheritance():
 
 # ==================== PARAMETRIZED TESTS ====================
 
-@pytest.mark.parametrize("source_type,expected_plugins", [
-    (SourceType.POSTGRES, ["postgres"]),
-    (SourceType.S3, ["httpfs"]),
-])
-def test_handler_plugins(source_type, expected_plugins):
-    """Test that handlers return correct required plugins."""
-    from quackpipe.core import SOURCE_HANDLER_REGISTRY
-
-    handler = SOURCE_HANDLER_REGISTRY.get(source_type)
-    if handler:
-        assert handler.required_plugins == expected_plugins
-
-
 @pytest.mark.parametrize("config_data,expected_count", [
     ({'sources': {}}, 0),
     ({'sources': {'pg1': {'type': 'postgres'}}}, 1),
@@ -671,7 +657,3 @@ def test_builder_with_none_config():
     builder.add_source("test", SourceType.POSTGRES, config=None)
 
     assert builder._sources[0].config == {}
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v", "--tb=short"])

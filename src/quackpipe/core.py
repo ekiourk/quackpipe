@@ -10,14 +10,13 @@ import yaml
 
 from .config import SourceConfig, SourceType
 from .exceptions import ConfigError
-from .secrets import fetch_secret_bundle
 from .sources import s3, postgres, ducklake
 
-# Registry mapping string types to handler classes
+# The registry now stores the handler CLASSES, not instances.
 SOURCE_HANDLER_REGISTRY = {
-    SourceType.POSTGRES: postgres.PostgresHandler(),
-    SourceType.S3: s3.S3Handler(),
-    SourceType.DUCKLAKE: ducklake.DuckLakeHandler(),
+    SourceType.POSTGRES: postgres.PostgresHandler,
+    SourceType.S3: s3.S3Handler,
+    SourceType.DUCKLAKE: ducklake.DuckLakeHandler,
 }
 
 def _parse_config_from_yaml(path: str) -> List[SourceConfig]:
@@ -32,7 +31,6 @@ def _parse_config_from_yaml(path: str) -> List[SourceConfig]:
     for name, details in raw_config.get('sources', {}).items():
         details_copy = details.copy()
 
-        # Pop the known, top-level fields for the SourceConfig object itself.
         try:
             source_type_str = details_copy.pop('type')
             source_type = SourceType(source_type_str)
@@ -40,48 +38,53 @@ def _parse_config_from_yaml(path: str) -> List[SourceConfig]:
             raise ConfigError(f"Missing or invalid 'type' for source '{name}'.")
 
         secret_name = details_copy.pop('secret_name', None)
-
-        # Everything that remains in the dictionary is source-specific config.
         source_specific_config = details_copy
 
-        # Now, construct the SourceConfig object correctly.
         source_configs.append(SourceConfig(
             name=name,
             type=source_type,
             secret_name=secret_name,
-            config=source_specific_config  # Pass the rest as the 'config' dict
+            config=source_specific_config
         ))
     return source_configs
-
 
 def _prepare_connection(con: duckdb.DuckDBPyConnection, configs: List[SourceConfig]):
     """Configures a DuckDB connection from a list of SourceConfig objects."""
     if not configs:
         return
 
-    required_plugins = set()
+    # 1. Instantiate all handlers first
+    instantiated_handlers = []
     for cfg in configs:
-        handler = SOURCE_HANDLER_REGISTRY.get(cfg.type)
-        if handler:
-            required_plugins.update(handler.required_plugins)
+        HandlerClass = SOURCE_HANDLER_REGISTRY.get(cfg.type)
+        if not HandlerClass:
+            print(f"Warning: No handler class found for source type '{cfg.type.value}'. Skipping.")
+            continue
 
+        # Create the full context dictionary for the handler's __init__
+        full_context = {
+            **cfg.config,
+            "connection_name": cfg.name,
+            "secret_name": cfg.secret_name,
+        }
+        handler_instance = HandlerClass(full_context)
+        instantiated_handlers.append(handler_instance)
+
+    # 2. Gather all required plugins from the instantiated handlers
+    required_plugins = set()
+    for handler in instantiated_handlers:
+        # This now calls the dynamic property on the instance
+        required_plugins.update(handler.required_plugins)
+
+    # 3. Install and load all extensions
     for plugin in required_plugins:
         con.install_extension(plugin)
         con.load_extension(plugin)
-    
-    for cfg in configs:
-        handler = SOURCE_HANDLER_REGISTRY.get(cfg.type)
-        if not handler:
-            continue
 
-        secrets = fetch_secret_bundle(cfg.secret_name)
-        full_context = {
-            **cfg.config,
-            **secrets,
-            "connection_name": cfg.name,
-        }
-        
-        setup_sql = handler.render_sql(full_context)
+    # 4. Render and execute the setup SQL for each handler
+    for handler in instantiated_handlers:
+        # render_sql() no longer takes an argument
+        setup_sql = handler.render_sql()
         con.execute(setup_sql)
 
 @contextmanager

@@ -1,7 +1,8 @@
 """Source Handler for PostgreSQL databases."""
+from typing import List, Dict, Any
+
 from .base import BaseSourceHandler
 from ..secrets import fetch_secret_bundle
-from typing import List, Dict, Any
 
 
 class PostgresHandler(BaseSourceHandler):
@@ -9,6 +10,8 @@ class PostgresHandler(BaseSourceHandler):
     Handler for PostgreSQL connections using the 'postgres' extension.
     This handler uses the recommended CREATE SECRET + ATTACH pattern.
     """
+    def __init__(self, context: Dict[str, Any]):
+        super().__init__(context)
 
     @property
     def source_type(self):
@@ -18,26 +21,20 @@ class PostgresHandler(BaseSourceHandler):
     def required_plugins(self) -> List[str]:
         return ["postgres"]
 
-    def render_sql(self, context: Dict[str, Any]) -> str:
+    def render_sql(self) -> str:
         """
         Renders SQL to create a named secret for Postgres credentials
         and then attaches the database by referencing that secret.
         """
-        secrets = fetch_secret_bundle(context.get('secret_name'))
-        sql_context = {**context, **secrets}
+        secrets = fetch_secret_bundle(self.context.get('secret_name'))
+        sql_context = {**self.context, **secrets}
 
         connection_name = sql_context['connection_name']
         secret_name_for_duckdb = f"{connection_name}_secret"
 
-        # 1. Build the CREATE SECRET statement dynamically
         secret_parts = [f"CREATE OR REPLACE SECRET {secret_name_for_duckdb} (", "  TYPE POSTGRES"]
-        param_map = {
-            'host': 'host',
-            'port': 'port',
-            'database': 'database',
-            'user': 'user',
-            'password': 'password'
-        }
+        param_map = {'host': 'host', 'port': 'port', 'database': 'database', 'user': 'user', 'password': 'password'}
+
         for duckdb_key, context_key in param_map.items():
             value = sql_context.get(context_key)
             if value is not None:
@@ -48,8 +45,6 @@ class PostgresHandler(BaseSourceHandler):
         secret_parts.append(");")
         create_secret_sql = "\n".join(secret_parts)
 
-        # 2. Build the ATTACH statement referencing the secret
-        # The READ_ONLY flag is present if true, and absent if false.
         read_only_flag = ", READ_ONLY" if sql_context.get('read_only', True) else ""
 
         attach_sql = (
@@ -57,13 +52,10 @@ class PostgresHandler(BaseSourceHandler):
             f"(TYPE POSTGRES, SECRET '{secret_name_for_duckdb}'{read_only_flag});"
         )
 
-        # 3. Build CREATE VIEW statements if tables are specified
         view_sqls = []
         if 'tables' in sql_context and isinstance(sql_context['tables'], list):
             for table in sql_context['tables']:
                 view_name = f"{connection_name}_{table}"
                 view_sqls.append(f"CREATE OR REPLACE VIEW {view_name} AS SELECT * FROM {connection_name}.{table};")
 
-        # Combine all SQL statements
         return "\n".join([create_secret_sql, attach_sql] + view_sqls)
-
