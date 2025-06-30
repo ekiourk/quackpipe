@@ -1,0 +1,21 @@
+[project]
+name = "quackpipe"
+version = "0.3.0"
+requires-python = ">=3.12"
+description = "A configuration-driven and programmatic ETL helper for DuckDB."
+dependencies = [
+    "pyyaml",
+    "duckdb>=0.9.0",
+    "pandas", # Added for the new utils module
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ipdb"
+]
+lint = [
+    "ruff"
+]
+postgres = []
+s3 = []

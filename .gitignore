@@ -1,0 +1,43 @@
+# IDE-specific files
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Build artifacts
+target/
+build/
+dist/
+out/
+
+# Dependency directories
+node_modules/
+venv/
+.venv/
+env/
+
+# Python specific
+__pycache__/
+*.pyc
+*.log
+*.egg-info/
+.pytest_cache/
+
+# Operating System files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*~
+*.swp
+.fuse_hidden*
+
+# Docker/Lakehouse specific
+.env
+data/
+minio_data/ # Assuming MinIO might create this
+derby.log # Common for some Java/SQL tools
+
+# Notebooks
+.ipynb_checkpoints/

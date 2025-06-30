@@ -1,0 +1,37 @@
+# =======================================================
+# quackpipe Configuration Example
+# =======================================================
+# 'secret_name' refers to a bundle of secrets that the
+# configured secret provider knows how to resolve.
+# For the default EnvSecretProvider, it will look for env vars
+# prefixed with the secret name (e.g., PG_PROD_HOST).
+# =======================================================
+
+sources:
+  pg_main:
+    type: postgres
+    secret_name: "pg_prod"
+    # Non-secret configuration
+    port: 5432
+    read_only: true
+    # You can specify which tables to automatically create views for
+    tables:
+      - users
+      - orders
+
+  datalake:
+    type: s3
+    secret_name: "aws_datalake"
+    # Non-secret configuration
+    region: "us-east-1"
+
+  my_lake:
+    type: ducklake
+    # The DuckLake source has two main components: catalog and storage
+    catalog:
+      type: postgres
+      secret_name: "pg_prod" # Re-uses the postgres credentials
+    storage:
+      type: s3
+      secret_name: "aws_datalake" # Re-uses the S3 credentials
+      path: "s3://my-data-lake-bucket/" # The root path for the data
