@@ -49,19 +49,22 @@ class DuckLakeHandler(BaseSourceHandler):
 
         # --- Part 1: Handle Catalog ---
         catalog_type = self.catalog_config.get('type')
+        catalog_secret_name = None
         if catalog_type == 'postgres':
             catalog_secrets = fetch_secret_bundle(self.catalog_config.get('secret_name'))
             catalog_secret_name = f"{connection_name}_catalog_secret"
             catalog_sql_context = {**self.catalog_config, **catalog_secrets}
+            catalog_db_name = catalog_sql_context.get('database')
+            catalog_host = catalog_sql_context.get('host')
 
             sql_statements.append(
                 f"CREATE OR REPLACE SECRET {catalog_secret_name} ("
-                f"  TYPE POSTGRES, HOST '{catalog_sql_context.get('host')}',"
-                f"  PORT {catalog_sql_context.get('port', 5432)}, DATABASE '{catalog_sql_context.get('database')}',"
+                f"  TYPE POSTGRES, HOST '{catalog_host}',"
+                f"  PORT {catalog_sql_context.get('port', 5432)}, DATABASE '{catalog_db_name}',"
                 f"  USER '{catalog_sql_context.get('user')}', PASSWORD '{catalog_sql_context.get('password')}'"
                 f");"
             )
-            catalog_reference = f"postgres:{catalog_secret_name}"
+            catalog_reference = f"postgres:dbname={catalog_db_name} host={catalog_host}"
         elif catalog_type == 'sqlite':
             catalog_path = self.catalog_config.get('path')
             if not catalog_path:
@@ -77,21 +80,28 @@ class DuckLakeHandler(BaseSourceHandler):
             storage_secrets = fetch_secret_bundle(self.storage_config.get('secret_name'))
             storage_secret_name = f"{connection_name}_storage_secret"
             storage_sql_context = {**self.storage_config, **storage_secrets}
-
+            url_style = f"URL_STYLE '{storage_sql_context.get('url_style')}', " if storage_sql_context.get('url_style') else ""
             sql_statements.append(
                 f"CREATE OR REPLACE SECRET {storage_secret_name} ("
-                f"  TYPE S3, KEY_ID '{storage_sql_context.get('access_key_id')}',"
-                f"  SECRET '{storage_sql_context.get('secret_access_key')}', REGION '{storage_sql_context.get('region')}'"
+                f"  TYPE S3, "
+                f"  {url_style}"
+                f"  USE_SSL {storage_sql_context.get('use_ssl', 'true')}, "
+                f"  KEY_ID '{storage_sql_context.get('access_key_id')}', "
+                f"  ENDPOINT '{storage_sql_context.get('endpoint')}',"
+                f"  SECRET '{storage_sql_context.get('secret_access_key')}', "
+                f"  REGION '{storage_sql_context.get('region')}'"
                 f");"
             )
-            storage_attach_options.append(f"STORAGE_SECRET '{storage_secret_name}'")
         elif storage_type != 'local':
             raise ValueError(f"Unsupported DuckLake storage type: '{storage_type}'")
 
         data_path = self.storage_config.get('path')
         if not data_path:
             raise ValueError(f"DuckLake source '{connection_name}' requires a 'path' for storage.")
-        storage_attach_options.append(f"DATA_PATH '{data_path}'")
+        if catalog_secret_name:
+            storage_attach_options.append(f"DATA_PATH '{data_path}', META_SECRET '{catalog_secret_name}'")
+        else:
+            storage_attach_options.append(f"DATA_PATH '{data_path}'")
 
         # --- Part 3: Build Final ATTACH Statement ---
         attach_options_str = ", ".join(storage_attach_options)

@@ -39,7 +39,10 @@ def test_render_sql_with_valid_config(monkeypatch):
         "storage": {
             "type": "s3",
             "secret_name": "s3_creds_for_lake",
-            "path": "s3://my-bucket/data/"
+            "path": "s3://my-bucket/data/",
+            "url_style": 'path',
+            "use_ssl": 'false',
+            "endpoint": "localhost:8888"
         }
     }
     handler = DuckLakeHandler(context)
@@ -58,12 +61,16 @@ def test_render_sql_with_valid_config(monkeypatch):
     expected_sql_parts = [
         "CREATE OR REPLACE SECRET my_lake_catalog_secret",
         "CREATE OR REPLACE SECRET my_lake_storage_secret",
-        "ATTACH 'ducklake:postgres:my_lake_catalog_secret' AS my_lake",
+        "ATTACH 'ducklake:postgres:dbname=lake_catalog_db host=db.example.com' AS my_lake",
         "DATA_PATH 's3://my-bucket/data/'",
-        "STORAGE_SECRET 'my_lake_storage_secret'"
+        "META_SECRET 'my_lake_catalog_secret'",
+        "URL_STYLE 'path'",
+        "USE_SSL false",
+        "ENDPOINT 'localhost:8888'",
+        "KEY_ID 'LAKE_AWS_KEY'",
+        "SECRET 'LAKE_AWS_SECRET'"
     ]
 
-    # Act
     generated_sql = handler.render_sql() # No longer takes a context argument
 
     # Assert
