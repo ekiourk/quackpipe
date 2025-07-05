@@ -25,6 +25,25 @@ sources:
     # Non-secret configuration
     region: "us-east-1"
 
+  ducklake:
+    type: ducklake
+    catalog:
+      type: postgres
+      host: localhost
+      port: 5433
+      database: catalog
+      user: duckdb
+      password: duckdb_password
+    storage:
+      type: s3
+      access_key_id: minioadmin
+      secret_access_key: minioadmin123
+      use_ssl: false
+      url_style: path
+      region: us-east-1
+      endpoint: "localhost:9000"
+      path: "s3://lakehouse/"
+
   my_lake:
     type: ducklake
     # The DuckLake source has two main components: catalog and storage

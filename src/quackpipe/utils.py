@@ -1,47 +1,60 @@
 """
-Utility functions for common ETL tasks within quackpipe.
+General utility functions for the quackpipe library.
 """
-import pandas as pd
-import duckdb
+from typing import List, Optional
 
-class ETLUtils:
-    """A collection of static methods for common ETL operations."""
+import yaml
 
-    @staticmethod
-    def to_df(con: duckdb.DuckDBPyConnection, query: str) -> pd.DataFrame:
-        """
-        Executes a query and returns the result as a pandas DataFrame.
+# Note: We need to import these here to avoid circular dependencies
+# if this module were to be used by the config module in the future.
+from .config import SourceConfig
+from .exceptions import ConfigError
 
-        Args:
-            con: An active DuckDB connection.
-            query: The SQL query to execute.
 
-        Returns:
-            A pandas DataFrame with the query results.
-        """
-        return con.execute(query).fetchdf()
+def parse_config_from_yaml(path: str) -> List[SourceConfig]:
+    """Loads a YAML file and parses it into a list of SourceConfig objects."""
+    try:
+        with open(path, 'r') as f:
+            raw_config = yaml.safe_load(f)
+    except FileNotFoundError:
+        raise ConfigError(f"Configuration file not found at '{path}'.")
 
-    @staticmethod
-    def copy(con: duckdb.DuckDBPyConnection, source_query: str, target_path: str, format: str = 'parquet'):
-        """
-        Copies the result of a query to a file (e.g., in S3 or locally).
+    source_configs = []
+    for name, details in raw_config.get('sources', {}).items():
+        details_copy = details.copy()
 
-        Args:
-            con: An active DuckDB connection.
-            source_query: A SELECT query providing the data to copy.
-            target_path: The destination file path (e.g., 's3://bucket/file.parquet').
-            format: The output format (e.g., 'PARQUET', 'CSV').
-        """
-        con.execute(f"COPY ({source_query}) TO '{target_path}' (FORMAT {format.upper()})")
+        try:
+            # We import here to avoid a circular import at the top level
+            from .config import SourceType
+            source_type_str = details_copy.pop('type')
+            source_type = SourceType(source_type_str)
+        except (KeyError, ValueError):
+            raise ConfigError(f"Missing or invalid 'type' for source '{name}'.")
 
-    @staticmethod
-    def create_table_from_df(con: duckdb.DuckDBPyConnection, df: pd.DataFrame, table_name: str):
-        """
-        Creates a new table in DuckDB from a pandas DataFrame, replacing if it exists.
+        secret_name = details_copy.pop('secret_name', None)
+        source_specific_config = details_copy
 
-        Args:
-            con: An active DuckDB connection.
-            df: The pandas DataFrame to load.
-            table_name: The name of the table to create.
-        """
-        con.execute(f"CREATE OR REPLACE TABLE {table_name} AS SELECT * FROM df")
+        source_configs.append(SourceConfig(
+            name=name,
+            type=source_type,
+            secret_name=secret_name,
+            config=source_specific_config
+        ))
+    return source_configs
+
+
+def get_configs(
+        config_path: Optional[str] = None,
+        configs: Optional[List[SourceConfig]] = None
+) -> List[SourceConfig]:
+    """
+    A helper function to load source configurations from either a file path or a direct list.
+    This logic is shared by `session` and `etl_utils`.
+    """
+    if config_path:
+        return parse_config_from_yaml(config_path)
+    elif configs:
+        return configs
+    else:
+        # This provides a clear error message if no configuration source is given.
+        raise ConfigError("Must provide either a 'config_path' or a 'configs' list.")

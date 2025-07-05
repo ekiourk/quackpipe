@@ -12,7 +12,6 @@ from .builder import QuackpipeBuilder
 from .config import SourceConfig, SourceType
 from .secrets import set_secret_providers, BaseSecretProvider, SecretError
 from .exceptions import QuackpipeError, ConfigError
-from .utils import ETLUtils
 
 __all__ = [
     # Core API
@@ -29,9 +28,6 @@ __all__ = [
     # Secret Management
     "set_secret_providers",
     "BaseSecretProvider",
-
-    # Utilities
-    "ETLUtils",
 
     # Exceptions
     "QuackpipeError",

@@ -3,139 +3,27 @@ Comprehensive test suite for quackpipe using pytest.
 
 This test file covers:
 - Configuration parsing and validation
-- Secret management with multiple providers
 - Builder API functionality
 - Core session management
-- ETL utilities
 - Error handling
 """
 
-import json
 import os
 import sys
-import tempfile
 from unittest.mock import Mock, patch
 
-import pandas as pd
 import pytest
 import yaml
+
+from quackpipe.utils import parse_config_from_yaml
 
 sys.path.insert(0, 'src')
 
 from quackpipe.config import SourceConfig, SourceType
-from quackpipe.secrets import (
-    EnvSecretProvider, JsonFileSecretProvider, set_secret_providers, fetch_secret_bundle
-)
+from quackpipe.secrets import fetch_secret_bundle
 from quackpipe.builder import QuackpipeBuilder
-from quackpipe.core import session, _parse_config_from_yaml, _prepare_connection
-from quackpipe.utils import ETLUtils
+from quackpipe.core import session, _prepare_connection
 from quackpipe.exceptions import QuackpipeError, ConfigError, SecretError
-
-
-# ==================== FIXTURES ====================
-
-@pytest.fixture
-def temp_dir():
-    """Create a temporary directory for test files."""
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        yield tmp_dir
-
-
-@pytest.fixture
-def sample_config_dict():
-    """Sample configuration dictionary for testing."""
-    return {
-        'sources': {
-            'pg_main': {
-                'type': 'postgres',
-                'secret_name': 'pg_prod',
-                'port': 5432,
-                'read_only': True,
-                'tables': ['users', 'orders']
-            },
-            'datalake': {
-                'type': 's3',
-                'secret_name': 'aws_datalake',
-                'region': 'us-east-1'
-            }
-        }
-    }
-
-
-@pytest.fixture
-def sample_yaml_config(temp_dir, sample_config_dict):
-    """Create a temporary YAML config file."""
-    config_path = os.path.join(temp_dir, 'test_config.yml')
-    with open(config_path, 'w') as f:
-        yaml.dump(sample_config_dict, f)
-    return config_path
-
-
-@pytest.fixture
-def mock_duckdb_connection():
-    """Mock DuckDB connection for testing."""
-    mock_con = Mock()
-    mock_con.execute = Mock()
-    mock_con.install_extension = Mock()
-    mock_con.load_extension = Mock()
-    mock_con.close = Mock()
-
-    # Mock fetchdf for pandas integration
-    mock_result = Mock()
-    mock_result.fetchdf.return_value = pd.DataFrame({'id': [1, 2], 'name': ['Alice', 'Bob']})
-    mock_con.execute.return_value = mock_result
-
-    return mock_con
-
-
-@pytest.fixture
-def env_secrets():
-    """Set up environment variables for testing."""
-    env_vars = {
-        'PG_PROD_HOST': 'localhost',
-        'PG_PROD_USER': 'testuser',
-        'PG_PROD_PASSWORD': 'testpass',
-        'PG_PROD_DATABASE': 'testdb',
-        'AWS_DATALAKE_ACCESS_KEY_ID': 'test_key',
-        'AWS_DATALAKE_SECRET_ACCESS_KEY': 'test_secret'
-    }
-
-    # Set environment variables
-    for key, value in env_vars.items():
-        os.environ[key] = value
-
-    yield env_vars
-
-    # Clean up
-    for key in env_vars:
-        os.environ.pop(key, None)
-
-
-@pytest.fixture
-def json_secrets_dir(temp_dir):
-    """Create JSON secret files for testing."""
-    secrets_dir = os.path.join(temp_dir, 'secrets')
-    os.makedirs(secrets_dir)
-
-    # Create pg_prod.json
-    pg_secrets = {
-        'host': 'json-localhost',
-        'user': 'json-user',
-        'password': 'json-pass',
-        'database': 'json-db'
-    }
-    with open(os.path.join(secrets_dir, 'pg_prod.json'), 'w') as f:
-        json.dump(pg_secrets, f)
-
-    # Create aws_datalake.json
-    aws_secrets = {
-        'access_key_id': 'json-key',
-        'secret_access_key': 'json-secret'
-    }
-    with open(os.path.join(secrets_dir, 'aws_datalake.json'), 'w') as f:
-        json.dump(aws_secrets, f)
-
-    return secrets_dir
 
 
 # ==================== CONFIG TESTS ====================
@@ -170,111 +58,6 @@ def test_source_config_defaults():
 
     assert config.config == {}
     assert config.secret_name is None
-
-
-# ==================== SECRET MANAGEMENT TESTS ====================
-
-def test_env_secret_provider(env_secrets):
-    """Test EnvSecretProvider functionality."""
-    provider = EnvSecretProvider()
-
-    secrets = provider.get_secret('pg_prod')
-
-    assert secrets['host'] == 'localhost'
-    assert secrets['user'] == 'testuser'
-    assert secrets['password'] == 'testpass'
-    assert secrets['database'] == 'testdb'
-
-
-def test_env_secret_provider_empty():
-    """Test EnvSecretProvider with non-existent secret."""
-    provider = EnvSecretProvider()
-
-    secrets = provider.get_secret('nonexistent')
-
-    assert secrets == {}
-
-
-def test_json_file_secret_provider(json_secrets_dir):
-    """Test JsonFileSecretProvider functionality."""
-    provider = JsonFileSecretProvider(json_secrets_dir)
-
-    secrets = provider.get_secret('pg_prod')
-
-    assert secrets['host'] == 'json-localhost'
-    assert secrets['user'] == 'json-user'
-    assert secrets['password'] == 'json-pass'
-    assert secrets['database'] == 'json-db'
-
-
-def test_json_file_secret_provider_not_found(json_secrets_dir):
-    """Test JsonFileSecretProvider with non-existent file."""
-    provider = JsonFileSecretProvider(json_secrets_dir)
-
-    secrets = provider.get_secret('nonexistent')
-
-    assert secrets == {}
-
-
-def test_set_secret_providers():
-    """Test setting custom secret providers."""
-    provider1 = EnvSecretProvider()
-    provider2 = JsonFileSecretProvider()
-
-    set_secret_providers([provider1, provider2])
-
-    # This would test the global _providers variable
-    # We'll verify by testing fetch_secret_bundle behavior
-
-
-def test_set_secret_providers_invalid():
-    """Test setting invalid secret providers."""
-    with pytest.raises(TypeError):
-        set_secret_providers("not a list")
-
-    with pytest.raises(TypeError):
-        set_secret_providers(["not a provider"])
-
-
-def test_fetch_secret_bundle_success(env_secrets):
-    """Test successful secret bundle fetching."""
-    # Reset to default provider
-    set_secret_providers([EnvSecretProvider()])
-
-    secrets = fetch_secret_bundle('pg_prod')
-
-    assert secrets['host'] == 'localhost'
-    assert secrets['user'] == 'testuser'
-
-
-def test_fetch_secret_bundle_not_found():
-    """Test secret bundle not found."""
-    set_secret_providers([EnvSecretProvider()])
-
-    with pytest.raises(SecretError, match="Secret bundle 'nonexistent' not found"):
-        fetch_secret_bundle('nonexistent')
-
-
-def test_fetch_secret_bundle_empty_name():
-    """Test fetch_secret_bundle with empty name."""
-    result = fetch_secret_bundle('')
-    assert result == {}
-
-
-def test_secret_provider_chain(env_secrets, json_secrets_dir):
-    """Test multiple secret providers in chain."""
-    # Set up providers where JSON has priority
-    json_provider = JsonFileSecretProvider(json_secrets_dir)
-    env_provider = EnvSecretProvider()
-
-    set_secret_providers([json_provider, env_provider])
-
-    # Should get JSON version (first in chain)
-    secrets = fetch_secret_bundle('pg_prod')
-    assert secrets['host'] == 'json-localhost'
-
-    # Reset to default
-    set_secret_providers([EnvSecretProvider()])
 
 
 # ==================== BUILDER API TESTS ====================
@@ -343,7 +126,7 @@ def test_builder_session_success(mock_session):
 
 def test_parse_config_from_yaml(sample_yaml_config):
     """Test parsing YAML configuration."""
-    configs = _parse_config_from_yaml(sample_yaml_config)
+    configs = parse_config_from_yaml(sample_yaml_config)
 
     assert len(configs) == 2
 
@@ -362,7 +145,7 @@ def test_parse_config_from_yaml(sample_yaml_config):
 def test_parse_config_from_yaml_not_found():
     """Test parsing non-existent YAML file."""
     with pytest.raises(ConfigError, match="Configuration file not found"):
-        _parse_config_from_yaml("nonexistent.yml")
+        parse_config_from_yaml("nonexistent.yml")
 
 
 def test_parse_config_invalid_type(temp_dir):
@@ -381,7 +164,7 @@ def test_parse_config_invalid_type(temp_dir):
         yaml.dump(invalid_config, f)
 
     with pytest.raises(ConfigError, match="Missing or invalid 'type' for source 'bad_source'."):
-        _parse_config_from_yaml(config_path)
+        parse_config_from_yaml(config_path)
 
 
 @patch('duckdb.connect')
@@ -465,7 +248,7 @@ def test_session_with_configs(mock_connect, mock_duckdb_connection, monkeypatch)
 
 def test_session_no_config():
     """Test session creation without config."""
-    with pytest.raises(ConfigError, match="Must provide either 'config_path' or 'configs'"):
+    with pytest.raises(ConfigError, match="Must provide either a 'config_path' or a 'configs'"):
         with session():
             pass
 
@@ -490,90 +273,6 @@ def test_session_with_sources_filter(mock_prepare, mock_connect, mock_duckdb_con
     prepared_configs = call_args[1]
     assert len(prepared_configs) == 2
     assert {c.name for c in prepared_configs} == {"pg1", "s3_1"}
-
-
-# ==================== ETL UTILS TESTS ====================
-
-def test_etl_utils_to_df(mock_duckdb_connection):
-    """Test ETLUtils.to_df method."""
-    query = "SELECT * FROM test_table"
-
-    result = ETLUtils.to_df(mock_duckdb_connection, query)
-
-    mock_duckdb_connection.execute.assert_called_once_with(query)
-    assert isinstance(result, pd.DataFrame)
-    assert len(result) == 2
-    assert list(result.columns) == ['id', 'name']
-
-
-@pytest.mark.parametrize("format_type", ["parquet", "csv", "json"])
-def test_etl_utils_copy(mock_duckdb_connection, format_type):
-    """Test ETLUtils.copy method with different formats."""
-    source_query = "SELECT * FROM source_table"
-    target_path = f"s3://bucket/data.{format_type}"
-
-    ETLUtils.copy(mock_duckdb_connection, source_query, target_path, format_type)
-
-    expected_sql = f"COPY ({source_query}) TO '{target_path}' (FORMAT {format_type.upper()})"
-    mock_duckdb_connection.execute.assert_called_once_with(expected_sql)
-
-
-def test_etl_utils_copy_default_format(mock_duckdb_connection):
-    """Test ETLUtils.copy with default parquet format."""
-    source_query = "SELECT * FROM source_table"
-    target_path = "output/data.parquet"
-
-    ETLUtils.copy(mock_duckdb_connection, source_query, target_path)
-
-    expected_sql = f"COPY ({source_query}) TO '{target_path}' (FORMAT PARQUET)"
-    mock_duckdb_connection.execute.assert_called_once_with(expected_sql)
-
-
-def test_etl_utils_create_table_from_df(mock_duckdb_connection):
-    """Test ETLUtils.create_table_from_df method."""
-    df = pd.DataFrame({'col1': [1, 2], 'col2': ['a', 'b']})
-    table_name = "new_table"
-
-    ETLUtils.create_table_from_df(mock_duckdb_connection, df, table_name)
-
-    expected_sql = f"CREATE OR REPLACE TABLE {table_name} AS SELECT * FROM df"
-    mock_duckdb_connection.execute.assert_called_once_with(expected_sql)
-
-
-# ==================== INTEGRATION TESTS ====================
-
-@patch('duckdb.connect')
-def test_full_workflow_yaml_config(mock_connect, mock_duckdb_connection, sample_yaml_config, env_secrets):
-    """Test complete workflow using YAML configuration."""
-    mock_connect.return_value = mock_duckdb_connection
-
-    with session(config_path=sample_yaml_config) as con:
-        # Test ETL operations
-        df = ETLUtils.to_df(con, "SELECT * FROM pg_main_users LIMIT 5")
-        assert len(df) == 2
-
-        ETLUtils.copy(con, "SELECT * FROM pg_main_users", "output/users.parquet")
-
-    # Verify connection setup
-    assert mock_duckdb_connection.install_extension.call_count >= 1
-    assert mock_duckdb_connection.execute.call_count >= 1
-
-
-@patch('duckdb.connect')
-def test_full_workflow_builder_api(mock_connect, mock_duckdb_connection, env_secrets):
-    """Test complete workflow using Builder API."""
-    mock_connect.return_value = mock_duckdb_connection
-
-    builder = (QuackpipeBuilder()
-               .add_source("pg_test", SourceType.POSTGRES,
-                           config={"port": 5432, "tables": ["users"]},
-                           secret_name="pg_prod"))
-
-    with builder.session() as con:
-        df = ETLUtils.to_df(con, "SELECT * FROM pg_test_users")
-        assert isinstance(df, pd.DataFrame)
-
-    mock_duckdb_connection.close.assert_called_once()
 
 
 # ==================== ERROR HANDLING TESTS ====================
@@ -609,18 +308,8 @@ def test_config_parsing_counts(temp_dir, config_data, expected_count):
     with open(config_path, 'w') as f:
         yaml.dump(config_data, f)
 
-    configs = _parse_config_from_yaml(config_path)
+    configs = parse_config_from_yaml(config_path)
     assert len(configs) == expected_count
-
-
-# ==================== CONFTEST ADDITIONAL FIXTURES ====================
-
-@pytest.fixture(autouse=True)
-def reset_secret_providers():
-    """Reset secret providers after each test."""
-    yield
-    # Reset to default after each test
-    set_secret_providers([EnvSecretProvider()])
 
 
 # ==================== PERFORMANCE/EDGE CASE TESTS ====================
@@ -640,7 +329,7 @@ def test_large_config_handling(temp_dir):
     with open(config_path, 'w') as f:
         yaml.dump(large_config, f)
 
-    configs = _parse_config_from_yaml(config_path)
+    configs = parse_config_from_yaml(config_path)
     assert len(configs) == 50
 
 

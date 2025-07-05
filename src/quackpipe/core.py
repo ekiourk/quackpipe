@@ -6,11 +6,11 @@ from functools import wraps
 from typing import List, Optional, Generator
 
 import duckdb
-import yaml
 
 from .config import SourceConfig, SourceType
-from .exceptions import ConfigError
+# Import all handlers
 from .sources import s3, postgres, ducklake, sqlite
+from .utils import get_configs
 
 # The registry now stores the handler CLASSES, not instances.
 SOURCE_HANDLER_REGISTRY = {
@@ -19,36 +19,6 @@ SOURCE_HANDLER_REGISTRY = {
     SourceType.DUCKLAKE: ducklake.DuckLakeHandler,
     SourceType.SQLITE: sqlite.SQLiteHandler,
 }
-
-
-def _parse_config_from_yaml(path: str) -> List[SourceConfig]:
-    """Loads a YAML file and parses it into a list of SourceConfig objects."""
-    try:
-        with open(path, 'r') as f:
-            raw_config = yaml.safe_load(f)
-    except FileNotFoundError:
-        raise ConfigError(f"Configuration file not found at '{path}'.")
-
-    source_configs = []
-    for name, details in raw_config.get('sources', {}).items():
-        details_copy = details.copy()
-
-        try:
-            source_type_str = details_copy.pop('type')
-            source_type = SourceType(source_type_str)
-        except (KeyError, ValueError):
-            raise ConfigError(f"Missing or invalid 'type' for source '{name}'.")
-
-        secret_name = details_copy.pop('secret_name', None)
-        source_specific_config = details_copy
-
-        source_configs.append(SourceConfig(
-            name=name,
-            type=source_type,
-            secret_name=secret_name,
-            config=source_specific_config
-        ))
-    return source_configs
 
 
 def _prepare_connection(con: duckdb.DuckDBPyConnection, configs: List[SourceConfig]):
@@ -96,28 +66,25 @@ def session(
 ) -> Generator[duckdb.DuckDBPyConnection, None, None]:
     """
     A context manager providing a pre-configured DuckDB connection.
-    Accepts configuration from a YAML file OR a list of SourceConfig objects.
     """
-    if config_path:
-        all_configs = _parse_config_from_yaml(config_path)
-    elif configs:
-        all_configs = configs
-    else:
-        raise ConfigError("Must provide either 'config_path' or 'configs'.")
+    all_configs = get_configs(config_path, configs)
 
+    active_configs = all_configs
     if sources:
-        all_configs = [c for c in all_configs if c.name in sources]
+        active_configs = [c for c in all_configs if c.name in sources]
 
     con = duckdb.connect(database=':memory:')
     try:
-        _prepare_connection(con, all_configs)
+        _prepare_connection(con, active_configs)
         yield con
     finally:
         con.close()
 
 
 def with_session(**session_kwargs):
-    """A decorator to inject a pre-configured DuckDB connection."""
+    """
+    A decorator to inject a pre-configured DuckDB connection into a function.
+    """
 
     def decorator(func):
         @wraps(func)
