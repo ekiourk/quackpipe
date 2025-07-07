@@ -1,7 +1,7 @@
 """Source Handler for SQLite databases."""
 from typing import List, Dict, Any
 
-from .base import BaseSourceHandler
+from quackpipe.sources.base import BaseSourceHandler
 
 
 class SQLiteHandler(BaseSourceHandler):

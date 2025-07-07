@@ -7,12 +7,12 @@ from typing import List, Optional, Generator
 
 import duckdb
 
-from .config import SourceConfig, SourceType
+from .config import SourceConfig, SourceType, Plugin
 # Import all handlers
 from .sources import s3, postgres, ducklake, sqlite
 from .utils import get_configs
 
-# The registry now stores the handler CLASSES, not instances.
+# The registry stores the handler CLASSES, not instances.
 SOURCE_HANDLER_REGISTRY = {
     SourceType.POSTGRES: postgres.PostgresHandler,
     SourceType.S3: s3.S3Handler,
@@ -48,9 +48,21 @@ def _prepare_connection(con: duckdb.DuckDBPyConnection, configs: List[SourceConf
         required_plugins.update(handler.required_plugins)
 
     # 3. Install and load all extensions
-    for plugin in required_plugins:
-        con.install_extension(plugin)
-        con.load_extension(plugin)
+    for plugin_def in required_plugins:
+        if isinstance(plugin_def, Plugin):
+            # It's a structured Plugin object with extra parameters
+            plugin_name = plugin_def.name
+            install_params = {'repository': plugin_def.repository}
+            # Filter out None values to avoid passing `repository=None`
+            clean_params = {k: v for k, v in install_params.items() if v is not None}
+            con.install_extension(plugin_name, **clean_params)
+        else:
+            # It's a simple string (the name of the plugin)
+            plugin_name = plugin_def
+            con.install_extension(plugin_name)
+
+        # Loading the extension only requires the name
+        con.load_extension(plugin_name)
 
     # 4. Render and execute the setup SQL for each handler
     for handler in instantiated_handlers:

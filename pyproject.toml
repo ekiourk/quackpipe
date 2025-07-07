@@ -1,21 +1,37 @@
 [project]
 name = "quackpipe"
-version = "0.3.0"
+version = "0.4.0"
 requires-python = ">=3.12"
 description = "A configuration-driven and programmatic ETL helper for DuckDB."
 dependencies = [
     "pyyaml",
     "duckdb>=0.9.0",
-    "pandas", # Added for the new utils module
+    "pandas"
 ]
 
-[dependency-groups]
+[project.optional-dependencies]
 dev = [
     "pytest",
+    "testcontainers",
+    "testcontainers-postgres",
+    "testcontainers-kafka",
+    "testcontainers-minio",
+    "httpx",
     "ipdb"
 ]
 lint = [
     "ruff"
 ]
-postgres = []
-s3 = []
+postgres = ["psycopg"]
+s3 = ["pyarrow"]
+kafka = ["confluent-kafka"]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

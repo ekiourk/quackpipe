@@ -1,8 +1,8 @@
 """Source Handler for S3-compatible object storage."""
 from typing import List, Dict, Any
 
-from .base import BaseSourceHandler
-from ..secrets import fetch_secret_bundle
+from quackpipe.secrets import fetch_secret_bundle
+from quackpipe.sources.base import BaseSourceHandler
 
 
 class S3Handler(BaseSourceHandler):
@@ -59,6 +59,7 @@ class S3Handler(BaseSourceHandler):
     def _render_set_commands_sql(self) -> str:
         """Builds a series of SET commands for S3 configuration."""
         param_map = {
+            'access_key_id': 's3_access_key_id', 'secret_access_key': 's3_secret_access_key',
             'region': 's3_region', 'endpoint': 's3_endpoint',
             'url_style': 's3_url_style', 'use_ssl': 's3_use_ssl'
         }

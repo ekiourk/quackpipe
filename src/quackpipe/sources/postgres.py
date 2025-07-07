@@ -1,8 +1,8 @@
 """Source Handler for PostgreSQL databases."""
 from typing import List, Dict, Any
 
-from .base import BaseSourceHandler
-from ..secrets import fetch_secret_bundle
+from quackpipe.secrets import fetch_secret_bundle
+from quackpipe.sources.base import BaseSourceHandler
 
 
 class PostgresHandler(BaseSourceHandler):

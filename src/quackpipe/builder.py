@@ -2,8 +2,10 @@
 The Builder API for programmatically constructing a quackpipe session.
 """
 from typing import List, Dict, Any, Self
+
 from .config import SourceConfig, SourceType
-from .core import session as core_session # Avoid circular import
+from .core import session as core_session  # Avoid circular import
+
 
 class QuackpipeBuilder:
     """A fluent builder for creating a quackpipe session without a YAML file."""
@@ -33,14 +35,24 @@ class QuackpipeBuilder:
         self._sources.append(source)
         return self
 
-    def session(self):
+    def get_configs(self) -> List[SourceConfig]:
         """
-        Builds and enters the session context manager.
+        Returns the list of SourceConfig objects that have been added to the builder.
+        This is useful for passing to high-level utilities like `move_data`.
+        """
+        return self._sources
+
+    def session(self, **kwargs):
+        """
+        Builds and enters the session context manager. Can accept the same arguments
+        as the core session function, like `sources=['source_a']`.
 
         Returns:
             A context manager yielding a configured DuckDB connection.
         """
         if not self._sources:
             raise ValueError("Cannot build a session with no sources defined.")
-        # The core session function is designed to accept a list of configs directly
-        return core_session(configs=self._sources)
+
+        # Pass the built configs and any extra arguments (like `sources`)
+        # to the core session manager.
+        return core_session(configs=self._sources, **kwargs)

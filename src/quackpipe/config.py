@@ -3,7 +3,15 @@ Defines the typed configuration objects for quackpipe.
 """
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, Optional
+
+
+@dataclass(frozen=True)
+class Plugin:
+    """A structured definition for a DuckDB plugin that may require special installation."""
+    name: str
+    repository: Optional[str] = None
+
 
 class SourceType(Enum):
     """Enumeration of supported source types."""
@@ -13,6 +21,7 @@ class SourceType(Enum):
     SQLITE = "sqlite"
     PARQUET = "parquet"
     CSV = "csv"
+
 
 @dataclass
 class SourceConfig:

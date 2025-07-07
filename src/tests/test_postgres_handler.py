@@ -6,6 +6,8 @@ The tests are written as standalone functions, leveraging pytest features
 like parametrize and fixtures for setup.
 """
 import pytest
+
+from quackpipe import QuackpipeBuilder, SourceType
 from quackpipe.sources.postgres import PostgresHandler
 
 
@@ -147,3 +149,39 @@ def test_postgres_handler_no_tables():
     assert "ATTACH" in sql
     assert "READ_ONLY" not in sql
     assert "CREATE OR REPLACE VIEW" not in sql
+
+
+def test_integration_with_postgres_e2e(postgres_connection_params):
+    builder = QuackpipeBuilder().add_source(
+        name="postgres_test_container",
+        type=SourceType.POSTGRES,
+        config={
+            'database': postgres_connection_params['database'],
+            'user': postgres_connection_params['user'],
+            'password': postgres_connection_params['password'],
+            'host': postgres_connection_params['host'],
+            'port': postgres_connection_params['port'],
+            'connection_name': 'pg_main',
+            'read_only': True,
+            'tables': ['employees', 'monthly_reports']
+        }
+    )
+
+    with builder.session(sources=["postgres_test_container"]) as con:
+        results = con.execute(
+            f"FROM postgres_test_container.employees"
+        ).fetchall()
+        assert len(results) == 5
+
+        # check the view
+        results = con.execute(
+            f"FROM postgres_test_container_employees"
+        ).fetchall()
+        assert len(results) == 5
+
+        results = con.execute(
+            f"FROM postgres_test_container.employees WHERE department='Engineering'"
+        ).fetchall()
+        assert len(results) == 2
+        assert results[0][1] == "Alice"
+        assert results[1][1] == "Diana"
