@@ -21,20 +21,9 @@ class S3Handler(BaseSourceHandler):
     def required_plugins(self) -> List[str]:
         return ["httpfs"]
 
-    def render_sql(self) -> str:
-        """
-        Renders SQL to configure S3 based on the stored context.
-        """
-        secret_name = self.context.get('secret_name')
-
-        if secret_name:
-            return self._render_create_secret_sql(secret_name)
-        else:
-            return self._render_set_commands_sql()
-
-    def _render_create_secret_sql(self, secret_name: str) -> str:
+    def _render_create_secret_sql(self, duckdb_secret_name: str) -> str:
         """Builds a CREATE SECRET statement for S3."""
-        secrets = fetch_secret_bundle(secret_name)
+        secrets = fetch_secret_bundle(self.context.get('secret_name'))
         sql_context = {**self.context, **secrets}
 
         param_map = {
@@ -43,7 +32,7 @@ class S3Handler(BaseSourceHandler):
             'endpoint': 'endpoint', 'url_style': 'url_style', 'use_ssl': 'use_ssl'
         }
 
-        parts = [f"CREATE OR REPLACE SECRET {self.context['connection_name']}_secret (", "  TYPE S3"]
+        parts = [f"CREATE OR REPLACE SECRET {duckdb_secret_name} (", "  TYPE S3"]
 
         for duckdb_key, context_key in param_map.items():
             value = sql_context.get(context_key)
@@ -74,3 +63,15 @@ class S3Handler(BaseSourceHandler):
                     commands.append(f"SET {duckdb_var} = {value};")
 
         return "\n".join(commands)
+
+    def render_sql(self) -> str:
+        """
+        Renders SQL to configure S3 based on the stored context.
+        """
+        secret_name = self.context.get('secret_name')
+
+        if secret_name:
+            duckdb_secret_name = f"{self.context['connection_name']}_secret"
+            return self._render_create_secret_sql(duckdb_secret_name)
+        else:
+            return self._render_set_commands_sql()

@@ -5,13 +5,27 @@ This file contains pytest tests for the PostgresHandler class in quackpipe.
 The tests are written as standalone functions, leveraging pytest features
 like parametrize and fixtures for setup.
 """
+import os
+from typing import Dict
+
 import pytest
 
 from quackpipe import QuackpipeBuilder, SourceType
 from quackpipe.sources.postgres import PostgresHandler
 
 
-def test_postgres_handler_properties():
+@pytest.fixture(scope="function")
+def postgres_env_vars(monkeypatch) -> Dict[str, str]:
+    secret_name = 'pg_creds'
+    # Use monkeypatch to set the environment variables for the secret bundle.
+    monkeypatch.setenv(f"{secret_name.upper()}_DATABASE", "testdb")
+    monkeypatch.setenv(f"{secret_name.upper()}_USER", "pguser")
+    monkeypatch.setenv(f"{secret_name.upper()}_PASSWORD", "pgpass")
+    monkeypatch.setenv(f"{secret_name.upper()}_HOST", "localhost")
+    return dict(os.environ)
+
+
+def test_postgres_handler_properties(postgres_env_vars):
     """Verify that the handler correctly reports its static properties."""
     # Arrange
     handler = PostgresHandler({
@@ -76,20 +90,12 @@ def test_postgres_handler_properties():
         ),
     ]
 )
-def test_postgres_render_sql(monkeypatch, test_id, context, expected_sql_parts, unexpected_sql_parts):
+def test_postgres_render_sql(postgres_env_vars, test_id, context, expected_sql_parts, unexpected_sql_parts):
     """
     Tests that the PostgresHandler's render_sql method correctly generates
     a CREATE SECRET statement followed by an ATTACH statement.
     """
-    # Arrange
     handler = PostgresHandler(context)
-    secret_name = context["secret_name"]
-
-    # Use monkeypatch to set the environment variables for the secret bundle.
-    monkeypatch.setenv(f"{secret_name.upper()}_DATABASE", "testdb")
-    monkeypatch.setenv(f"{secret_name.upper()}_USER", "pguser")
-    monkeypatch.setenv(f"{secret_name.upper()}_PASSWORD", "pgpass")
-    monkeypatch.setenv(f"{secret_name.upper()}_HOST", "localhost")
 
     # Act
     generated_sql = handler.render_sql()

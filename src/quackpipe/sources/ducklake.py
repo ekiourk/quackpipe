@@ -1,14 +1,17 @@
 """Source Handler for DuckLake, combining a catalog and storage."""
 from typing import List, Dict, Any
 
-from quackpipe.secrets import fetch_secret_bundle
 from quackpipe.sources.base import BaseSourceHandler
+from quackpipe.sources.postgres import PostgresHandler
+from quackpipe.sources.s3 import S3Handler
+from quackpipe.sources.sqlite import SQLiteHandler
+from ..exceptions import ConfigError
 
 
 class DuckLakeHandler(BaseSourceHandler):
     """
-    Handler for a DuckLake source, which combines a metadata catalog
-    (like Postgres or SQLite) with a data storage backend (like S3 or local).
+    Handler for a DuckLake source. It reuses other handlers to manage
+    its catalog and storage components and creates a single DUCKLAKE secret.
     """
 
     def __init__(self, context: Dict[str, Any]):
@@ -17,7 +20,29 @@ class DuckLakeHandler(BaseSourceHandler):
         self.storage_config = self.context.get('storage', {})
 
         if not self.catalog_config or not self.storage_config:
-            raise ValueError("DuckLake source requires 'catalog' and 'storage' sections in config.")
+            raise ConfigError("DuckLake source requires 'catalog' and 'storage' sections in config.")
+
+        # Instantiate the appropriate sub-handlers
+        self.catalog_handler = self._get_catalog_handler()
+        self.storage_handler = self._get_storage_handler()
+
+    def _get_catalog_handler(self) -> BaseSourceHandler:
+        """Factory function to create the catalog handler instance."""
+        catalog_type = self.catalog_config.get('type')
+        if catalog_type == 'postgres':
+            return PostgresHandler(self.catalog_config)
+        elif catalog_type == 'sqlite':
+            return SQLiteHandler(self.catalog_config)
+        raise ConfigError(f"Unsupported DuckLake catalog type: '{catalog_type}'")
+
+    def _get_storage_handler(self) -> BaseSourceHandler | None:
+        """Factory function to create the storage handler instance."""
+        storage_type = self.storage_config.get('type')
+        if storage_type == 's3':
+            return S3Handler(self.storage_config)
+        elif storage_type == 'local':
+            return None  # Local storage needs no setup SQL
+        raise ConfigError(f"Unsupported DuckLake storage type: '{storage_type}'")
 
     @property
     def source_type(self) -> str:
@@ -25,87 +50,66 @@ class DuckLakeHandler(BaseSourceHandler):
 
     @property
     def required_plugins(self) -> List[str]:
-        """Dynamically determines required plugins based on sub-configs."""
+        """Dynamically determines required plugins by delegating to sub-handlers."""
         plugins = {"ducklake"}
-
-        catalog_type = self.catalog_config.get('type')
-        if catalog_type == 'postgres':
-            plugins.add('postgres')
-        elif catalog_type == 'sqlite':
-            plugins.add('sqlite')
-
-        storage_type = self.storage_config.get('type')
-        if storage_type == 's3':
-            plugins.add('httpfs')
-
+        plugins.update(self.catalog_handler.required_plugins)
+        if self.storage_handler:
+            plugins.update(self.storage_handler.required_plugins)
         return list(plugins)
 
     def render_sql(self) -> str:
         """
-        Renders SQL to create secrets (if needed) and attach the DuckLake.
+        Orchestrates the SQL generation to create all necessary secrets and
+        then construct the final ATTACH statement.
         """
         connection_name = self.context['connection_name']
+        ducklake_secret_name = f"{connection_name}_secret"
         sql_statements = []
 
-        # --- Part 1: Handle Catalog ---
+        # --- Part 1: Generate setup for sub-components ---
         catalog_type = self.catalog_config.get('type')
-        catalog_secret_name = None
+
         if catalog_type == 'postgres':
-            catalog_secrets = fetch_secret_bundle(self.catalog_config.get('secret_name'))
-            catalog_secret_name = f"{connection_name}_catalog_secret"
-            catalog_sql_context = {**self.catalog_config, **catalog_secrets}
-            catalog_db_name = catalog_sql_context.get('database')
-            catalog_host = catalog_sql_context.get('host')
+            # First, create the secret for the Postgres catalog itself.
+            postgres_secret_name = f"{connection_name}_catalog_secret"
+            sql_statements.append(self.catalog_handler._render_create_secret_sql(postgres_secret_name))
 
-            sql_statements.append(
-                f"CREATE OR REPLACE SECRET {catalog_secret_name} ("
-                f"  TYPE POSTGRES, HOST '{catalog_host}',"
-                f"  PORT {catalog_sql_context.get('port', 5432)}, DATABASE '{catalog_db_name}',"
-                f"  USER '{catalog_sql_context.get('user')}', PASSWORD '{catalog_sql_context.get('password')}'"
-                f");"
-            )
-            catalog_reference = f"postgres:dbname={catalog_db_name} host={catalog_host}"
+            # The METADATA_PARAMETERS will reference this newly created secret.
+            metadata_params = f"MAP {{'TYPE': 'postgres', 'SECRET': '{postgres_secret_name}'}}"
+            metadata_path = "''"  # Path is not used when METADATA_PARAMETERS is set
         elif catalog_type == 'sqlite':
-            catalog_path = self.catalog_config.get('path')
-            if not catalog_path:
-                raise ValueError(f"DuckLake source '{connection_name}' with SQLite catalog requires a 'path'.")
-            catalog_reference = f"sqlite:{catalog_path}"
+            metadata_path = f"'{self.catalog_config.get('path')}'"
+            metadata_params = "NULL"  # No parameters needed for SQLite
         else:
-            raise ValueError(f"Unsupported DuckLake catalog type: '{catalog_type}'")
+            raise ConfigError(f"Unsupported DuckLake catalog type: '{catalog_type}'")
 
-        # --- Part 2: Handle Storage ---
-        storage_type = self.storage_config.get('type')
-        storage_attach_options = []
-        if storage_type == 's3':
-            storage_secrets = fetch_secret_bundle(self.storage_config.get('secret_name'))
+        # Create the S3 secret if needed for the storage backend. This is correct.
+        # The httpfs extension will find and use this secret automatically.
+        if self.storage_handler and isinstance(self.storage_handler, S3Handler):
             storage_secret_name = f"{connection_name}_storage_secret"
-            storage_sql_context = {**self.storage_config, **storage_secrets}
-            url_style = f"URL_STYLE '{storage_sql_context.get('url_style')}', " if storage_sql_context.get('url_style') else ""
-            sql_statements.append(
-                f"CREATE OR REPLACE SECRET {storage_secret_name} ("
-                f"  TYPE S3, "
-                f"  {url_style}"
-                f"  USE_SSL {storage_sql_context.get('use_ssl', 'true')}, "
-                f"  KEY_ID '{storage_sql_context.get('access_key_id')}', "
-                f"  ENDPOINT '{storage_sql_context.get('endpoint')}',"
-                f"  SECRET '{storage_sql_context.get('secret_access_key')}', "
-                f"  REGION '{storage_sql_context.get('region')}'"
-                f");"
-            )
-        elif storage_type != 'local':
-            raise ValueError(f"Unsupported DuckLake storage type: '{storage_type}'")
+            sql_statements.append(self.storage_handler._render_create_secret_sql(storage_secret_name))
 
+        # --- Part 2: Generate the main DUCKLAKE secret ---
         data_path = self.storage_config.get('path')
         if not data_path:
-            raise ValueError(f"DuckLake source '{connection_name}' requires a 'path' for storage.")
-        if catalog_secret_name:
-            storage_attach_options.append(f"DATA_PATH '{data_path}', META_SECRET '{catalog_secret_name}'")
-        else:
-            storage_attach_options.append(f"DATA_PATH '{data_path}'")
+            raise ConfigError(f"DuckLake source '{connection_name}' requires a 'path' for storage.")
 
-        # --- Part 3: Build Final ATTACH Statement ---
-        attach_options_str = ", ".join(storage_attach_options)
-        attach_sql = f"ATTACH 'ducklake:{catalog_reference}' AS {connection_name} ({attach_options_str});"
+        ducklake_secret_parts = [
+            f"CREATE OR REPLACE SECRET {ducklake_secret_name} (",
+            "    TYPE DUCKLAKE,",
+            f"   METADATA_PATH {metadata_path},",
+            f"   DATA_PATH '{data_path}'"
+        ]
+
+        # Conditionally add METADATA_PARAMETERS only if it's not NULL.
+        if metadata_params != "NULL":
+            ducklake_secret_parts.append(f",   METADATA_PARAMETERS {metadata_params}")
+
+        ducklake_secret_parts.append(");")
+        sql_statements.append("\n".join(ducklake_secret_parts))
+
+        # --- Part 3: Generate the final ATTACH statement ---
+        attach_sql = f"ATTACH 'ducklake:{ducklake_secret_name}' AS {connection_name};"
         sql_statements.append(attach_sql)
 
         return "\n".join(sql_statements)

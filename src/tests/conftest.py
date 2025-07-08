@@ -158,9 +158,10 @@ def mock_get_configs():
     with patch('quackpipe.etl_utils.get_configs') as mock:
         yield mock
 
+# ==================== PYTEST FIXTURES FOR MINIO CONTAINERS ====================
 
 @pytest.fixture(scope="module")
-def minio_container():
+def minio_container_with_data():
     """
     Starts a MinIO container with sample data for testing.
     Creates a bucket with example CSV and Parquet files.
@@ -298,6 +299,25 @@ def minio_container():
 
 
 @pytest.fixture(scope="module")
+def minio_with_data_client(minio_container_with_data):
+    """Returns a configured MinIO client for testing."""
+    return minio_container_with_data.get_client()
+
+
+@pytest.fixture(scope="module")
+def minio_with_data_connection_params(minio_container_with_data):
+    """Returns connection parameters for the MinIO container."""
+    return {
+        'endpoint_url': minio_container_with_data.get_config()["endpoint"],
+        'access_key': minio_container_with_data.get_config()["access_key"],
+        'secret_key': minio_container_with_data.get_config()["secret_key"],
+        'bucket_name': 'test-lake'
+    }
+
+
+# ==================== PYTEST FIXTURES FOR POSTGRES CONTAINERS ====================
+
+@pytest.fixture(scope="module")
 def source_postgres_container():
     """
     Starts a PostgreSQL container with sample data for testing.
@@ -369,23 +389,6 @@ def source_postgres_container():
 
 
 @pytest.fixture(scope="module")
-def minio_client(minio_container):
-    """Returns a configured MinIO client for testing."""
-    return minio_container.get_client()
-
-
-@pytest.fixture(scope="module")
-def minio_connection_params(minio_container):
-    """Returns connection parameters for the MinIO container."""
-    return {
-        'endpoint_url': minio_container.get_config()["endpoint"],
-        'access_key': minio_container.get_config()["access_key"],
-        'secret_key': minio_container.get_config()["secret_key"],
-        'bucket_name': 'test-lake'
-    }
-
-
-@pytest.fixture(scope="module")
 def postgres_engine(source_postgres_container):
     """Returns a SQLAlchemy engine for the PostgreSQL container."""
     return create_engine(source_postgres_container.get_connection_url())
@@ -418,3 +421,20 @@ def test_datasets():
         'vessels': pd.DataFrame(vessels),
         'ais_data': generate_synthetic_ais_data(vessels)
     }
+
+
+# ==================== PYTEST FIXTURES FOR LAKEHOUSE CONTAINERS ====================
+
+@pytest.fixture(scope="module")
+def catalog_postgres_container():
+    """Starts a second, separate PostgreSQL container to act as the DuckLake catalog."""
+    with PostgresContainer("postgres:15-alpine", user="catalog", password="catalog", dbname="catalog") as postgres:
+        yield postgres
+
+@pytest.fixture(scope="module")
+def minio_container():
+    """Starts a MinIO container to act as S3-compatible storage for the DuckLake."""
+    with MinioContainer("minio/minio:RELEASE.2025-06-13T11-33-47Z") as minio:
+        # It's good practice to create the bucket ahead of time.
+        minio.get_client().make_bucket("test-lake")
+        yield minio
