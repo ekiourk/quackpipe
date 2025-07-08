@@ -21,7 +21,7 @@ class S3Handler(BaseSourceHandler):
     def required_plugins(self) -> List[str]:
         return ["httpfs"]
 
-    def _render_create_secret_sql(self, duckdb_secret_name: str) -> str:
+    def render_create_secret_sql(self, duckdb_secret_name: str) -> str:
         """Builds a CREATE SECRET statement for S3."""
         secrets = fetch_secret_bundle(self.context.get('secret_name'))
         sql_context = {**self.context, **secrets}
@@ -72,6 +72,6 @@ class S3Handler(BaseSourceHandler):
 
         if secret_name:
             duckdb_secret_name = f"{self.context['connection_name']}_secret"
-            return self._render_create_secret_sql(duckdb_secret_name)
+            return self.render_create_secret_sql(duckdb_secret_name)
         else:
             return self._render_set_commands_sql()

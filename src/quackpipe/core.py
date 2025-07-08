@@ -7,10 +7,10 @@ from typing import List, Optional, Generator
 
 import duckdb
 
-from .config import SourceConfig, SourceType, Plugin
+from quackpipe.config import SourceConfig, SourceType, Plugin
 # Import all handlers
-from .sources import s3, postgres, ducklake, sqlite
-from .utils import get_configs
+from quackpipe.sources import s3, postgres, ducklake, sqlite
+from quackpipe.utils import get_configs
 
 # The registry stores the handler CLASSES, not instances.
 SOURCE_HANDLER_REGISTRY = {

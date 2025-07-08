@@ -4,11 +4,13 @@ Abstract Base Class for all Source Handlers.
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any
 
+
 class BaseSourceHandler(ABC):
     """
     Abstract base class for a data source handler.
     It is initialized with a context dictionary containing all its configuration.
     """
+
     def __init__(self, context: Dict[str, Any]):
         """
         Initializes the handler with its specific configuration context.

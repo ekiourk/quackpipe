@@ -23,7 +23,7 @@ class PostgresHandler(BaseSourceHandler):
     def required_plugins(self) -> List[str]:
         return ["postgres"]
 
-    def _render_create_secret_sql(self, duckdb_secret_name: str) -> str:
+    def render_create_secret_sql(self, duckdb_secret_name: str) -> str:
         """Renders only the CREATE SECRET statement for Postgres."""
 
         secret_parts = [f"CREATE OR REPLACE SECRET {duckdb_secret_name} (", "  TYPE POSTGRES"]
@@ -62,7 +62,7 @@ class PostgresHandler(BaseSourceHandler):
         Renders the full SQL setup for a standalone Postgres connection.
         """
         duckdb_secret_name = f"{self.context['connection_name']}_secret"
-        create_secret_sql = self._render_create_secret_sql(duckdb_secret_name)
+        create_secret_sql = self.render_create_secret_sql(duckdb_secret_name)
         attach_sql = self._render_attach_sql(duckdb_secret_name)
 
         return "\n".join([create_secret_sql, attach_sql])
