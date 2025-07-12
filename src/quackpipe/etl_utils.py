@@ -23,6 +23,7 @@ def move_data(
     table_name: str,
     config_path: Optional[str] = None,
     configs: Optional[List[SourceConfig]] = None,
+    env_file: Optional[str] = None,
     mode: str = 'replace',
     format: str = 'parquet'
 ):
@@ -49,7 +50,7 @@ def move_data(
         raise ValueError(f"Destination '{destination_name}' not found in the provided configuration.")
 
     # This utility creates its own session to perform the work.
-    with session(configs=all_configs) as con:
+    with session(configs=all_configs, env_file=env_file) as con:
         if dest_config.type == SourceType.S3:
             base_path = dest_config.config.get('path', f"s3://{destination_name}/")
             if not base_path.endswith('/'):

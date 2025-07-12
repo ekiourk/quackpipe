@@ -10,7 +10,7 @@ from typing import Dict
 
 import pytest
 
-from quackpipe import QuackpipeBuilder, SourceType
+from quackpipe import QuackpipeBuilder, SourceType, configure_secret_provider
 from quackpipe.sources.postgres import PostgresHandler
 
 
@@ -22,6 +22,9 @@ def postgres_env_vars(monkeypatch) -> Dict[str, str]:
     monkeypatch.setenv(f"{secret_name.upper()}_USER", "pguser")
     monkeypatch.setenv(f"{secret_name.upper()}_PASSWORD", "pgpass")
     monkeypatch.setenv(f"{secret_name.upper()}_HOST", "localhost")
+    # has set the environment variables. This ensures the provider reads the
+    # correct state for this specific test run.
+    configure_secret_provider(env_file=None)
     return dict(os.environ)
 
 

@@ -11,18 +11,24 @@ from sqlalchemy import create_engine, text
 from testcontainers.minio import MinioContainer
 from testcontainers.postgres import PostgresContainer
 
-from quackpipe import set_secret_providers
-from quackpipe.secrets import EnvSecretProvider
+from quackpipe import configure_secret_provider
 from tests.data_fixtures import (generate_synthetic_ais_data, create_vessel_definitions, create_monthly_data,
                                  create_employee_data, create_ais_summary)
 
 
 @pytest.fixture(autouse=True)
-def reset_secret_providers():
-    """Reset secret providers after each test."""
+def reset_secret_provider_fixture():
+    """
+    This fixture automatically runs before each test in this file. It resets
+    the global secret provider, ensuring a clean state and preventing tests
+    from interfering with each other's environment variables.
+    """
+    # This call re-initializes the global provider with the current os.environ
+    # at the start of each test function.
+    configure_secret_provider(env_file=None)
     yield
-    # Reset to default after each test
-    set_secret_providers([EnvSecretProvider()])
+    # Optional: reset again after the test for good measure
+    configure_secret_provider(env_file=None)
 
 
 @pytest.fixture
@@ -117,33 +123,6 @@ def env_secrets():
 
 
 @pytest.fixture
-def json_secrets_dir(temp_dir):
-    """Create JSON secret files for testing."""
-    secrets_dir = os.path.join(temp_dir, 'secrets')
-    os.makedirs(secrets_dir)
-
-    # Create pg_prod.json
-    pg_secrets = {
-        'host': 'json-localhost',
-        'user': 'json-user',
-        'password': 'json-pass',
-        'database': 'json-db'
-    }
-    with open(os.path.join(secrets_dir, 'pg_prod.json'), 'w') as f:
-        json.dump(pg_secrets, f)
-
-    # Create aws_datalake.json
-    aws_secrets = {
-        'access_key_id': 'json-key',
-        'secret_access_key': 'json-secret'
-    }
-    with open(os.path.join(secrets_dir, 'aws_datalake.json'), 'w') as f:
-        json.dump(aws_secrets, f)
-
-    return secrets_dir
-
-
-@pytest.fixture
 def mock_session(mock_duckdb_connection):
     """A patch fixture for the quackpipe.etl_utils.session context manager."""
     with patch('quackpipe.etl_utils.session') as mock_session_context:
@@ -157,6 +136,7 @@ def mock_get_configs():
     """A patch fixture for the quackpipe.etl_utils.get_configs function."""
     with patch('quackpipe.etl_utils.get_configs') as mock:
         yield mock
+
 
 # ==================== PYTEST FIXTURES FOR MINIO CONTAINERS ====================
 
@@ -430,6 +410,7 @@ def catalog_postgres_container():
     """Starts a second, separate PostgreSQL container to act as the DuckLake catalog."""
     with PostgresContainer("postgres:15-alpine", user="catalog", password="catalog", dbname="catalog") as postgres:
         yield postgres
+
 
 @pytest.fixture(scope="module")
 def minio_container():

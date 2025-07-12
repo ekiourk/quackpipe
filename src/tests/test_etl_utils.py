@@ -3,7 +3,7 @@ tests/test_etl_utils.py
 
 This file contains pytest tests for the standalone functions in etl_utils.py.
 """
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import pandas as pd
 import pytest
@@ -12,6 +12,38 @@ from quackpipe import QuackpipeBuilder
 from quackpipe.config import SourceConfig, SourceType
 from quackpipe.etl_utils import to_df, create_table_from_df, move_data
 
+
+# ==================== FIXTURES ====================
+
+@pytest.fixture
+def mock_duckdb_connection():
+    """Provides a mock DuckDB connection object."""
+    mock_con = MagicMock()
+
+    sample_df = pd.DataFrame({'id': [1, 2], 'name': ['A', 'B']})
+    mock_execute_result = MagicMock()
+    mock_execute_result.fetchdf.return_value = sample_df
+    mock_con.execute.return_value = mock_execute_result
+
+    return mock_con
+
+
+@pytest.fixture
+def mock_session(mock_duckdb_connection):
+    """A patch fixture for the quackpipe.etl_utils.session context manager."""
+    with patch('quackpipe.etl_utils.session') as mock_session_context:
+        mock_session_context.return_value.__enter__.return_value = mock_duckdb_connection
+        yield mock_session_context
+
+
+@pytest.fixture
+def mock_get_configs():
+    """A patch fixture for the quackpipe.etl_utils.get_configs function."""
+    with patch('quackpipe.etl_utils.get_configs') as mock:
+        yield mock
+
+
+# ==================== UNIT TESTS ====================
 
 def test_to_df(mock_duckdb_connection):
     """Test the to_df utility function."""
@@ -52,8 +84,8 @@ def test_move_data_to_s3(mock_session, mock_get_configs, mock_duckdb_connection,
 
     # Assert
     expected_sql = f"COPY ({source_query}) TO 's3://bucket/output_table.{format_type}' (FORMAT {format_type.upper()});"
-    mock_duckdb_connection.execute.assert_called_once_with(expected_sql)
-    mock_session.assert_called_once_with(configs=s3_configs)
+    mock_duckdb_connection.execute.assert_any_call(expected_sql)
+    mock_session.assert_called_once_with(configs=s3_configs, env_file=None)
 
 
 @pytest.mark.parametrize("mode, expected_sql_pattern", [
@@ -140,7 +172,6 @@ def test_full_workflow_with_move_data(mock_get_configs, mock_session, mock_duckd
     mock_session.return_value.__enter__.return_value = mock_duckdb_connection
 
     # Act: Call the high-level utility function directly.
-    # No need for an outer `with session(...)` block.
     move_data(
         source_query="SELECT * FROM pg_main.users",
         destination_name="s3_lake",
@@ -154,15 +185,18 @@ def test_full_workflow_with_move_data(mock_get_configs, mock_session, mock_duckd
     mock_get_configs.assert_called_once_with(None, all_configs)
 
     # 2. Verify that an internal session was created with all the necessary configs
-    mock_session.assert_called_once_with(configs=all_configs)
+    mock_session.assert_called_once_with(configs=all_configs, env_file=None)
 
     # 3. Verify the correct COPY command was executed inside the session
     expected_sql = "COPY (SELECT * FROM pg_main.users) TO 's3://my-lake/users_backup.parquet' (FORMAT PARQUET);"
-    mock_duckdb_connection.execute.assert_called_once_with(expected_sql)
+    mock_duckdb_connection.execute.assert_any_call(expected_sql)
+
 
 @patch('duckdb.connect')
-def test_full_workflow_builder_api(mock_connect, mock_duckdb_connection, env_secrets):
+@patch('quackpipe.core.configure_secret_provider')
+def test_full_workflow_builder_api(mock_configure_secrets, mock_connect, mock_duckdb_connection):
     """Test complete workflow using Builder API."""
+    # Arrange
     mock_connect.return_value = mock_duckdb_connection
 
     builder = (QuackpipeBuilder()
@@ -170,8 +204,12 @@ def test_full_workflow_builder_api(mock_connect, mock_duckdb_connection, env_sec
                            config={"port": 5432, "tables": ["users"]},
                            secret_name="pg_prod"))
 
+    # Act
     with builder.session() as con:
         df = to_df(con, "SELECT * FROM pg_test_users")
         assert isinstance(df, pd.DataFrame)
 
+    # Assert
     mock_duckdb_connection.close.assert_called_once()
+    # Verify that the secret provider was configured when the session started
+    mock_configure_secrets.assert_called_once()

@@ -1,84 +1,98 @@
 """
 Handles secret management for quackpipe.
-
-This module supports a chain of secret providers. The library will
-try each provider in order until one successfully returns the requested secret.
 """
 import os
-import json
-from abc import ABC, abstractmethod
-from typing import Dict, List, Any
-from .exceptions import SecretError
+from typing import Dict, Optional
 
-class BaseSecretProvider(ABC):
-    """Abstract base class for a secret provider."""
-    @abstractmethod
-    def get_secret(self, name: str) -> Dict[str, str]:
-        """
-        Fetch a bundle of secrets for a given logical name.
+from dotenv import load_dotenv
 
-        Args:
-            name: The logical name of the secret bundle (e.g., 'pg_prod').
 
-        Returns:
-            A dictionary of key-value pairs for the secret.
-            Returns an empty dictionary if the secret is not found by this provider.
-        """
-        pass
-
-class EnvSecretProvider(BaseSecretProvider):
+class EnvSecretProvider:
     """
-    Fetches secrets from environment variables.
-    Convention: Looks for variables prefixed with the secret name in uppercase,
-    e.g., for secret 'pg_prod', it looks for PG_PROD_HOST, PG_PROD_USER, etc.
+    Fetches secrets from environment variables. If an env_file is provided
+    during initialization, it loads that file first.
     """
-    def get_secret(self, name: str) -> Dict[str, str]:
+
+    def __init__(self, env_file: Optional[str] = None):
+        self.env_vars = os.environ.copy()
+        if env_file:
+            if os.path.exists(env_file):
+                print(f"Loading environment variables from: {env_file}")
+                load_dotenv(dotenv_path=env_file, override=True)
+                self.env_vars.update(os.environ)
+            else:
+                print(f"Warning: env_file '{env_file}' not found. Using system environment.")
+
+    def get_raw_secret(self, name: str) -> Dict[str, str]:
+        """
+        Retrieves secrets from the loaded environment variables by prefix.
+        Returns a dict where the key is the FULL env var name and value is the secret.
+        e.g., {'PROD_DB_USER': 'test_user'}
+        """
         prefix = f"{name.upper()}_"
         secrets = {}
-        for key, value in os.environ.items():
+        for key, value in self.env_vars.items():
             if key.startswith(prefix):
-                secret_key = key[len(prefix):].lower()
-                secrets[secret_key] = value
+                secrets[key] = value  # Use the full, original key
         return secrets
 
-class JsonFileSecretProvider(BaseSecretProvider):
-    """Fetches secrets from JSON files in a specified directory."""
-    def __init__(self, secrets_dir: str = "./secrets"):
-        self.secrets_dir = secrets_dir
 
-    def get_secret(self, name: str) -> Dict[str, str]:
-        try:
-            path = os.path.join(self.secrets_dir, f"{name}.json")
-            with open(path, 'r') as f:
-                return json.load(f)
-        except FileNotFoundError:
-            return {} # Not found, so another provider can be tried.
+# Global variable holding the current secret provider instance.
+_provider: Optional[EnvSecretProvider] = None
 
-# Global list of provider instances.
-_providers: List[BaseSecretProvider] = [EnvSecretProvider()]
 
-def set_secret_providers(providers: List[BaseSecretProvider]):
+def _get_provider() -> EnvSecretProvider:
     """
-    Sets a custom chain of secret providers.
-
-    Args:
-        providers: A list of provider instances. They will be tried in order.
+    Internal function to get the current provider, initializing a default
+    one if it hasn't been configured yet.
     """
-    global _providers
-    if not isinstance(providers, list) or not all(isinstance(p, BaseSecretProvider) for p in providers):
-        raise TypeError("Argument must be a list of BaseSecretProvider instances.")
-    _providers = providers
+    global _provider
+    if _provider is None:
+        _provider = EnvSecretProvider()
+    return _provider
 
-def fetch_secret_bundle(name: str) -> Dict[str, str]:
+
+def configure_secret_provider(env_file: Optional[str] = None):
     """
-    Tries to fetch a secret bundle from the configured providers.
+    Initializes or re-initializes the secret provider, optionally loading
+    an environment file.
+    """
+    global _provider
+    _provider = EnvSecretProvider(env_file=env_file)
+
+
+def fetch_raw_secret_bundle(name: str) -> Dict[str, str]:
+    """
+    Fetches a secret bundle from the configured provider.
+    Returns a dictionary with full environment variable names as keys.
+    This is primarily used by the CLI for placeholder generation.
     """
     if not name:
         return {}
-        
-    for provider in _providers:
-        secrets = provider.get_secret(name)
-        if secrets:
-            return secrets # Return the first one found
-    
-    raise SecretError(f"Secret bundle '{name}' not found in any configured provider.")
+
+    provider = _get_provider()
+    secrets = provider.get_raw_secret(name)
+
+    return secrets
+
+
+def fetch_secret_bundle(name: str) -> Dict[str, str]:
+    """
+    Fetches a secret bundle and normalizes the keys for use by handlers.
+    e.g., {'PROD_DB_HOST': 'db.host.com'} becomes {'host': 'db.host.com'}.
+    This is the primary function to be used by source handlers.
+    """
+    if not name:
+        return {}
+
+    raw_secrets = fetch_raw_secret_bundle(name)
+    normalized_secrets = {}
+    prefix = f"{name.upper()}_"
+
+    for key, value in raw_secrets.items():
+        if key.startswith(prefix):
+            # Creates a clean key like 'host' from 'PROD_DB_HOST'
+            normalized_key = key[len(prefix):].lower()
+            normalized_secrets[normalized_key] = value
+
+    return normalized_secrets

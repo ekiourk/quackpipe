@@ -1,12 +1,13 @@
 [project]
 name = "quackpipe"
-version = "0.4.0"
+version = "0.5.0"
 requires-python = ">=3.12"
 description = "A configuration-driven and programmatic ETL helper for DuckDB."
 dependencies = [
     "pyyaml",
     "duckdb>=0.9.0",
-    "pandas"
+    "pandas",
+    "python-dotenv"
 ]
 
 [project.optional-dependencies]
@@ -35,3 +36,7 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[project.scripts]
+quackpipe = "quackpipe.cli:main"
+

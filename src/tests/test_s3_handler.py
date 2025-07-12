@@ -7,7 +7,7 @@ like parametrize and fixtures for setup.
 """
 import pytest
 
-from quackpipe import QuackpipeBuilder, SourceType
+from quackpipe import QuackpipeBuilder, SourceType, configure_secret_provider
 from quackpipe.sources.s3 import S3Handler
 
 
@@ -90,6 +90,10 @@ def test_render_sql_with_secret_creation(monkeypatch, test_id, context, secret_b
     for key, value in secret_bundle.items():
         env_var_name = f"{secret_name.upper()}_{key.upper()}"
         monkeypatch.setenv(env_var_name, value)
+
+    # has set the environment variables. This ensures the provider reads the
+    # correct state for this specific test run.
+    configure_secret_provider(env_file=None)
 
     # Act
     generated_sql = handler.render_sql()

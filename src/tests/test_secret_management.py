@@ -1,111 +1,109 @@
-import sys
-
-import pytest
-
-sys.path.insert(0, 'src')
-
-from quackpipe.secrets import EnvSecretProvider, JsonFileSecretProvider, set_secret_providers, fetch_secret_bundle
-from quackpipe.exceptions import SecretError
+from quackpipe.secrets import configure_secret_provider, fetch_secret_bundle
 
 
-def test_env_secret_provider(env_secrets):
-    """Test EnvSecretProvider functionality."""
-    provider = EnvSecretProvider()
 
-    secrets = provider.get_secret('pg_prod')
+def test_fetch_secret_bundle_from_os_environ(monkeypatch):
+    """
+    Tests the default behavior: fetching secrets from pre-existing
+    environment variables without loading a .env file.
+    """
+    # Arrange: Use monkeypatch to set system environment variables
+    monkeypatch.setenv("PROD_DB_HOST", "db.example.com")
+    monkeypatch.setenv("PROD_DB_USER", "prod_user")
+    # This variable should not be picked up
+    monkeypatch.setenv("STAGING_DB_USER", "staging_user")
 
-    assert secrets['host'] == 'localhost'
-    assert secrets['user'] == 'testuser'
-    assert secrets['password'] == 'testpass'
-    assert secrets['database'] == 'testdb'
+    # Ensure the provider is in its default state
+    configure_secret_provider(env_file=None)
+
+    # Act
+    secrets = fetch_secret_bundle("prod_db")
+
+    # Assert
+    assert secrets == {
+        'host': 'db.example.com',
+        'user': 'prod_user'
+    }
 
 
-def test_env_secret_provider_empty():
-    """Test EnvSecretProvider with non-existent secret."""
-    provider = EnvSecretProvider()
+def test_configure_and_fetch_from_env_file(tmp_path):
+    """
+    Tests loading secrets from a specified .env file.
+    """
+    # Arrange: Create a temporary .env file
+    env_content = (
+        "MINIO_STORAGE_ACCESS_KEY_ID=minio_key\n"
+        "MINIO_STORAGE_SECRET_ACCESS_KEY=minio_secret\n"
+    )
+    p = tmp_path / "test.env"
+    p.write_text(env_content)
 
-    secrets = provider.get_secret('nonexistent')
+    # Act: Configure the provider to use our temporary file
+    configure_secret_provider(env_file=str(p))
+    secrets = fetch_secret_bundle("minio_storage")
 
+    # Assert
+    assert secrets == {
+        'access_key_id': 'minio_key',
+        'secret_access_key': 'minio_secret'
+    }
+
+
+def test_env_file_overrides_os_environ(monkeypatch, tmp_path):
+    """
+    Tests that variables loaded from a .env file take precedence over
+    existing system environment variables.
+    """
+    # Arrange: Set a variable in the system environment
+    monkeypatch.setenv("PG_CATALOG_HOST", "system.host.com")
+    monkeypatch.setenv("PG_CATALOG_USER", "system_user")
+
+    # Create a .env file with an overriding value and a new value
+    env_content = (
+        "PG_CATALOG_HOST=file.host.com\n"
+        "PG_CATALOG_PASSWORD=file_password\n"
+    )
+    p = tmp_path / "test.env"
+    p.write_text(env_content)
+
+    # Act: Configure the provider to use the file
+    configure_secret_provider(env_file=str(p))
+    secrets = fetch_secret_bundle("pg_catalog")
+
+    # Assert
+    assert secrets == {
+        'host': 'file.host.com',  # Value from file should win
+        'user': 'system_user',  # Value from system should persist
+        'password': 'file_password'  # New value from file should be present
+    }
+
+
+def test_fetch_secret_bundle_no_match():
+    """
+    Tests that an empty dictionary is returned when no environment variables
+    match the given secret name prefix.
+    """
+    # Arrange: Ensure the provider is in its default state
+    configure_secret_provider(env_file=None)
+
+    # Act
+    secrets = fetch_secret_bundle("non_existent_secret")
+
+    # Assert
     assert secrets == {}
 
 
-def test_json_file_secret_provider(json_secrets_dir):
-    """Test JsonFileSecretProvider functionality."""
-    provider = JsonFileSecretProvider(json_secrets_dir)
+def test_configure_with_nonexistent_env_file(capsys):
+    """
+    Tests that a warning is printed to stdout if the specified .env file
+    is not found, and the system falls back to os.environ.
+    """
+    # Arrange
+    non_existent_path = "/path/that/does/not/exist/.env"
 
-    secrets = provider.get_secret('pg_prod')
+    # Act
+    configure_secret_provider(env_file=non_existent_path)
 
-    assert secrets['host'] == 'json-localhost'
-    assert secrets['user'] == 'json-user'
-    assert secrets['password'] == 'json-pass'
-    assert secrets['database'] == 'json-db'
-
-
-def test_json_file_secret_provider_not_found(json_secrets_dir):
-    """Test JsonFileSecretProvider with non-existent file."""
-    provider = JsonFileSecretProvider(json_secrets_dir)
-
-    secrets = provider.get_secret('nonexistent')
-
-    assert secrets == {}
-
-
-def test_set_secret_providers():
-    """Test setting custom secret providers."""
-    provider1 = EnvSecretProvider()
-    provider2 = JsonFileSecretProvider()
-
-    set_secret_providers([provider1, provider2])
-
-    # This would test the global _providers variable
-    # We'll verify by testing fetch_secret_bundle behavior
-
-
-def test_set_secret_providers_invalid():
-    """Test setting invalid secret providers."""
-    with pytest.raises(TypeError):
-        set_secret_providers("not a list")
-
-    with pytest.raises(TypeError):
-        set_secret_providers(["not a provider"])
-
-
-def test_fetch_secret_bundle_success(env_secrets):
-    """Test successful secret bundle fetching."""
-    # Reset to default provider
-    set_secret_providers([EnvSecretProvider()])
-
-    secrets = fetch_secret_bundle('pg_prod')
-
-    assert secrets['host'] == 'localhost'
-    assert secrets['user'] == 'testuser'
-
-
-def test_fetch_secret_bundle_not_found():
-    """Test secret bundle not found."""
-    set_secret_providers([EnvSecretProvider()])
-
-    with pytest.raises(SecretError, match="Secret bundle 'nonexistent' not found"):
-        fetch_secret_bundle('nonexistent')
-
-
-def test_fetch_secret_bundle_empty_name():
-    """Test fetch_secret_bundle with empty name."""
-    result = fetch_secret_bundle('')
-    assert result == {}
-
-
-def test_secret_provider_chain(env_secrets, json_secrets_dir):
-    """Test multiple secret providers in chain."""
-    # Set up providers where JSON has priority
-    json_provider = JsonFileSecretProvider(json_secrets_dir)
-    env_provider = EnvSecretProvider()
-
-    set_secret_providers([json_provider, env_provider])
-
-    # Should get JSON version (first in chain)
-    secrets = fetch_secret_bundle('pg_prod')
-    assert secrets['host'] == 'json-localhost'
-
-    # Reset to default
-    set_secret_providers([EnvSecretProvider()])
+    # Assert: Check that the warning was printed
+    captured = capsys.readouterr()
+    assert f"Warning: env_file '{non_existent_path}' not found." in captured.out

@@ -5,6 +5,7 @@ This file contains pytest tests for the DuckLakeHandler class in quackpipe.
 """
 import pytest
 
+from quackpipe import configure_secret_provider
 from quackpipe.exceptions import ConfigError
 from quackpipe.sources.ducklake import DuckLakeHandler
 
@@ -110,6 +111,10 @@ def test_render_sql_with_postgres_and_minio(monkeypatch):
 
     monkeypatch.setenv("MINIO_CREDS_FOR_LAKE_ACCESS_KEY_ID", "MINIO_KEY")
     monkeypatch.setenv("MINIO_CREDS_FOR_LAKE_SECRET_ACCESS_KEY", "MINIO_SECRET")
+
+    # has set the environment variables. This ensures the provider reads the
+    # correct state for this specific test run.
+    configure_secret_provider(env_file=None)
 
     handler = DuckLakeHandler(context)
 

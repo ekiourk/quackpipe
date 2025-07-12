@@ -10,8 +10,8 @@ programmatic builder.
 from .core import session, with_session
 from .builder import QuackpipeBuilder
 from .config import SourceConfig, SourceType
-from .secrets import set_secret_providers, BaseSecretProvider, SecretError
-from .exceptions import QuackpipeError, ConfigError
+from .secrets import configure_secret_provider
+from .exceptions import QuackpipeError, ConfigError, SecretError
 
 __all__ = [
     # Core API
@@ -26,8 +26,7 @@ __all__ = [
     "SourceType",
 
     # Secret Management
-    "set_secret_providers",
-    "BaseSecretProvider",
+    "configure_secret_provider",
 
     # Exceptions
     "QuackpipeError",
