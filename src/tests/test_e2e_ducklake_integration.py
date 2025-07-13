@@ -100,7 +100,7 @@ def test_e2e_postgres_to_ducklake(
     print("Moving 'employees' table to DuckLake...")
     move_data(
         configs=builder.get_configs(),
-        source_query="SELECT * FROM pg_source.public.employees",
+        source_query="SELECT * FROM pg_source.company.employees",
         destination_name="my_datalake",
         table_name="employees_archive",
         mode="replace"

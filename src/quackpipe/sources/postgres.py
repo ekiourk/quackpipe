@@ -52,7 +52,7 @@ class PostgresHandler(BaseSourceHandler):
         view_sqls = []
         if 'tables' in self.context and isinstance(self.context['tables'], list):
             for table in self.context['tables']:
-                view_name = f"{connection_name}_{table}"
+                view_name = f"{connection_name}_{table.replace('.', '_')}"
                 view_sqls.append(f"CREATE OR REPLACE VIEW {view_name} AS SELECT * FROM {connection_name}.{table};")
 
         return "\n".join([attach_sql] + view_sqls)

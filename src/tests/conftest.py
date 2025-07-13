@@ -1,5 +1,4 @@
 import io
-import json
 import os
 import tempfile
 from unittest.mock import Mock, patch
@@ -319,11 +318,12 @@ def source_postgres_container():
 
         # Create tables and insert data
         with engine.connect() as conn:
+            conn.execute(text("CREATE SCHEMA company"))
             # Create and populate employees table
-            employees_df.to_sql('employees', conn, if_exists='replace', index=False)
+            employees_df.to_sql('employees', conn, schema='company', if_exists='replace', index=False)
 
             # Create and populate monthly_reports table
-            monthly_df.to_sql('monthly_reports', conn, if_exists='replace', index=False)
+            monthly_df.to_sql('monthly_reports', conn, schema='company', if_exists='replace', index=False)
 
             # Create and populate vessels table (from vessel definitions)
             vessels_df = pd.DataFrame(vessels)
@@ -339,7 +339,7 @@ def source_postgres_container():
             ais_df_pg.to_sql('ais_data', conn, if_exists='replace', index=False)
 
             # Create some indexes for better query performance
-            conn.execute(text("CREATE INDEX idx_employees_department ON employees(department)"))
+            conn.execute(text("CREATE INDEX idx_employees_department ON company.employees(department)"))
             conn.execute(text("CREATE INDEX idx_ais_mmsi ON ais_data(mmsi)"))
             conn.execute(text("CREATE INDEX idx_ais_datetime ON ais_data(basedatetime)"))
             conn.execute(text("CREATE INDEX idx_vessels_mmsi ON vessels(mmsi)"))

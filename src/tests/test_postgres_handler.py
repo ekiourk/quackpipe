@@ -172,25 +172,32 @@ def test_integration_with_postgres_e2e(postgres_connection_params):
             'port': postgres_connection_params['port'],
             'connection_name': 'pg_main',
             'read_only': True,
-            'tables': ['employees', 'monthly_reports']
+            'tables': ['company.employees', 'company.monthly_reports', 'vessels']
         }
     )
 
     with builder.session(sources=["postgres_test_container"]) as con:
         results = con.execute(
-            f"FROM postgres_test_container.employees"
+            f"FROM postgres_test_container.company.employees"
         ).fetchall()
         assert len(results) == 5
 
         # check the view
         results = con.execute(
-            f"FROM postgres_test_container_employees"
+            f"FROM postgres_test_container_company_employees"
         ).fetchall()
         assert len(results) == 5
 
         results = con.execute(
-            f"FROM postgres_test_container.employees WHERE department='Engineering'"
+            f"FROM postgres_test_container.company.employees WHERE department='Engineering'"
         ).fetchall()
         assert len(results) == 2
         assert results[0][1] == "Alice"
         assert results[1][1] == "Diana"
+
+        results = con.execute('FROM postgres_test_container.vessels').fetchall()
+        assert len(results) == 5
+
+        # check the view
+        results = con.execute(f"FROM postgres_test_container_vessels").fetchall()
+        assert len(results) == 5
