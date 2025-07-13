@@ -12,8 +12,13 @@ from testcontainers.minio import MinioContainer
 from testcontainers.postgres import PostgresContainer
 
 from quackpipe import configure_secret_provider
-from tests.data_fixtures import (generate_synthetic_ais_data, create_vessel_definitions, create_monthly_data,
-                                 create_employee_data, create_ais_summary)
+from tests.data_fixtures import (
+    create_ais_summary,
+    create_employee_data,
+    create_monthly_data,
+    create_vessel_definitions,
+    generate_synthetic_ais_data,
+)
 
 logger = logging.getLogger(__name__)
 

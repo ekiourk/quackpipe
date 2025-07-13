@@ -1,7 +1,6 @@
 """
 General utility functions for the quackpipe library.
 """
-from typing import List, Optional
 
 import yaml
 
@@ -11,13 +10,13 @@ from .config import SourceConfig
 from .exceptions import ConfigError
 
 
-def parse_config_from_yaml(path: str) -> List[SourceConfig]:
+def parse_config_from_yaml(path: str) -> list[SourceConfig]:
     """Loads a YAML file and parses it into a list of SourceConfig objects."""
     try:
-        with open(path, 'r') as f:
+        with open(path) as f:
             raw_config = yaml.safe_load(f)
-    except FileNotFoundError:
-        raise ConfigError(f"Configuration file not found at '{path}'.")
+    except FileNotFoundError as e:
+        raise ConfigError(f"Configuration file not found at '{path}'.") from e
 
     source_configs = []
     for name, details in raw_config.get('sources', {}).items():
@@ -28,8 +27,8 @@ def parse_config_from_yaml(path: str) -> List[SourceConfig]:
             from .config import SourceType
             source_type_str = details_copy.pop('type')
             source_type = SourceType(source_type_str)
-        except (KeyError, ValueError):
-            raise ConfigError(f"Missing or invalid 'type' for source '{name}'.")
+        except (KeyError, ValueError) as e:
+            raise ConfigError(f"Missing or invalid 'type' for source '{name}'.") from e
 
         secret_name = details_copy.pop('secret_name', None)
         source_specific_config = details_copy
@@ -44,9 +43,9 @@ def parse_config_from_yaml(path: str) -> List[SourceConfig]:
 
 
 def get_configs(
-        config_path: Optional[str] = None,
-        configs: Optional[List[SourceConfig]] = None
-) -> List[SourceConfig]:
+        config_path: str | None = None,
+        configs: list[SourceConfig] | None = None
+) -> list[SourceConfig]:
     """
     A helper function to load source configurations from either a file path or a direct list.
     This logic is shared by `session` and `etl_utils`.

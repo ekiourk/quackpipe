@@ -3,15 +3,14 @@ tests/test_etl_utils.py
 
 This file contains pytest tests for the standalone functions in etl_utils.py.
 """
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
 
 from quackpipe import QuackpipeBuilder
 from quackpipe.config import SourceConfig, SourceType
-from quackpipe.etl_utils import to_df, create_table_from_df, move_data
-
+from quackpipe.etl_utils import create_table_from_df, move_data, to_df
 
 # ==================== FIXTURES ====================
 

@@ -17,8 +17,8 @@ import yaml
 
 from quackpipe.builder import QuackpipeBuilder
 from quackpipe.config import SourceConfig, SourceType
-from quackpipe.core import session, _prepare_connection
-from quackpipe.exceptions import QuackpipeError, ConfigError, SecretError
+from quackpipe.core import _prepare_connection, session
+from quackpipe.exceptions import ConfigError, QuackpipeError, SecretError
 from quackpipe.secrets import fetch_secret_bundle
 from quackpipe.utils import parse_config_from_yaml
 

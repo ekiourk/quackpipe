@@ -1,7 +1,7 @@
 """
 The Builder API for programmatically constructing a quackpipe session.
 """
-from typing import List, Dict, Any, Self
+from typing import Any, Self
 
 from .config import SourceConfig, SourceType
 from .core import session as core_session  # Avoid circular import
@@ -11,9 +11,9 @@ class QuackpipeBuilder:
     """A fluent builder for creating a quackpipe session without a YAML file."""
 
     def __init__(self):
-        self._sources: List[SourceConfig] = []
+        self._sources: list[SourceConfig] = []
 
-    def add_source(self, name: str, type: SourceType, config: Dict[str, Any] = None, secret_name: str = None) -> Self:
+    def add_source(self, name: str, type: SourceType, config: dict[str, Any] = None, secret_name: str = None) -> Self:
         """
         Adds a data source to the configuration.
 
@@ -35,7 +35,7 @@ class QuackpipeBuilder:
         self._sources.append(source)
         return self
 
-    def get_configs(self) -> List[SourceConfig]:
+    def get_configs(self) -> list[SourceConfig]:
         """
         Returns the list of SourceConfig objects that have been added to the builder.
         This is useful for passing to high-level utilities like `move_data`.

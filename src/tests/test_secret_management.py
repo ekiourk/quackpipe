@@ -1,7 +1,6 @@
 from quackpipe.secrets import configure_secret_provider, fetch_secret_bundle
 
 
-
 def test_fetch_secret_bundle_from_os_environ(monkeypatch):
     """
     Tests the default behavior: fetching secrets from pre-existing

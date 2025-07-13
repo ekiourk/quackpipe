@@ -6,7 +6,6 @@ The tests are written as standalone functions, leveraging pytest features
 like parametrize and fixtures for setup.
 """
 import os
-from typing import Dict
 
 import pytest
 
@@ -15,7 +14,7 @@ from quackpipe.sources.postgres import PostgresHandler
 
 
 @pytest.fixture(scope="function")
-def postgres_env_vars(monkeypatch) -> Dict[str, str]:
+def postgres_env_vars(monkeypatch) -> dict[str, str]:
     secret_name = 'pg_creds'
     # Use monkeypatch to set the environment variables for the secret bundle.
     monkeypatch.setenv(f"{secret_name.upper()}_DATABASE", "testdb")

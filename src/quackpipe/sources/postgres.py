@@ -1,5 +1,5 @@
 """Source Handler for PostgreSQL databases."""
-from typing import List, Dict, Any
+from typing import Any
 
 from quackpipe.secrets import fetch_secret_bundle
 from quackpipe.sources.base import BaseSourceHandler
@@ -10,7 +10,7 @@ class PostgresHandler(BaseSourceHandler):
     Handler for PostgreSQL connections using the 'postgres' extension.
     This handler uses the recommended CREATE SECRET + ATTACH pattern.
     """
-    def __init__(self, context: Dict[str, Any]):
+    def __init__(self, context: dict[str, Any]):
         super().__init__(context)
         secrets = fetch_secret_bundle(self.context.get('secret_name'))
         self.context = {**self.context, **secrets}
@@ -20,7 +20,7 @@ class PostgresHandler(BaseSourceHandler):
         return "postgres"
 
     @property
-    def required_plugins(self) -> List[str]:
+    def required_plugins(self) -> list[str]:
         return ["postgres"]
 
     def render_create_secret_sql(self, duckdb_secret_name: str) -> str:

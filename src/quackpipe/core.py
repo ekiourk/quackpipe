@@ -2,16 +2,17 @@
 The core logic of quackpipe.
 """
 import logging
+from collections.abc import Generator
 from contextlib import contextmanager
 from functools import wraps
-from typing import List, Optional, Generator
 
 import duckdb
 
-from quackpipe.config import SourceConfig, SourceType, Plugin
+from quackpipe.config import Plugin, SourceConfig, SourceType
 from quackpipe.secrets import configure_secret_provider
+
 # Import all handlers
-from quackpipe.sources import s3, postgres, ducklake, sqlite
+from quackpipe.sources import ducklake, postgres, s3, sqlite
 from quackpipe.utils import get_configs
 
 logger = logging.getLogger(__name__)
@@ -25,7 +26,7 @@ SOURCE_HANDLER_REGISTRY = {
 }
 
 
-def _prepare_connection(con: duckdb.DuckDBPyConnection, configs: List[SourceConfig]):
+def _prepare_connection(con: duckdb.DuckDBPyConnection, configs: list[SourceConfig]):
     """Configures a DuckDB connection from a list of SourceConfig objects."""
     if not configs:
         return
@@ -81,10 +82,10 @@ def _prepare_connection(con: duckdb.DuckDBPyConnection, configs: List[SourceConf
 
 @contextmanager
 def session(
-        config_path: Optional[str] = None,
-        configs: Optional[List[SourceConfig]] = None,
-        sources: Optional[List[str]] = None,
-        env_file: Optional[str] = None
+        config_path: str | None = None,
+        configs: list[SourceConfig] | None = None,
+        sources: list[str] | None = None,
+        env_file: str | None = None
 ) -> Generator[duckdb.DuckDBPyConnection, None, None]:
     """
     A context manager providing a pre-configured DuckDB connection.

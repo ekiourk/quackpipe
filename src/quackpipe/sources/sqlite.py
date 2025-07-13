@@ -1,5 +1,5 @@
 """Source Handler for SQLite databases."""
-from typing import List, Dict, Any
+from typing import Any
 
 from quackpipe.sources.base import BaseSourceHandler
 
@@ -9,7 +9,7 @@ class SQLiteHandler(BaseSourceHandler):
     Handler for SQLite database connections using the 'sqlite' extension.
     """
 
-    def __init__(self, context: Dict[str, Any]):
+    def __init__(self, context: dict[str, Any]):
         super().__init__(context)
 
     @property
@@ -17,7 +17,7 @@ class SQLiteHandler(BaseSourceHandler):
         return "sqlite"
 
     @property
-    def required_plugins(self) -> List[str]:
+    def required_plugins(self) -> list[str]:
         return ["sqlite"]
 
     def render_sql(self) -> str:

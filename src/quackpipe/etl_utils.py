@@ -2,12 +2,12 @@
 High-level utility functions for common ETL operations.
 """
 import logging
-from typing import List, Optional
 
 import duckdb
 import pandas as pd
 
 from .config import SourceConfig, SourceType
+
 # Import the session context manager from core and config loader from utils
 from .core import session
 from .utils import get_configs
@@ -29,9 +29,9 @@ def move_data(
         source_query: str,
         destination_name: str,
         table_name: str,
-        config_path: Optional[str] = None,
-        configs: Optional[List[SourceConfig]] = None,
-        env_file: Optional[str] = None,
+        config_path: str | None = None,
+        configs: list[SourceConfig] | None = None,
+        env_file: str | None = None,
         mode: str = 'replace',
         format: str = 'parquet'
 ):
@@ -55,8 +55,8 @@ def move_data(
     try:
         # Find the destination config to determine its type.
         dest_config = next(c for c in all_configs if c.name == destination_name)
-    except StopIteration:
-        raise ValueError(f"Destination '{destination_name}' not found in the provided configuration.")
+    except StopIteration as e:
+        raise ValueError(f"Destination '{destination_name}' not found in the provided configuration.") from e
 
     # This utility creates its own session to perform the work.
     with session(configs=all_configs, env_file=env_file) as con:

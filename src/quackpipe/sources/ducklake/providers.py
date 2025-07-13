@@ -3,7 +3,7 @@ This module defines Provider classes that act as adaptors between a standard
 Source Handler and the specific requirements of the DuckLakeHandler.
 """
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List
+from typing import Any
 
 from quackpipe.sources.base import BaseSourceHandler
 from quackpipe.sources.postgres import PostgresHandler
@@ -19,7 +19,7 @@ class CatalogProvider(ABC):
 
     @property
     @abstractmethod
-    def required_plugins(self) -> List[str]:
+    def required_plugins(self) -> list[str]:
         """A list of DuckDB extensions needed for this provider."""
         pass
 
@@ -39,7 +39,7 @@ class StorageProvider(ABC):
 
     @property
     @abstractmethod
-    def required_plugins(self) -> List[str]:
+    def required_plugins(self) -> list[str]:
         """A list of DuckDB extensions needed for this provider."""
         pass
 
@@ -55,12 +55,12 @@ class PostgresCatalogProvider(CatalogProvider):
 
     handler: PostgresHandler
 
-    def __init__(self, context: Dict[str, Any]):
+    def __init__(self, context: dict[str, Any]):
         # Composition: Create an instance of the handler to delegate to.
         self.handler = PostgresHandler(context)
 
     @property
-    def required_plugins(self) -> List[str]:
+    def required_plugins(self) -> list[str]:
         return self.handler.required_plugins
 
     def render_catalog_setup_sql(self, duckdb_secret_name: str) -> str:
@@ -72,11 +72,11 @@ class PostgresCatalogProvider(CatalogProvider):
 
 class SQLiteCatalogProvider(CatalogProvider):
     """A CatalogProvider that uses a SQLiteHandler internally."""
-    def __init__(self, context: Dict[str, Any]):
+    def __init__(self, context: dict[str, Any]):
         self.handler = SQLiteHandler(context)
 
     @property
-    def required_plugins(self) -> List[str]:
+    def required_plugins(self) -> list[str]:
         return self.handler.required_plugins
 
     def render_catalog_setup_sql(self, duckdb_secret_name: str) -> str:
@@ -94,11 +94,11 @@ class S3StorageProvider(StorageProvider):
 
     handler: S3Handler
 
-    def __init__(self, context: Dict[str, Any]):
+    def __init__(self, context: dict[str, Any]):
         self.handler = S3Handler(context)
 
     @property
-    def required_plugins(self) -> List[str]:
+    def required_plugins(self) -> list[str]:
         return self.handler.required_plugins
 
     def render_storage_setup_sql(self, duckdb_secret_name: str) -> str:

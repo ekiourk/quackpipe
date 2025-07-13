@@ -2,7 +2,7 @@
 Abstract Base Class for all Source Handlers.
 """
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any
+from typing import Any
 
 
 class BaseSourceHandler(ABC):
@@ -11,7 +11,7 @@ class BaseSourceHandler(ABC):
     It is initialized with a context dictionary containing all its configuration.
     """
 
-    def __init__(self, context: Dict[str, Any]):
+    def __init__(self, context: dict[str, Any]):
         """
         Initializes the handler with its specific configuration context.
 
@@ -28,7 +28,7 @@ class BaseSourceHandler(ABC):
 
     @property
     @abstractmethod
-    def required_plugins(self) -> List[str]:
+    def required_plugins(self) -> list[str]:
         """A list of DuckDB extensions needed for this source."""
         pass
 

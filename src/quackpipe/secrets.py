@@ -3,7 +3,6 @@ Handles secret management for quackpipe.
 """
 import logging
 import os
-from typing import Dict, Optional
 
 from dotenv import load_dotenv
 
@@ -16,7 +15,7 @@ class EnvSecretProvider:
     during initialization, it loads that file first.
     """
 
-    def __init__(self, env_file: Optional[str] = None):
+    def __init__(self, env_file: str | None = None):
         self.env_vars = os.environ.copy()
         if env_file:
             if os.path.exists(env_file):
@@ -26,7 +25,7 @@ class EnvSecretProvider:
             else:
                 logger.warning("Warning: env_file '%s' not found. Using system environment.", env_file)
 
-    def get_raw_secret(self, name: str) -> Dict[str, str]:
+    def get_raw_secret(self, name: str) -> dict[str, str]:
         """
         Retrieves secrets from the loaded environment variables by prefix.
         Returns a dict where the key is the FULL env var name and value is the secret.
@@ -41,7 +40,7 @@ class EnvSecretProvider:
 
 
 # Global variable holding the current secret provider instance.
-_provider: Optional[EnvSecretProvider] = None
+_provider: EnvSecretProvider | None = None
 
 
 def _get_provider() -> EnvSecretProvider:
@@ -55,7 +54,7 @@ def _get_provider() -> EnvSecretProvider:
     return _provider
 
 
-def configure_secret_provider(env_file: Optional[str] = None):
+def configure_secret_provider(env_file: str | None = None):
     """
     Initializes or re-initializes the secret provider, optionally loading
     an environment file.
@@ -64,7 +63,7 @@ def configure_secret_provider(env_file: Optional[str] = None):
     _provider = EnvSecretProvider(env_file=env_file)
 
 
-def fetch_raw_secret_bundle(name: str) -> Dict[str, str]:
+def fetch_raw_secret_bundle(name: str) -> dict[str, str]:
     """
     Fetches a secret bundle from the configured provider.
     Returns a dictionary with full environment variable names as keys.
@@ -79,7 +78,7 @@ def fetch_raw_secret_bundle(name: str) -> Dict[str, str]:
     return secrets
 
 
-def fetch_secret_bundle(name: str) -> Dict[str, str]:
+def fetch_secret_bundle(name: str) -> dict[str, str]:
     """
     Fetches a secret bundle and normalizes the keys for use by handlers.
     e.g., {'PROD_DB_HOST': 'db.host.com'} becomes {'host': 'db.host.com'}.

@@ -1,13 +1,16 @@
 """Source Handler for DuckLake, combining a catalog and storage."""
-from typing import List, Dict, Any
+from typing import Any
 
-from .providers import (
-    CatalogProvider, StorageProvider,
-    PostgresCatalogProvider, SQLiteCatalogProvider, S3StorageProvider
-)
+from ...exceptions import ConfigError
 from ..base import BaseSourceHandler
 from ..s3 import S3Handler
-from ...exceptions import ConfigError
+from .providers import (
+    CatalogProvider,
+    PostgresCatalogProvider,
+    S3StorageProvider,
+    SQLiteCatalogProvider,
+    StorageProvider,
+)
 
 
 class DuckLakeHandler(BaseSourceHandler):
@@ -16,7 +19,7 @@ class DuckLakeHandler(BaseSourceHandler):
     to manage its catalog and storage components.
     """
 
-    def __init__(self, context: Dict[str, Any]):
+    def __init__(self, context: dict[str, Any]):
         super().__init__(context)
         self.catalog_config = self.context.get('catalog', {})
         self.storage_config = self.context.get('storage', {})
@@ -51,7 +54,7 @@ class DuckLakeHandler(BaseSourceHandler):
         return "ducklake"
 
     @property
-    def required_plugins(self) -> List[str]:
+    def required_plugins(self) -> list[str]:
         """Dynamically determines required plugins by delegating to the provider instances."""
         plugins = {"ducklake"}
         plugins.update(self.catalog_provider.required_plugins)

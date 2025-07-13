@@ -13,7 +13,7 @@ import os
 from .builder import QuackpipeBuilder
 from .config import SourceConfig, SourceType
 from .core import session, with_session
-from .exceptions import QuackpipeError, ConfigError, SecretError
+from .exceptions import ConfigError, QuackpipeError, SecretError
 from .secrets import configure_secret_provider
 
 # Set up the library's top-level logger

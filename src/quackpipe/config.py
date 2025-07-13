@@ -3,14 +3,14 @@ Defines the typed configuration objects for quackpipe.
 """
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, Any, Optional
+from typing import Any
 
 
 @dataclass(frozen=True)
 class Plugin:
     """A structured definition for a DuckDB plugin that may require special installation."""
     name: str
-    repository: Optional[str] = None
+    repository: str | None = None
 
 
 class SourceType(Enum):
@@ -30,5 +30,5 @@ class SourceConfig:
     """
     name: str
     type: SourceType
-    config: Dict[str, Any] = field(default_factory=dict)
-    secret_name: Optional[str] = None
+    config: dict[str, Any] = field(default_factory=dict)
+    secret_name: str | None = None

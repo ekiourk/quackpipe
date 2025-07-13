@@ -1,5 +1,5 @@
 """Source Handler for S3-compatible object storage."""
-from typing import List, Dict, Any
+from typing import Any
 
 from quackpipe.secrets import fetch_secret_bundle
 from quackpipe.sources.base import BaseSourceHandler
@@ -10,7 +10,7 @@ class S3Handler(BaseSourceHandler):
     Handler for S3 connections. Supports explicit credential creation via secrets
     or automatic detection (IAM/env vars) via SET commands.
     """
-    def __init__(self, context: Dict[str, Any]):
+    def __init__(self, context: dict[str, Any]):
         super().__init__(context)
 
     @property
@@ -18,7 +18,7 @@ class S3Handler(BaseSourceHandler):
         return "s3"
 
     @property
-    def required_plugins(self) -> List[str]:
+    def required_plugins(self) -> list[str]:
         return ["httpfs"]
 
     def render_create_secret_sql(self, duckdb_secret_name: str) -> str:
