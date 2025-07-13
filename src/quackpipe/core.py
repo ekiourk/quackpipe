@@ -1,6 +1,7 @@
 """
 The core logic of quackpipe.
 """
+import logging
 from contextlib import contextmanager
 from functools import wraps
 from typing import List, Optional, Generator
@@ -12,6 +13,8 @@ from quackpipe.secrets import configure_secret_provider
 # Import all handlers
 from quackpipe.sources import s3, postgres, ducklake, sqlite
 from quackpipe.utils import get_configs
+
+logger = logging.getLogger(__name__)
 
 # The registry stores the handler CLASSES, not instances.
 SOURCE_HANDLER_REGISTRY = {
@@ -32,7 +35,7 @@ def _prepare_connection(con: duckdb.DuckDBPyConnection, configs: List[SourceConf
     for cfg in configs:
         HandlerClass = SOURCE_HANDLER_REGISTRY.get(cfg.type)
         if not HandlerClass:
-            print(f"Warning: No handler class found for source type '{cfg.type.value}'. Skipping.")
+            logger.warning("Warning: No handler class found for source type '%s'. Skipping.", cfg.type.value)
             continue
 
         full_context = {
@@ -68,7 +71,12 @@ def _prepare_connection(con: duckdb.DuckDBPyConnection, configs: List[SourceConf
     # 4. Render and execute the setup SQL for each handler
     for handler in instantiated_handlers:
         setup_sql = handler.render_sql()
-        con.execute(setup_sql)
+        logger.debug(setup_sql)
+        try:
+            con.execute(setup_sql)
+        except (duckdb.ParserException, duckdb.IOException):
+            logger.exception(setup_sql)
+            raise
 
 
 @contextmanager

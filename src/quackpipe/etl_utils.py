@@ -1,31 +1,39 @@
 """
 High-level utility functions for common ETL operations.
 """
-import pandas as pd
-import duckdb
+import logging
 from typing import List, Optional
+
+import duckdb
+import pandas as pd
+
 from .config import SourceConfig, SourceType
 # Import the session context manager from core and config loader from utils
 from .core import session
 from .utils import get_configs
 
+logger = logging.getLogger(__name__)
+
+
 def to_df(con: duckdb.DuckDBPyConnection, query: str) -> pd.DataFrame:
     """Executes a query and returns the result as a pandas DataFrame."""
     return con.execute(query).fetchdf()
+
 
 def create_table_from_df(con: duckdb.DuckDBPyConnection, df: pd.DataFrame, table_name: str):
     """Creates a new table in DuckDB from a pandas DataFrame, replacing if it exists."""
     con.execute(f"CREATE OR REPLACE TABLE {table_name} AS SELECT * FROM df")
 
+
 def move_data(
-    source_query: str,
-    destination_name: str,
-    table_name: str,
-    config_path: Optional[str] = None,
-    configs: Optional[List[SourceConfig]] = None,
-    env_file: Optional[str] = None,
-    mode: str = 'replace',
-    format: str = 'parquet'
+        source_query: str,
+        destination_name: str,
+        table_name: str,
+        config_path: Optional[str] = None,
+        configs: Optional[List[SourceConfig]] = None,
+        env_file: Optional[str] = None,
+        mode: str = 'replace',
+        format: str = 'parquet'
 ):
     """
     A self-contained utility to move data from a source query to a destination.
@@ -37,6 +45,7 @@ def move_data(
         table_name: The name of the table or file to create at the destination.
         config_path: Path to the YAML configuration file.
         configs: A direct list of SourceConfig objects.
+        env_file: Path to an env file to use.
         mode: Write mode. 'replace' or 'append'.
         format: The file format for file-based destinations (e.g., 'parquet', 'csv').
     """
@@ -58,7 +67,7 @@ def move_data(
             full_path = f"{base_path}{table_name}.{format}"
             sql = f"COPY ({source_query}) TO '{full_path}' (FORMAT {format.upper()});"
             con.execute(sql)
-            print(f"Data successfully copied to {full_path}")
+            logger.info("Data successfully copied to %s", full_path)
 
         elif dest_config.type == SourceType.DUCKLAKE:
             full_table_name = f"{destination_name}.{table_name}"
@@ -69,7 +78,7 @@ def move_data(
             else:
                 raise ValueError(f"Invalid mode '{mode}'. Use 'replace' or 'append'.")
             con.execute(sql)
-            print(f"Data successfully moved to table {full_table_name}")
+            logger.info("Data successfully moved to table %s", full_table_name)
 
         elif dest_config.type in [SourceType.POSTGRES, SourceType.SQLITE]:
             is_read_only = dest_config.config.get('read_only', True)
@@ -88,7 +97,7 @@ def move_data(
             else:
                 raise ValueError(f"Invalid mode '{mode}'. Use 'replace' or 'append'.")
             con.execute(sql)
-            print(f"Data successfully moved to table {full_table_name}")
+            logger.info("Data successfully moved to table %s", full_table_name)
 
         else:
             if mode == 'replace':
@@ -98,4 +107,4 @@ def move_data(
             else:
                 raise ValueError(f"Invalid mode '{mode}'. Use 'replace' or 'append'.")
             con.execute(sql)
-            print(f"Data successfully moved to in-memory table '{table_name}'")
+            logger.info("Data successfully moved to in-memory table '%s'", table_name)

@@ -178,18 +178,18 @@ def test_integration_with_postgres_e2e(postgres_connection_params):
 
     with builder.session(sources=["postgres_test_container"]) as con:
         results = con.execute(
-            f"FROM postgres_test_container.company.employees"
+            "FROM postgres_test_container.company.employees"
         ).fetchall()
         assert len(results) == 5
 
         # check the view
         results = con.execute(
-            f"FROM postgres_test_container_company_employees"
+            "FROM postgres_test_container_company_employees"
         ).fetchall()
         assert len(results) == 5
 
         results = con.execute(
-            f"FROM postgres_test_container.company.employees WHERE department='Engineering'"
+            "FROM postgres_test_container.company.employees WHERE department='Engineering'"
         ).fetchall()
         assert len(results) == 2
         assert results[0][1] == "Alice"
@@ -199,5 +199,5 @@ def test_integration_with_postgres_e2e(postgres_connection_params):
         assert len(results) == 5
 
         # check the view
-        results = con.execute(f"FROM postgres_test_container_vessels").fetchall()
+        results = con.execute("FROM postgres_test_container_vessels").fetchall()
         assert len(results) == 5

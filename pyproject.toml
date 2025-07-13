@@ -23,6 +23,10 @@ dev = [
 lint = [
     "ruff"
 ]
+logging = [
+    "structlog>=23.0.0",
+    "colorlog>=6.0.0",
+]
 postgres = ["psycopg"]
 s3 = ["pyarrow"]
 kafka = ["confluent-kafka"]
@@ -36,6 +40,26 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.ruff]
+src = ["src"]
+line-length = 120
+
+[tool.ruff.lint]
+# Allow logging format strings
+ignore = [
+    "G201",
+    "G202",
+    "E501",  # line too long (handled by formatter)
+    "B008",  # do not perform function calls in argument defaults
+]
+
+[tool.ruff.format]
+# Use double quotes
+quote-style = "double"
+
+# Indent with spaces
+indent-style = "space"
 
 [project.scripts]
 quackpipe = "quackpipe.cli:main"

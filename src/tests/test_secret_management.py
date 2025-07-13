@@ -93,7 +93,7 @@ def test_fetch_secret_bundle_no_match():
     assert secrets == {}
 
 
-def test_configure_with_nonexistent_env_file(capsys):
+def test_configure_with_nonexistent_env_file(caplog):
     """
     Tests that a warning is printed to stdout if the specified .env file
     is not found, and the system falls back to os.environ.
@@ -104,6 +104,5 @@ def test_configure_with_nonexistent_env_file(capsys):
     # Act
     configure_secret_provider(env_file=non_existent_path)
 
-    # Assert: Check that the warning was printed
-    captured = capsys.readouterr()
-    assert f"Warning: env_file '{non_existent_path}' not found." in captured.out
+    # Assert: Check that the warning was logged
+    assert f"Warning: env_file '{non_existent_path}' not found." in caplog.text

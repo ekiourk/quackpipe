@@ -15,15 +15,14 @@ from unittest.mock import Mock, patch
 import pytest
 import yaml
 
+from quackpipe.builder import QuackpipeBuilder
+from quackpipe.config import SourceConfig, SourceType
+from quackpipe.core import session, _prepare_connection
+from quackpipe.exceptions import QuackpipeError, ConfigError, SecretError
+from quackpipe.secrets import fetch_secret_bundle
 from quackpipe.utils import parse_config_from_yaml
 
 sys.path.insert(0, 'src')
-
-from quackpipe.config import SourceConfig, SourceType
-from quackpipe.secrets import fetch_secret_bundle
-from quackpipe.builder import QuackpipeBuilder
-from quackpipe.core import session, _prepare_connection
-from quackpipe.exceptions import QuackpipeError, ConfigError, SecretError
 
 
 # ==================== CONFIG TESTS ====================
@@ -265,7 +264,7 @@ def test_session_with_sources_filter(mock_prepare, mock_connect, mock_duckdb_con
         SourceConfig(name="s3_1", type=SourceType.S3)
     ]
 
-    with session(configs=configs, sources=["pg1", "s3_1"]) as con:
+    with session(configs=configs, sources=["pg1", "s3_1"]) as _:
         pass
 
     # Should only prepare filtered configs

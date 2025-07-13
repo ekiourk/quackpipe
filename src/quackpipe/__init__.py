@@ -6,12 +6,22 @@ to various data sources based on a YAML configuration file or a
 programmatic builder.
 """
 
+import logging
+import os
+
 # Expose the primary user-facing functions and classes.
-from .core import session, with_session
 from .builder import QuackpipeBuilder
 from .config import SourceConfig, SourceType
-from .secrets import configure_secret_provider
+from .core import session, with_session
 from .exceptions import QuackpipeError, ConfigError, SecretError
+from .secrets import configure_secret_provider
+
+# Set up the library's top-level logger
+_default_level = os.getenv('QUACKPIPE_LOG_LEVEL', 'WARNING').upper()
+_root_logger = logging.getLogger(__name__)
+_root_logger.setLevel(getattr(logging, _default_level, logging.WARNING))
+_root_logger.addHandler(logging.NullHandler())
+
 
 __all__ = [
     # Core API

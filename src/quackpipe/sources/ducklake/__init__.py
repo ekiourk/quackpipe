@@ -95,7 +95,7 @@ class DuckLakeHandler(BaseSourceHandler):
         if self.catalog_config.get('type') == 'postgres':
             metadata_params = f"MAP {{'TYPE': 'postgres', 'SECRET': '{catalog_secret_name}'}}"
             ducklake_secret_parts.append(f",   METADATA_PARAMETERS {metadata_params}")
-            ducklake_secret_parts.append(f",   METADATA_PATH ''")
+            ducklake_secret_parts.append(",   METADATA_PATH ''")
         elif self.catalog_config.get('type') == 'sqlite':
             metadata_path = self.catalog_config.get('path')
             ducklake_secret_parts.append(f",   METADATA_PATH '{metadata_path}'")

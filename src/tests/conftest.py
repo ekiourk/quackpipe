@@ -1,4 +1,5 @@
 import io
+import logging
 import os
 import tempfile
 from unittest.mock import Mock, patch
@@ -13,6 +14,8 @@ from testcontainers.postgres import PostgresContainer
 from quackpipe import configure_secret_provider
 from tests.data_fixtures import (generate_synthetic_ais_data, create_vessel_definitions, create_monthly_data,
                                  create_employee_data, create_ais_summary)
+
+logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(autouse=True)
@@ -230,7 +233,7 @@ def minio_container_with_data():
                 )
 
         # Generate synthetic AIS data
-        print("Creating synthetic AIS data...")
+        logger.info("Creating synthetic AIS data...")
         synthetic_ais_df = generate_synthetic_ais_data(vessels)
 
         # Upload synthetic CSV
@@ -271,8 +274,8 @@ def minio_container_with_data():
             content_type="application/json"
         )
 
-        print(f"Successfully created synthetic AIS data with {len(synthetic_ais_df)} records")
-        print("AIS data setup complete!")
+        logger.info(f"Successfully created synthetic AIS data with {len(synthetic_ais_df)} records")
+        logger.info("AIS data setup complete!")
 
         yield minio
 
@@ -358,12 +361,12 @@ def source_postgres_container():
 
             conn.commit()
 
-        print(f"PostgreSQL container populated with:")
-        print(f"  - {len(employees_df)} employee records")
-        print(f"  - {len(monthly_df)} monthly report records")
-        print(f"  - {len(vessels_df)} vessel definitions")
-        print(f"  - {len(synthetic_ais_df)} AIS data records")
-        print("  - Created indexes and views for better query performance")
+        logger.info("PostgreSQL container populated with:")
+        logger.info(f"  - {len(employees_df)} employee records")
+        logger.info(f"  - {len(monthly_df)} monthly report records")
+        logger.info(f"  - {len(vessels_df)} vessel definitions")
+        logger.info(f"  - {len(synthetic_ais_df)} AIS data records")
+        logger.info("  - Created indexes and views for better query performance")
 
         yield postgres
 

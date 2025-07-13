@@ -1,10 +1,13 @@
 """
 Handles secret management for quackpipe.
 """
+import logging
 import os
 from typing import Dict, Optional
 
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
 
 
 class EnvSecretProvider:
@@ -17,11 +20,11 @@ class EnvSecretProvider:
         self.env_vars = os.environ.copy()
         if env_file:
             if os.path.exists(env_file):
-                print(f"Loading environment variables from: {env_file}")
+                logger.info("Loading environment variables from: %s", env_file)
                 load_dotenv(dotenv_path=env_file, override=True)
                 self.env_vars.update(os.environ)
             else:
-                print(f"Warning: env_file '{env_file}' not found. Using system environment.")
+                logger.warning("Warning: env_file '%s' not found. Using system environment.", env_file)
 
     def get_raw_secret(self, name: str) -> Dict[str, str]:
         """
