@@ -1,6 +1,6 @@
 [project]
 name = "quackpipe"
-version = "0.5.5"
+version = "0.5.6"
 requires-python = ">=3.12"
 description = "A configuration-driven and programmatic ETL helper for DuckDB."
 dependencies = [
@@ -14,9 +14,9 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest",
-    "testcontainers",
+    "testcontainers==4.10.0",
+    "sqlalchemy",
     "testcontainers-postgres",
-    "testcontainers-kafka",
     "testcontainers-minio",
     "testcontainers-azurite",
     "httpx",

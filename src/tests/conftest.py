@@ -312,7 +312,7 @@ def source_postgres_container():
     Starts a PostgreSQL container with sample data for testing.
     Creates tables and populates them with the same synthetic data used in MinIO.
     """
-    with PostgresContainer("postgres:15-alpine", user="test", password="test", dbname="test") as postgres:
+    with PostgresContainer("postgres:15-alpine", username="test", password="test", dbname="test") as postgres:
         # Create connection
         engine = create_engine(postgres.get_connection_url())
 
@@ -418,7 +418,7 @@ def test_datasets():
 @pytest.fixture(scope="module")
 def catalog_postgres_container():
     """Starts a second, separate PostgreSQL container to act as the DuckLake catalog."""
-    with PostgresContainer("postgres:15-alpine", user="catalog", password="catalog", dbname="catalog") as postgres:
+    with PostgresContainer("postgres:15-alpine", username="catalog", password="catalog", dbname="catalog") as postgres:
         yield postgres
 
 

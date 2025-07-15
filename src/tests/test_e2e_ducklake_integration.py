@@ -37,16 +37,16 @@ def test_e2e_postgres_to_ducklake(
     # Source Postgres details
     source_pg_host = source_postgres_container.get_container_host_ip()
     source_pg_port = source_postgres_container.get_exposed_port(5432)
-    source_pg_user = source_postgres_container.POSTGRES_USER
-    source_pg_pass = source_postgres_container.POSTGRES_PASSWORD
-    source_pg_db = source_postgres_container.POSTGRES_DB
+    source_pg_user = source_postgres_container.username
+    source_pg_pass = source_postgres_container.password
+    source_pg_db = source_postgres_container.dbname
 
     # Catalog Postgres details
     catalog_pg_host = catalog_postgres_container.get_container_host_ip()
     catalog_pg_port = catalog_postgres_container.get_exposed_port(5432)
-    catalog_pg_user = catalog_postgres_container.POSTGRES_USER
-    catalog_pg_pass = catalog_postgres_container.POSTGRES_PASSWORD
-    catalog_pg_db = catalog_postgres_container.POSTGRES_DB
+    catalog_pg_user = catalog_postgres_container.username
+    catalog_pg_pass = catalog_postgres_container.password
+    catalog_pg_db = catalog_postgres_container.dbname
 
     # MinIO storage details
     minio_endpoint = minio_container.get_config()["endpoint"]
