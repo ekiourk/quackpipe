@@ -54,3 +54,22 @@ sources:
       type: s3
       secret_name: "aws_datalake" # Re-uses the S3 credentials
       path: "s3://my-data-lake-bucket/" # The root path for the data
+
+  # Example 1: Connecting to Azure Blob Storage using a Connection String.
+  azure_storage_cs:
+    type: azure
+    # The provider type for this authentication method.
+    provider: connection_string
+    # This secret_name will cause quackpipe to look for an environment variable
+    # named 'AZURE_PROD_CS_CONNECTION_STRING'.
+    secret_name: "azure_prod_cs"
+
+  # Example 2: Connecting to Azure Blob Storage using a Service Principal.
+  azure_storage_sp:
+    type: azure
+    provider: service_principal
+    # This secret_name will cause quackpipe to look for environment variables
+    # prefixed with 'AZURE_PROD_SP_'.
+    secret_name: "azure_prod_sp"
+    # The storage account name is required and can be placed here directly.
+    account: "yourstorageaccountname"
