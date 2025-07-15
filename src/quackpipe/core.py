@@ -12,7 +12,7 @@ from quackpipe.config import Plugin, SourceConfig, SourceType
 from quackpipe.secrets import configure_secret_provider
 
 # Import all handlers
-from quackpipe.sources import ducklake, postgres, s3, sqlite
+from quackpipe.sources import azure_blob, ducklake, postgres, s3, sqlite
 from quackpipe.utils import get_configs
 
 logger = logging.getLogger(__name__)
@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 SOURCE_HANDLER_REGISTRY = {
     SourceType.POSTGRES: postgres.PostgresHandler,
     SourceType.S3: s3.S3Handler,
+    SourceType.AZURE: azure_blob.AzureBlobHandler,
     SourceType.DUCKLAKE: ducklake.DuckLakeHandler,
     SourceType.SQLITE: sqlite.SQLiteHandler,
 }

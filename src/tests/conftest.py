@@ -7,7 +7,9 @@ from unittest.mock import Mock, patch
 import pandas as pd
 import pytest
 import yaml
+from azure.storage.blob import BlobServiceClient
 from sqlalchemy import create_engine, text
+from testcontainers.azurite import AzuriteContainer
 from testcontainers.minio import MinioContainer
 from testcontainers.postgres import PostgresContainer
 
@@ -427,3 +429,44 @@ def minio_container():
         # It's good practice to create the bucket ahead of time.
         minio.get_client().make_bucket("test-lake")
         yield minio
+
+# ==================== PYTEST FIXTURE FOR AZURITE CONTAINER ====================
+
+@pytest.fixture(scope="module")
+def azurite_with_data_container():
+    """Starts an Azurite container and populates it with sample data."""
+    with AzuriteContainer("mcr.microsoft.com/azure-storage/azurite:latest") as azurite:
+        # connection string from the container.
+        blob_service_client = BlobServiceClient.from_connection_string(azurite.get_connection_string())
+
+        container_name = "test-container"
+        blob_service_client.create_container(container_name)
+
+        # Get a client for the specific container to upload the blob
+        container_client = blob_service_client.get_container_client(container=container_name)
+
+        # Generate and upload sample employee data as a Parquet file
+        df = pd.DataFrame(create_employee_data())
+
+        parquet_buffer = io.BytesIO()
+        df.to_parquet(parquet_buffer, index=False)
+        parquet_data = parquet_buffer.getvalue()
+
+        container_client.upload_blob(
+            name="employees.parquet",
+            data=io.BytesIO(parquet_data),
+            length=len(parquet_data),
+            overwrite=True
+        )
+        print(f"Uploaded employees.parquet to Azurite container '{container_name}'.")
+
+        yield azurite
+
+
+@pytest.fixture(scope="module")
+def azurite_connection_params(azurite_with_data_container: AzuriteContainer):
+    """Returns connection parameters for the Azurite container."""
+    return {
+        "connection_string": azurite_with_data_container.get_connection_string(),
+        "container_name": "test-container"
+    }
