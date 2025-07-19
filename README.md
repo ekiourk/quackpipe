@@ -1,86 +1,62 @@
 # Quackpipe
 
-**A configuration-driven and programmatic ETL helper for DuckDB.**
+**The missing link between your Python scripts and your data infrastructure.**
 
-Quackpipe simplifies connecting to and moving data between various sources by leveraging DuckDB's powerful extension ecosystem. It allows you to define your data sources in a simple YAML file or build them programmatically, and then provides a clean interface to query them or perform high-level ETL operations.
+Quackpipe is a powerful ETL helper library that uses **DuckDB** to create a unified, high-performance data plane for Python applications. It bridges the gap between writing raw, complex connection code and adopting a full-scale data transformation framework.
 
-## Key Features
+With a simple YAML configuration, you can instantly connect to multiple data sources like **PostgreSQL**, **S3**, **Azure Blob Storage**, and **SQLite**, and even orchestrate complex **DuckLake** setups, all from a single, clean Python interface.
 
-* **Declarative & Programmatic:** Configure sources via a simple `config.yml` or build connections on-the-fly in Python using a fluent builder API.
-* **Multi-Source Support:** Out-of-the-box support for **PostgreSQL**, **S3**, **SQLite**, and composite **DuckLake** sources (e.g., Postgres catalog + S3 storage).
-* **Intelligent Plugin Management:** Automatically installs and loads the required DuckDB extensions based on your configuration.
-* **Flexible Secret Management:** Pluggable secret provider system that defaults to environment variables but can be extended for services like AWS Secrets Manager or HashiCorp Vault.
-* **High-Level ETL Utilities:** A powerful `move_data` function to transfer data between any two configured sources with a single line of code.
+## What Gap Does Quackpipe Fill?
 
----
+In the modern data stack, you often face a choice:
+
+* **Low-Level:** Write boilerplate code with multiple database drivers (`psycopg2`, `boto3`, etc.) to connect and move data manually. This is flexible but repetitive and error-prone.
+* **High-Level:** Adopt a full DataOps framework like **SQLMesh** or **dbt**. These are powerful for building production-grade data warehouses but can be overkill for ad-hoc analysis, rapid prototyping, or simple scripting.
+
+**Quackpipe provides the perfect middle ground.** It gives you the power of a unified query engine and the simplicity of a Python library, allowing you to:
+
+* **Prototype Rapidly:** Spin up a multi-source data environment in seconds.
+* **Simplify ETL Scripts:** Replace complex driver code with a single, clean `session` or a one-line `move_data` command.
+* **Explore Data Interactively:** Use the built-in CLI to launch a web UI with all your sources pre-connected for instant ad-hoc querying.
+* **Bridge to Production:** Automatically generate configuration for frameworks like **SQLMesh** when you're ready to graduate from a script to a versioned data model.
+
+## Core Capabilities
+
+* **Unified Data Access:** Query across PostgreSQL, S3, Azure, and SQLite as if they were all schemas in a single database.
+* **Declarative Configuration:** Define all your data sources in one human-readable `config.yml` file.
+* **Powerful ETL Utilities:** Move data between any two configured sources with the `move_data()` function.
+* **Programmatic API:** Use the `QuackpipeBuilder` for dynamic, on-the-fly connection setups in your code.
+* **Secure Secret Management:** Load credentials safely from `.env` files, keeping them out of your code and configuration.
+* **Interactive UI:** Launch an interactive DuckDB web UI with all your sources pre-connected using a single CLI command.
+* **Framework Integration:** Automatically generate a `sqlmesh_config.yml` file to seamlessly transition your project to a full DataOps framework.
 
 ## Installation
-
-Install the base library using pip:
 
 ```bash
 pip install quackpipe
 ```
 
-The library uses optional dependencies to keep the installation minimal. Install the support for the sources you need:
+Install support for the sources you need:
 
 ```bash
-# To install support for postgres, s3, and ducklake
-pip install "quackpipe[postgres,s3,ducklake]"
+# Example: Install support for Postgres, S3, Azure, and the UI
+pip install "quackpipe[postgres,s3,azure,ui]"
 ```
 
----
+## Configuration
 
-## Project Structure
+`quackpipe` uses a simple `config.yml` file to define your sources and an `.env` file to manage your secrets.
 
-The project is organized with a clear separation of concerns.
-
-```
-.
-├── pyproject.toml              # Project configuration and dependencies
-├── README.md                   # This file
-├── src/
-│   └── quackpipe/              # Main package
-│       ├── __init__.py         # Public API exports
-│       ├── core.py             # Core session management
-│       ├── config.py           # Typed configuration objects (SourceConfig, SourceType)
-│       ├── secrets.py          # Secret management system
-│       ├── builder.py          # Programmatic builder API
-│       ├── utils.py            # General utility functions (e.g., get_configs)
-│       ├── etl_utils.py        # High-level ETL functions (e.g., move_data)
-│       ├── exceptions.py       # Custom exceptions
-│       └── sources/            # Source-specific logic
-│           ├── base.py
-│           ├── postgres.py
-│           ├── s3.py
-│           ├── sqlite.py
-│           └── ducklake.py
-├── examples/                   # Usage examples
-│   ├── config.yml
-│   └── run_etl.py
-└── tests/                      # Pytest tests
-    ├── test_etl_utils.py
-    ├── test_integration.py
-    └── ...
-```
-
----
-
-## Configuration (`config.yml`)
-
-Define all your data sources in a `config.yml` file.
+### `config.yml` Example
 
 ```yaml
-# examples/config.yml
+# config.yml
 sources:
   # A writeable PostgreSQL database.
   pg_warehouse:
     type: postgres
     secret_name: "pg_prod" # See Secret Management section below
     read_only: false       # Allows writing data back to this source
-    tables:                # Auto-create views for these tables
-      - users
-      - orders
 
   # An S3 data lake for Parquet files.
   s3_datalake:
@@ -88,11 +64,11 @@ sources:
     secret_name: "aws_prod"
     region: "us-east-1"
 
-  # A local SQLite database file.
-  local_analytics:
-    type: sqlite
-    path: "/path/to/analytics.db"
-    read_only: true
+  # An Azure Blob Storage container.
+  azure_datalake:
+    type: azure
+    provider: connection_string
+    secret_name: "azure_prod"
 
   # A composite DuckLake source.
   my_lake:
@@ -105,99 +81,73 @@ sources:
       path: "/path/to/lake_storage/"
 ```
 
-### Secret Management
+### Secret Management with `.env`
 
-Quackpipe uses a `secret_name` to refer to a bundle of credentials. By default, it uses the `EnvSecretProvider`, which reads credentials from environment variables based on a convention: `SECRET_NAME_KEY`.
+Quackpipe uses a `secret_name` in the config to refer to a bundle of credentials. These are loaded from an `.env` file using a simple prefix convention: `SECRET_NAME_KEY`.
 
-For a `secret_name` of **`pg_prod`**, you would set the following environment variables:
+Create an `.env` file in your project root:
 
-```bash
-export PG_PROD_HOST=db.example.com
-export PG_PROD_USER=myuser
-export PG_PROD_PASSWORD=mypassword
-export PG_PROD_DATABASE=production
+```dotenv
+# .env
+
+# Secrets for secret_name: "pg_prod"
+PG_PROD_HOST=db.example.com
+PG_PROD_USER=myuser
+PG_PROD_PASSWORD=mypassword
+PG_PROD_DATABASE=production
+
+# Secrets for secret_name: "aws_prod"
+AWS_PROD_ACCESS_KEY_ID=YOUR_AWS_ACCESS_KEY
+AWS_PROD_SECRET_ACCESS_KEY=YOUR_AWS_SECRET_KEY
+
+# Secrets for secret_name: "azure_prod"
+AZURE_PROD_CONNECTION_STRING="DefaultEndpointsProtocol=https..."
 ```
 
----
+## Usage Highlights
 
-## Usage Examples
+### 1. Interactive Querying with `session`
 
-Quackpipe offers multiple ways to interact with your data.
-
-### 1. Interactive Session with YAML
-
-The `session` context manager is perfect for exploration and running custom queries. It yields a pre-configured DuckDB connection.
+Need to join a CSV in S3 with a table in Postgres? `quackpipe` makes it trivial.
 
 ```python
-# examples/run_etl.py
 import quackpipe
 
-# This session will attach pg_warehouse and s3_datalake
-with quackpipe.session(config_path="examples/config.yml", sources=["pg_warehouse", "s3_datalake"]) as con:
-    # Query data from the attached postgres database
-    active_users = con.execute("SELECT * FROM pg_warehouse_users WHERE status = 'active';").fetchdf()
-    print(active_users.head())
+# quackpipe automatically loads your .env file
+with quackpipe.session(config_path="config.yml", env_file=".env") as con:
+    df = con.execute("""
+        SELECT u.name, o.order_total
+        FROM pg_warehouse.users u
+        JOIN read_parquet('s3://my-bucket/orders/*.parquet') o ON u.id = o.user_id
+        WHERE u.signup_date > '2024-01-01';
+    """).fetchdf()
+
+    print(df.head())
 ```
 
-### 2. High-Level Data Movement
+### 2. One-Line Data Movement with `move_data`
 
-The `move_data` utility is the easiest way to perform ETL. It's a self-contained function that handles the entire process of connecting, copying, and closing the connection.
+Archive old records from your production database to your data lake with a single command.
 
 ```python
-# examples/run_etl.py
 from quackpipe.etl_utils import move_data
 
-# Move active users from Postgres to a Parquet file in the S3 data lake
 move_data(
-    config_path="examples/config.yml",
-    source_query="SELECT id, email, signup_date FROM pg_warehouse_users WHERE status = 'active'",
+    config_path="config.yml",
+    env_file=".env",
+    source_query="SELECT * FROM pg_warehouse.logs WHERE timestamp < '2024-01-01'",
     destination_name="s3_datalake",
-    table_name="active_users" # This will become active_users.parquet
-)
-
-# Move aggregated data from Postgres back into a new table in the same Postgres DB
-move_data(
-    config_path="examples/config.yml",
-    source_query="SELECT signup_date, COUNT(*) as new_users FROM pg_warehouse_users GROUP BY 1",
-    destination_name="pg_warehouse", # The destination is the writeable Postgres DB
-    table_name="daily_signups",      # Creates a new table named 'daily_signups'
-    mode="replace"                   # Options are 'replace' or 'append'
+    table_name="logs_archive_2023"
 )
 ```
 
-### 3. Programmatic Builder
+### 3. Instant Data Exploration with the CLI
 
-For dynamic workflows where a YAML file is not suitable, use the `QuackpipeBuilder`.
-
-```python
-# examples/run_etl.py
-from quackpipe import QuackpipeBuilder, SourceType
-
-builder = (
-    QuackpipeBuilder()
-    .add_source(
-        name="pg_main",
-        type=SourceType.POSTGRES,
-        secret_name="pg_prod",
-        config={"read_only": True}
-    )
-    .add_source(
-        name="local_db",
-        type=SourceType.SQLITE,
-        config={"path": "local.db"}
-    )
-)
-
-# The builder returns a session context manager
-with builder.session() as con:
-    df = con.execute("SELECT * FROM pg_main.some_table;").fetchdf()
-    print(df)
-```
-
-## Running Tests
-
-To run the test suite, install the development dependencies and run `pytest`.
+Launch a web browser UI with all your sources attached and ready for ad-hoc queries.
 
 ```bash
-pip install ".[test]"
-pytest
+# This command reads your config.yml and .env file
+quackpipe ui
+
+# Or connect to specific sources
+quackpipe ui pg_warehouse s3_datalake
