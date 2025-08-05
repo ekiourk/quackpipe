@@ -6,6 +6,8 @@ Quackpipe is a powerful ETL helper library that uses **DuckDB** to create a unif
 
 With a simple YAML configuration, you can instantly connect to multiple data sources like **PostgreSQL**, **S3**, **Azure Blob Storage**, and **SQLite**, and even orchestrate complex **DuckLake** setups, all from a single, clean Python interface.
 
+[![codecov](https://codecov.io/github/ekiourk/quackpipe/graph/badge.svg?token=5LF2QD9MEW)](https://codecov.io/github/ekiourk/quackpipe)
+
 ## What Gap Does Quackpipe Fill?
 
 In the modern data stack, you often face a choice:
