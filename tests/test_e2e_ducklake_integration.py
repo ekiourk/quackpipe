@@ -17,9 +17,6 @@ from testcontainers.postgres import PostgresContainer
 from quackpipe import QuackpipeBuilder, SourceType
 from quackpipe.etl_utils import move_data
 
-# Assume the fixtures you provided are in a conftest.py and available
-# (source_postgres_container, catalog_postgres_container, minio_container, test_datasets)
-
 # ==================== END-TO-END INTEGRATION TEST ====================
 
 def test_e2e_postgres_to_ducklake(

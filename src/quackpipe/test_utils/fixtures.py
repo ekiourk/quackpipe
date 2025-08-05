@@ -14,7 +14,7 @@ from testcontainers.minio import MinioContainer
 from testcontainers.postgres import PostgresContainer
 
 from quackpipe import configure_secret_provider
-from tests.data_fixtures import (
+from quackpipe.test_utils.data_fixtures import (
     create_ais_summary,
     create_employee_data,
     create_monthly_data,
@@ -92,20 +92,6 @@ def mock_duckdb_connection():
     mock_con.execute.return_value = mock_result
 
     return mock_con
-
-
-# @pytest.fixture
-# def mock_duckdb_connection():
-#     """Provides a mock DuckDB connection object."""
-#     mock_con = MagicMock()
-#
-#     # Mock the return value for fetchdf() to be a sample DataFrame
-#     sample_df = pd.DataFrame({'id': [1, 2], 'name': ['A', 'B']})
-#     mock_execute_result = MagicMock()
-#     mock_execute_result.fetchdf.return_value = sample_df
-#     mock_con.execute.return_value = mock_execute_result
-#
-#     return mock_con
 
 
 @pytest.fixture

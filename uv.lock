@@ -837,7 +837,7 @@ wheels = [
 
 [[package]]
 name = "quackpipe"
-version = "0.5.6"
+version = "0.6.1"
 source = { editable = "." }
 dependencies = [
     { name = "azure-storage-blob" },
@@ -852,6 +852,14 @@ dev = [
     { name = "httpx" },
     { name = "ipdb" },
     { name = "pytest" },
+    { name = "sqlalchemy" },
+    { name = "testcontainers" },
+    { name = "testcontainers-azurite" },
+    { name = "testcontainers-minio" },
+    { name = "testcontainers-postgres" },
+]
+fixtures = [
+    { name = "httpx" },
     { name = "sqlalchemy" },
     { name = "testcontainers" },
     { name = "testcontainers-azurite" },
@@ -881,7 +889,7 @@ requires-dist = [
     { name = "colorlog", marker = "extra == 'logging'", specifier = ">=6.0.0" },
     { name = "confluent-kafka", marker = "extra == 'kafka'" },
     { name = "duckdb", specifier = ">=0.9.0" },
-    { name = "httpx", marker = "extra == 'dev'" },
+    { name = "httpx", marker = "extra == 'fixtures'" },
     { name = "ipdb", marker = "extra == 'dev'" },
     { name = "pandas" },
     { name = "psycopg", marker = "extra == 'postgres'" },
@@ -889,15 +897,16 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
+    { name = "quackpipe", extras = ["fixtures"], marker = "extra == 'dev'" },
     { name = "ruff", marker = "extra == 'lint'" },
-    { name = "sqlalchemy", marker = "extra == 'dev'" },
+    { name = "sqlalchemy", marker = "extra == 'fixtures'" },
     { name = "structlog", marker = "extra == 'logging'", specifier = ">=23.0.0" },
-    { name = "testcontainers", marker = "extra == 'dev'", specifier = "==4.10.0" },
-    { name = "testcontainers-azurite", marker = "extra == 'dev'" },
-    { name = "testcontainers-minio", marker = "extra == 'dev'" },
-    { name = "testcontainers-postgres", marker = "extra == 'dev'" },
+    { name = "testcontainers", marker = "extra == 'fixtures'", specifier = "==4.10.0" },
+    { name = "testcontainers-azurite", marker = "extra == 'fixtures'" },
+    { name = "testcontainers-minio", marker = "extra == 'fixtures'" },
+    { name = "testcontainers-postgres", marker = "extra == 'fixtures'" },
 ]
-provides-extras = ["dev", "lint", "logging", "postgres", "s3", "kafka"]
+provides-extras = ["dev", "fixtures", "lint", "logging", "postgres", "s3", "kafka"]
 
 [[package]]
 name = "requests"
