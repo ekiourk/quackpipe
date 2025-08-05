@@ -13,7 +13,7 @@ from testcontainers.azurite import AzuriteContainer
 from testcontainers.minio import MinioContainer
 from testcontainers.postgres import PostgresContainer
 
-from quackpipe import configure_secret_provider
+from quackpipe import SourceConfig, SourceType, configure_secret_provider
 from quackpipe.test_utils.data_fixtures import (
     create_ais_summary,
     create_employee_data,
@@ -415,6 +415,26 @@ def minio_container():
         # It's good practice to create the bucket ahead of time.
         minio.get_client().make_bucket("test-lake")
         yield minio
+
+
+@pytest.fixture(scope="function")
+def local_ducklake_config(tmp_path) -> SourceConfig:
+    # Set up temporary paths for the database and storage
+    catalog_dir = tmp_path / "catalog"
+    catalog_dir.mkdir()
+    catalog_db_path = catalog_dir / "lake_catalog.db"
+    storage_dir = tmp_path / "storage"
+    storage_dir.mkdir()
+
+    # Create the SourceConfig programmatically and return it
+    return SourceConfig(
+        name="local_lake",
+        type=SourceType.DUCKLAKE,
+        config={
+            "catalog": {"type": "sqlite", "path": str(catalog_db_path)},
+            "storage": {"type": "local", "path": str(storage_dir)}
+        }
+    )
 
 # ==================== PYTEST FIXTURE FOR AZURITE CONTAINER ====================
 
