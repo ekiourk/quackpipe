@@ -3,6 +3,8 @@ name = "quackpipe"
 version = "0.6.1"
 requires-python = ">=3.12"
 description = "A configuration-driven and programmatic ETL helper for DuckDB."
+license = {text = "MIT"}
+readme = "README.md"
 dependencies = [
     "pyyaml",
     "duckdb>=0.9.0",
