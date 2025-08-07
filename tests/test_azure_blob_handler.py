@@ -4,8 +4,9 @@ tests/test_azure_blob_handler.py
 This file contains pytest tests for the AzureBlobHandler class in quackpipe.
 """
 import pytest
+from testcontainers.azurite import AzuriteContainer
 
-from quackpipe import QuackpipeBuilder, SourceType
+from quackpipe import QuackpipeBuilder
 from quackpipe.secrets import configure_secret_provider
 from quackpipe.sources.azure_blob import AzureBlobHandler
 
@@ -123,35 +124,23 @@ def test_render_sql_raises_error_for_invalid_provider():
 
 # ==================== END-TO-END INTEGRATION TEST ====================
 
-def test_e2e_read_from_azure(azurite_connection_params: dict):
+def test_e2e_read_from_azure(azurite_container_with_data: AzuriteContainer, quackpipe_with_azurite: QuackpipeBuilder):
     """
     Tests reading pre-existing Parquet data from an Azurite container,
     validating the AzureBlobHandler.
     """
-    # 1. ARRANGE: Programmatically configure quackpipe using the Builder
-    builder = (
-        QuackpipeBuilder()
-        .add_source(
-            name="my_azure_storage",
-            type=SourceType.AZURE,
-            config={
-                "provider": "connection_string",
-                "connection_string": azurite_connection_params["connection_string"],
-            }
-        )
-    )
 
-    # 2. ACT & ASSERT: Open a session and run queries against the data
-    with builder.session() as con:
-        container = azurite_connection_params["container_name"]
+    # Open a session and run queries against the data
+    with quackpipe_with_azurite.session() as con:
+        blob_container_name = "test-container"  # this is the same value set on TEST_BLOB_CONTAINER_NAME in fixtures
 
         # Test reading all records
-        results = con.execute(f"FROM read_parquet('azure://{container}/employees.parquet');").fetchall()
+        results = con.execute(f"FROM read_parquet('azure://{blob_container_name}/employees.parquet');").fetchall()
         assert len(results) == 5
 
         # Test filtering records
         filtered_results = con.execute(
-            f"FROM read_parquet('azure://{container}/employees.parquet') WHERE department='Engineering';"
+            f"FROM read_parquet('azure://{blob_container_name}/employees.parquet') WHERE department='Engineering';"
         ).fetchall()
 
         assert len(filtered_results) == 2

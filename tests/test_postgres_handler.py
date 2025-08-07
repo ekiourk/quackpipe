@@ -9,7 +9,7 @@ import os
 
 import pytest
 
-from quackpipe import QuackpipeBuilder, SourceType, configure_secret_provider
+from quackpipe import configure_secret_provider
 from quackpipe.sources.postgres import PostgresHandler
 
 
@@ -159,44 +159,29 @@ def test_postgres_handler_no_tables():
     assert "CREATE OR REPLACE VIEW" not in sql
 
 
-def test_integration_with_postgres_e2e(postgres_connection_params):
-    builder = QuackpipeBuilder().add_source(
-        name="postgres_test_container",
-        type=SourceType.POSTGRES,
-        config={
-            'database': postgres_connection_params['database'],
-            'user': postgres_connection_params['user'],
-            'password': postgres_connection_params['password'],
-            'host': postgres_connection_params['host'],
-            'port': postgres_connection_params['port'],
-            'connection_name': 'pg_main',
-            'read_only': True,
-            'tables': ['company.employees', 'company.monthly_reports', 'vessels']
-        }
-    )
-
-    with builder.session(sources=["postgres_test_container"]) as con:
+def test_integration_with_postgres_e2e(quackpipe_with_pg_source):
+    with quackpipe_with_pg_source.session() as con:
         results = con.execute(
-            "FROM postgres_test_container.company.employees"
+            "FROM pg_source.company.employees"
         ).fetchall()
         assert len(results) == 5
 
         # check the view
         results = con.execute(
-            "FROM postgres_test_container_company_employees"
+            "FROM pg_source_company_employees"
         ).fetchall()
         assert len(results) == 5
 
         results = con.execute(
-            "FROM postgres_test_container.company.employees WHERE department='Engineering'"
+            "FROM pg_source.company.employees WHERE department='Engineering'"
         ).fetchall()
         assert len(results) == 2
         assert results[0][1] == "Alice"
         assert results[1][1] == "Diana"
 
-        results = con.execute('FROM postgres_test_container.vessels').fetchall()
+        results = con.execute('FROM pg_source.vessels').fetchall()
         assert len(results) == 5
 
         # check the view
-        results = con.execute("FROM postgres_test_container_vessels").fetchall()
+        results = con.execute("FROM pg_source_vessels").fetchall()
         assert len(results) == 5

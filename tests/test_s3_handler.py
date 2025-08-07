@@ -7,7 +7,7 @@ like parametrize and fixtures for setup.
 """
 import pytest
 
-from quackpipe import QuackpipeBuilder, SourceType, configure_secret_provider
+from quackpipe import configure_secret_provider
 from quackpipe.sources.s3 import S3Handler
 
 
@@ -147,28 +147,16 @@ def test_render_sql_with_set_commands(test_id, context, expected_sql):
     assert generated_sql.strip() == expected_sql.strip()
 
 
-def test_integration_with_minio_e2e(minio_with_data_connection_params):
-    builder = QuackpipeBuilder().add_source(
-        name="minio_test_container",
-        type=SourceType.S3,
-        config={
-            "path": f"s3://{minio_with_data_connection_params["bucket_name"]}/",
-            "endpoint": minio_with_data_connection_params["endpoint_url"],
-            "access_key_id": minio_with_data_connection_params["access_key"],
-            "secret_access_key": minio_with_data_connection_params["secret_key"],
-            "use_ssl": False,
-            "url_style": "path"
-        }
-    )
-
-    with builder.session(sources=["minio_test_container"]) as con:
+def test_integration_with_minio_e2e(minio_container_with_data, quackpipe_with_minio):
+    bucket_name = 'test-bucket'  # this is the name of the bucket that is set on TEST_BUCKET_NAME
+    with quackpipe_with_minio.session() as con:
         results = con.execute(
-            f"FROM read_parquet('s3://{minio_with_data_connection_params["bucket_name"]}/data/employees.parquet')"
+            f"FROM read_parquet('s3://{bucket_name}/data/employees.parquet')"
         ).fetchall()
         assert len(results) == 5
 
         results = con.execute(
-            f"FROM read_parquet('s3://{minio_with_data_connection_params["bucket_name"]}/data/employees.parquet') WHERE department='Engineering'"
+            f"FROM read_parquet('s3://{bucket_name}/data/employees.parquet') WHERE department='Engineering'"
         ).fetchall()
         assert len(results) == 2
         assert results[0][1] == "Alice"
