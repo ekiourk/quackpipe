@@ -1,6 +1,8 @@
 """
 The Builder API for programmatically constructing a quackpipe session.
 """
+from __future__ import annotations
+
 from typing import Any, Self
 
 from .config import SourceConfig, SourceType
@@ -15,7 +17,7 @@ class QuackpipeBuilder:
 
     def add_source(self, name: str, type: SourceType, config: dict[str, Any] = None, secret_name: str = None) -> Self:
         """
-        Adds a data source to the configuration.
+        Adds a data source to the configuration by specifying its components.
 
         Args:
             name: The name for the data source (e.g., 'pg_main').
@@ -33,6 +35,41 @@ class QuackpipeBuilder:
             secret_name=secret_name
         )
         self._sources.append(source)
+        return self
+
+    def add_source_config(self, source_config: SourceConfig) -> Self:
+        """
+        Adds a pre-constructed SourceConfig object to the builder.
+
+        Args:
+            source_config: An instance of the SourceConfig dataclass.
+
+        Returns:
+            The builder instance for chaining.
+        """
+        if not isinstance(source_config, SourceConfig):
+            raise TypeError("Argument must be a SourceConfig instance.")
+
+        self._sources.append(source_config)
+        return self
+
+    def chain(self, other_builder: QuackpipeBuilder) -> Self:
+        """
+        Chains another builder, absorbing all of its sources into this one.
+
+        This is useful for composing configurations from multiple builder instances.
+
+        Args:
+            other_builder: Another QuackpipeBuilder instance.
+
+        Returns:
+            The current builder instance for further chaining.
+        """
+        if not isinstance(other_builder, QuackpipeBuilder):
+            raise TypeError("Argument must be another QuackpipeBuilder instance.")
+
+        # Extend the current list of sources with the sources from the other builder
+        self._sources.extend(other_builder.get_configs())
         return self
 
     def get_configs(self) -> list[SourceConfig]:

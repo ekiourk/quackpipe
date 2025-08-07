@@ -90,16 +90,50 @@ def test_builder_add_source():
     assert source.secret_name == "pg_secret"
 
 
+def test_builder_add_source_config():
+    """Test adding sources to builder."""
+    builder = QuackpipeBuilder()
+
+    source_config = SourceConfig(
+        name="test_pg",
+        type=SourceType.POSTGRES,
+        config={"port": 5432},
+        secret_name="pg_secret"
+    )
+
+    result = builder.add_source_config(source_config)
+
+    # Should return self for chaining
+    assert result is builder
+
+    # Check source was added
+    assert len(builder._sources) == 1
+    source = builder._sources[0]
+    assert source.name == "test_pg"
+    assert source.type == SourceType.POSTGRES
+    assert source.config == {"port": 5432}
+    assert source.secret_name == "pg_secret"
+
+
 def test_builder_chaining():
     """Test builder method chaining."""
     builder = QuackpipeBuilder()
 
     result = (builder
               .add_source("pg1", SourceType.POSTGRES, secret_name="pg_secret")
-              .add_source("s3_1", SourceType.S3, secret_name="s3_secret"))
+              .add_source_config(SourceConfig("s3_1", SourceType.S3, secret_name="s3_secret")))
 
     assert result is builder
     assert len(builder._sources) == 2
+
+    # chaining an empty builder should not fail but have no effect
+    builder.chain(QuackpipeBuilder())
+    assert len(builder._sources) == 2
+
+    # chaining another builder should merge them
+    new_builder = QuackpipeBuilder().add_source_config(SourceConfig("s3_2", SourceType.S3, secret_name="s3_2_secret"))
+    builder.chain(new_builder)
+    assert len(builder._sources) == 3
 
 
 def test_builder_session_empty():
