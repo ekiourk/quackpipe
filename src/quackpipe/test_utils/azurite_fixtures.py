@@ -15,7 +15,7 @@ TEST_BLOB_CONTAINER_NAME = "test-container"
 @pytest.fixture(scope="module")
 def azurite_container() -> Generator[AzuriteContainer, None, None]:
     """Starts an Azurite docker container."""
-    with AzuriteContainer("mcr.microsoft.com/azure-storage/azurite:latest") as azurite:
+    with AzuriteContainer("mcr.microsoft.com/azure-storage/azurite:3.35.0") as azurite:
         yield azurite
 
 
