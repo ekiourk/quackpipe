@@ -16,6 +16,7 @@ class Plugin:
 class SourceType(Enum):
     """Enumeration of supported source types."""
     POSTGRES = "postgres"
+    MYSQL = "mysql"
     S3 = "s3"
     AZURE = "azure"
     DUCKLAKE = "ducklake"
