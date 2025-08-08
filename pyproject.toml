@@ -26,6 +26,7 @@ fixtures = [
     "testcontainers-postgres",
     "testcontainers-minio",
     "testcontainers-azurite",
+    "testcontainers-mysql",
     "httpx"
 ]
 lint = [
@@ -36,6 +37,7 @@ logging = [
     "colorlog>=6.0.0",
 ]
 postgres = ["psycopg"]
+mysql = ["mysql-connector-python"]
 s3 = ["pyarrow"]
 kafka = ["confluent-kafka"]
 
