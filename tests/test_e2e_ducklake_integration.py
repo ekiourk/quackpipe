@@ -1,16 +1,11 @@
 """
-tests/test_e2e_ducklake_integration.py
-
 This file contains true end-to-end integration tests using testcontainers
 to spin up real services like PostgreSQL and MinIO in Docker.
 
 NOTE: To run these tests, you must have Docker installed and running.
-You will also need to install the required test dependencies.
-
-Installation command:
-pip install "quackpipe[test]" "testcontainers-postgres>=3.7.0" "testcontainers-minio>=2.3.1" "httpx>=0.23.0"
 """
 import pandas as pd
+from testcontainers.postgres import PostgresContainer
 
 from quackpipe import QuackpipeBuilder, SourceConfig
 from quackpipe.etl_utils import move_data
@@ -20,6 +15,7 @@ from quackpipe.etl_utils import move_data
 def test_e2e_postgres_to_ducklake(
         quackpipe_with_pg_source: QuackpipeBuilder,
         postgres_s3_ducklake_config: SourceConfig,
+        postgres_container_with_data: PostgresContainer,  # this will generate the data inside postgres
         test_datasets: dict
 ):
     """
@@ -35,6 +31,7 @@ def test_e2e_postgres_to_ducklake(
 
     # Move data from the pre-populated Postgres source to the DuckLake destination
     # Move the 'employees' table
+    # the name of the source 'pg_source' should match the value of POSTGRES_SOURCE_NAME in the fixtures
     print("Moving 'employees' table to DuckLake...")
     move_data(
         configs=builder.get_configs(),
