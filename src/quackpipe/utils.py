@@ -3,6 +3,7 @@ General utility functions for the quackpipe library.
 """
 
 import yaml
+from duckdb import ConnectionException, DuckDBPyConnection
 
 # Note: We need to import these here to avoid circular dependencies
 # if this module were to be used by the config module in the future.
@@ -57,3 +58,11 @@ def get_configs(
     else:
         # This provides a clear error message if no configuration source is given.
         raise ConfigError("Must provide either a 'config_path' or a 'configs' list.")
+
+
+def is_connection_open(conn: DuckDBPyConnection) -> bool:
+    try:
+        conn.execute("SELECT 1")
+        return True
+    except ConnectionException:
+        return False

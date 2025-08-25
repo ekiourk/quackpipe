@@ -14,13 +14,14 @@ from unittest.mock import Mock, patch
 
 import pytest
 import yaml
+from duckdb import DuckDBPyConnection
 
 from quackpipe.builder import QuackpipeBuilder
 from quackpipe.config import SourceConfig, SourceType
 from quackpipe.core import _prepare_connection, session
 from quackpipe.exceptions import ConfigError, QuackpipeError, SecretError
 from quackpipe.secrets import fetch_secret_bundle
-from quackpipe.utils import parse_config_from_yaml
+from quackpipe.utils import is_connection_open, parse_config_from_yaml
 
 sys.path.insert(0, 'src')
 
@@ -234,17 +235,16 @@ def test_prepare_connection_empty():
     mock_con.install_extension.assert_not_called()
 
 
-@patch('duckdb.connect')
 @patch('quackpipe.core._prepare_connection')
-def test_session_with_config_path(mock_prepare, mock_connect, mock_duckdb_connection, sample_yaml_config):
+def test_session_with_config_path(mock_prepare, sample_yaml_config):
     """Test session creation with config path."""
-    mock_connect.return_value = mock_duckdb_connection
 
     with session(config_path=sample_yaml_config) as con:
-        assert con is mock_duckdb_connection
+        assert type(con) is DuckDBPyConnection
+        assert is_connection_open(con)
 
     mock_prepare.assert_called_once()
-    mock_duckdb_connection.close.assert_called_once()
+    assert not is_connection_open(con)
 
 
 @patch('duckdb.connect')
@@ -262,21 +262,21 @@ def test_session_with_configs(mock_connect, mock_duckdb_connection, monkeypatch)
 
     configs = [SourceConfig(name="test", type=SourceType.POSTGRES, secret_name="my_test_secret")]
 
-    with session(configs=configs) as con:
-        assert con is mock_duckdb_connection
+    con = session(configs=configs)
+    assert con is mock_duckdb_connection
 
-        # Note: The mock handler might generate slightly different SQL with newlines.
-        # This is just an example of a more detailed assertion.
-        last_call_args = mock_duckdb_connection.execute.call_args.args
-        # A simple check:
-        assert "CREATE OR REPLACE SECRET test_secret" in last_call_args[0]
-        assert "TYPE POSTGRES" in last_call_args[0]
-        assert "HOST 'localhost'" in last_call_args[0]
-        assert "PORT '5432'" in last_call_args[0]
-        assert "DATABASE 'test_db'" in last_call_args[0]
-        assert "USER 'test_user'" in last_call_args[0]
-        assert "PASSWORD 'test_password'" in last_call_args[0]
-        assert "ATTACH 'dbname=test_db' AS test (TYPE POSTGRES, SECRET 'test_secret', READ_ONLY)" in last_call_args[0]
+    # Note: The mock handler might generate slightly different SQL with newlines.
+    # This is just an example of a more detailed assertion.
+    last_call_args = mock_duckdb_connection.execute.call_args.args
+    # A simple check:
+    assert "CREATE OR REPLACE SECRET test_secret" in last_call_args[0]
+    assert "TYPE POSTGRES" in last_call_args[0]
+    assert "HOST 'localhost'" in last_call_args[0]
+    assert "PORT '5432'" in last_call_args[0]
+    assert "DATABASE 'test_db'" in last_call_args[0]
+    assert "USER 'test_user'" in last_call_args[0]
+    assert "PASSWORD 'test_password'" in last_call_args[0]
+    assert "ATTACH 'dbname=test_db' AS test (TYPE POSTGRES, SECRET 'test_secret', READ_ONLY)" in last_call_args[0]
 
 
 def test_session_no_config():
@@ -298,8 +298,7 @@ def test_session_with_sources_filter(mock_prepare, mock_connect, mock_duckdb_con
         SourceConfig(name="s3_1", type=SourceType.S3)
     ]
 
-    with session(configs=configs, sources=["pg1", "s3_1"]) as _:
-        pass
+    session(configs=configs, sources=["pg1", "s3_1"])
 
     # Should only prepare filtered configs
     call_args = mock_prepare.call_args[0]
@@ -307,6 +306,26 @@ def test_session_with_sources_filter(mock_prepare, mock_connect, mock_duckdb_con
     assert len(prepared_configs) == 2
     assert {c.name for c in prepared_configs} == {"pg1", "s3_1"}
 
+
+@patch('duckdb.connect')
+@patch('quackpipe.core._prepare_connection')
+def test_session_as_function(mock_prepare, mock_connect, mock_duckdb_connection):
+    """Test session creation as a direct function call."""
+    mock_connect.return_value = mock_duckdb_connection
+
+    # Call session as a regular function
+    con = session(configs=[SourceConfig(name="test", type=SourceType.POSTGRES)])
+
+    # Assert that a connection was returned
+    assert con is mock_duckdb_connection
+
+    # Assert that prepare was called, but close was NOT
+    mock_prepare.assert_called_once()
+    mock_duckdb_connection.close.assert_not_called()
+
+    # Now, manually close and check
+    con.close()
+    mock_duckdb_connection.close.assert_called_once()
 
 # ==================== ERROR HANDLING TESTS ====================
 

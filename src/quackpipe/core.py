@@ -2,8 +2,6 @@
 The core logic of quackpipe.
 """
 import logging
-from collections.abc import Generator
-from contextlib import contextmanager
 from functools import wraps
 
 import duckdb
@@ -82,15 +80,27 @@ def _prepare_connection(con: duckdb.DuckDBPyConnection, configs: list[SourceConf
             raise
 
 
-@contextmanager
 def session(
         config_path: str | None = None,
         configs: list[SourceConfig] | None = None,
         sources: list[str] | None = None,
         env_file: str | None = None
-) -> Generator[duckdb.DuckDBPyConnection, None, None]:
+) -> duckdb.DuckDBPyConnection:
     """
-    A context manager providing a pre-configured DuckDB connection.
+    Creates and returns a pre-configured DuckDB connection.
+
+    The returned connection object is a context manager and can be used in a
+    `with` statement, which will automatically handle closing the connection.
+
+    Example:
+        # As a context manager
+        with session(config_path="config.yml") as con:
+            con.sql("SELECT * FROM my_table")
+
+        # As a direct function call
+        con = session(config_path="config.yml")
+        # Remember to close it yourself
+        con.close()
     """
     configure_secret_provider(env_file=env_file)
 
@@ -101,11 +111,8 @@ def session(
         active_configs = [c for c in all_configs if c.name in sources]
 
     con = duckdb.connect(database=':memory:')
-    try:
-        _prepare_connection(con, active_configs)
-        yield con
-    finally:
-        con.close()
+    _prepare_connection(con, active_configs)
+    return con
 
 
 def with_session(**session_kwargs):

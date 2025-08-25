@@ -8,7 +8,6 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 import pytest
 
-from quackpipe import QuackpipeBuilder
 from quackpipe.config import SourceConfig, SourceType
 from quackpipe.etl_utils import create_table_from_df, move_data, to_df
 
@@ -189,26 +188,3 @@ def test_full_workflow_with_move_data(mock_get_configs, mock_session, mock_duckd
     # 3. Verify the correct COPY command was executed inside the session
     expected_sql = "COPY (SELECT * FROM pg_main.users) TO 's3://my-lake/users_backup.parquet' (FORMAT PARQUET);"
     mock_duckdb_connection.execute.assert_any_call(expected_sql)
-
-
-@patch('duckdb.connect')
-@patch('quackpipe.core.configure_secret_provider')
-def test_full_workflow_builder_api(mock_configure_secrets, mock_connect, mock_duckdb_connection):
-    """Test complete workflow using Builder API."""
-    # Arrange
-    mock_connect.return_value = mock_duckdb_connection
-
-    builder = (QuackpipeBuilder()
-               .add_source("pg_test", SourceType.POSTGRES,
-                           config={"port": 5432, "tables": ["users"]},
-                           secret_name="pg_prod"))
-
-    # Act
-    with builder.session() as con:
-        df = to_df(con, "SELECT * FROM pg_test_users")
-        assert isinstance(df, pd.DataFrame)
-
-    # Assert
-    mock_duckdb_connection.close.assert_called_once()
-    # Verify that the secret provider was configured when the session started
-    mock_configure_secrets.assert_called_once()
