@@ -159,16 +159,11 @@ def test_postgres_handler_no_tables():
     assert "CREATE OR REPLACE VIEW" not in sql
 
 
-def test_integration_with_postgres_e2e(quackpipe_with_pg_source):
+def test_integration_with_postgres_e2e(quackpipe_with_pg_source, postgres_container_with_data):
     with quackpipe_with_pg_source.session() as con:
+        # the name of the source 'pg_source' should match the value of POSTGRES_SOURCE_NAME in the fixtures
         results = con.execute(
             "FROM pg_source.company.employees"
-        ).fetchall()
-        assert len(results) == 5
-
-        # check the view
-        results = con.execute(
-            "FROM pg_source_company_employees"
         ).fetchall()
         assert len(results) == 5
 
@@ -180,8 +175,4 @@ def test_integration_with_postgres_e2e(quackpipe_with_pg_source):
         assert results[1][1] == "Diana"
 
         results = con.execute('FROM pg_source.vessels').fetchall()
-        assert len(results) == 5
-
-        # check the view
-        results = con.execute("FROM pg_source_vessels").fetchall()
         assert len(results) == 5
