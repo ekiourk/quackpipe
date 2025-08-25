@@ -205,6 +205,7 @@ def test_full_workflow_builder_api(mock_configure_secrets, mock_connect, mock_du
 
     # Act
     with builder.session() as con:
+        con.execute.return_value.fetch_df.return_value = pd.DataFrame([{"id": 1}])
         df = to_df(con, "SELECT * FROM pg_test_users")
         assert isinstance(df, pd.DataFrame)
 

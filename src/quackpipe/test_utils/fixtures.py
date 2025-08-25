@@ -1,8 +1,9 @@
 import logging
 import os
 import tempfile
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
+import duckdb
 import pandas as pd
 import pytest
 import yaml
@@ -73,16 +74,22 @@ def sample_yaml_config(temp_dir, sample_config_dict):
 @pytest.fixture
 def mock_duckdb_connection():
     """Mock DuckDB connection for testing."""
-    mock_con = Mock()
-    mock_con.execute = Mock()
-    mock_con.install_extension = Mock()
-    mock_con.load_extension = Mock()
-    mock_con.close = Mock()
+    mock_con = MagicMock(spec=duckdb.DuckDBPyConnection)
 
-    # Mock fetchdf for pandas integration
-    mock_result = Mock()
-    mock_result.fetchdf.return_value = pd.DataFrame({'id': [1, 2], 'name': ['Alice', 'Bob']})
+    # Mock fetch_df for pandas integration
+    mock_result = MagicMock()
+    mock_result.fetch_df.return_value = pd.DataFrame({'id': [1, 2], 'name': ['Alice', 'Bob']})
     mock_con.execute.return_value = mock_result
+
+    # When the mock is used as a context manager, __enter__ should return the mock itself.
+    mock_con.__enter__.return_value = mock_con
+
+    # The real duckdb connection calls .close() when the context manager exits.
+    # We need to replicate this behavior in the mock.
+    def exit_side_effect(*args, **kwargs):
+        mock_con.close()
+
+    mock_con.__exit__.side_effect = exit_side_effect
 
     return mock_con
 

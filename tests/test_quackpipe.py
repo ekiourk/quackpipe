@@ -308,6 +308,27 @@ def test_session_with_sources_filter(mock_prepare, mock_connect, mock_duckdb_con
     assert {c.name for c in prepared_configs} == {"pg1", "s3_1"}
 
 
+@patch('duckdb.connect')
+@patch('quackpipe.core._prepare_connection')
+def test_session_as_function(mock_prepare, mock_connect, mock_duckdb_connection):
+    """Test session creation as a direct function call."""
+    mock_connect.return_value = mock_duckdb_connection
+
+    # Call session as a regular function
+    con = session(configs=[SourceConfig(name="test", type=SourceType.POSTGRES)])
+
+    # Assert that a connection was returned
+    assert con is mock_duckdb_connection
+
+    # Assert that prepare was called, but close was NOT
+    mock_prepare.assert_called_once()
+    mock_duckdb_connection.close.assert_not_called()
+
+    # Now, manually close and check
+    con.close()
+    mock_duckdb_connection.close.assert_called_once()
+
+
 # ==================== ERROR HANDLING TESTS ====================
 
 def test_config_error_inheritance():
