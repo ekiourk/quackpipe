@@ -4,7 +4,20 @@ src/quackpipe/commands/common.py
 This module contains common utilities shared across CLI command modules.
 """
 import logging
+import os
 import sys
+
+DEFAULT_CONFIG_NAME = "config.yml"
+
+
+def get_default_config_path():
+    """
+    Returns 'config.yml' if it exists in the current directory, otherwise None.
+    This allows for a dynamic default value in the CLI.
+    """
+    if os.path.exists(DEFAULT_CONFIG_NAME):
+        return DEFAULT_CONFIG_NAME
+    return None
 
 
 def setup_cli_logging(verbose_level: int = 0):

@@ -43,7 +43,8 @@ def move_data(
         source_query: The SELECT query to execute for the source data.
         destination_name: The logical name of the destination source from the config.
         table_name: The name of the table or file to create at the destination.
-        config_path: Path to the YAML configuration file.
+        config_path: Path to the YAML configuration file. Can also be set via the
+            `QUACKPIPE_CONFIG_PATH` environment variable.
         configs: A direct list of SourceConfig objects.
         env_file: Path to an env file to use.
         mode: Write mode. 'replace' or 'append'.

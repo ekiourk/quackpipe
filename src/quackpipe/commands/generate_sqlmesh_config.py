@@ -11,6 +11,7 @@ from ..config import SourceConfig
 from ..core import SOURCE_HANDLER_REGISTRY
 from ..secrets import configure_secret_provider, fetch_raw_secret_bundle
 from ..utils import get_configs
+from .common import get_default_config_path
 
 
 def _generate_raw_sql(configs: list[SourceConfig]) -> str:
@@ -72,8 +73,10 @@ def register_command(subparsers: _SubParsersAction):
         "generate-sqlmesh-config",
         help="Generate a SQLMesh config file from a quackpipe config."
     )
-    parser_gen.add_argument("-c", "--config", default="config.yml",
-                            help="Path to the input quackpipe config.yml file. (Default: config.yml)")
+    parser_gen.add_argument("-c", "--config", default=get_default_config_path(),
+                            help="Path to the quackpipe config.yml file. Defaults to 'config.yml' in the current "
+                                 "directory if it exists or else it will check the "
+                                 "QUACKPIPE_CONFIG_PATH environment variable.")
     parser_gen.add_argument("-o", "--output", default="sqlmesh_config.yml",
                             help="Path for the output SQLMesh config file. (Default: sqlmesh_config.yml)")
     parser_gen.add_argument("--gateway-name", default="quackpipe_gateway",

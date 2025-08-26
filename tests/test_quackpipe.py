@@ -247,6 +247,19 @@ def test_session_with_config_path(mock_prepare, sample_yaml_config):
     assert not is_connection_open(con)
 
 
+@patch('quackpipe.core._prepare_connection')
+def test_session_with_env_var(mock_prepare, sample_yaml_config, monkeypatch):
+    """Test session creation with environment variable."""
+    monkeypatch.setenv("QUACKPIPE_CONFIG_PATH", sample_yaml_config)
+
+    with session() as con:
+        assert type(con) is DuckDBPyConnection
+        assert is_connection_open(con)
+
+    mock_prepare.assert_called_once()
+    assert not is_connection_open(con)
+
+
 @patch('duckdb.connect')
 def test_session_with_configs(mock_connect, mock_duckdb_connection, monkeypatch):
     """Test session creation with direct configs."""
@@ -281,9 +294,30 @@ def test_session_with_configs(mock_connect, mock_duckdb_connection, monkeypatch)
 
 def test_session_no_config():
     """Test session creation without config."""
-    with pytest.raises(ConfigError, match="Must provide either a 'config_path' or a 'configs'"):
+    with pytest.raises(ConfigError, match="Must provide either a 'config_path', a 'configs' list, or set the 'QUACKPIPE_CONFIG_PATH' environment variable."):
         with session():
             pass
+
+
+@patch('quackpipe.core._prepare_connection')
+def test_session_prioritizes_configs_over_env_var(mock_prepare, sample_yaml_config, monkeypatch):
+    """Test that direct configs are prioritized over the environment variable."""
+    # Set the env var to a valid config
+    monkeypatch.setenv("QUACKPIPE_CONFIG_PATH", sample_yaml_config)
+
+    # Provide a different, direct config
+    direct_configs = [SourceConfig(name="direct_config", type=SourceType.SQLITE)]
+
+    with session(configs=direct_configs):
+        pass
+
+    # The call to _prepare_connection should have used the direct_configs
+    mock_prepare.assert_called_once()
+    call_args = mock_prepare.call_args[0]
+    prepared_configs = call_args[1]
+
+    assert len(prepared_configs) == 1
+    assert prepared_configs[0].name == "direct_config"
 
 
 @patch('duckdb.connect')
