@@ -1,6 +1,7 @@
 """
 General utility functions for the quackpipe library.
 """
+import os
 
 import yaml
 from duckdb import ConnectionException, DuckDBPyConnection
@@ -48,16 +49,28 @@ def get_configs(
         configs: list[SourceConfig] | None = None
 ) -> list[SourceConfig]:
     """
-    A helper function to load source configurations from either a file path or a direct list.
+    A helper function to load source configurations. The priority is:
+    1. A file path from the `config_path` argument.
+    2. A direct list from the `configs` argument.
+    3. A file path from the `QUACKPIPE_CONFIG_PATH` environment variable.
+
     This logic is shared by `session` and `etl_utils`.
     """
     if config_path:
         return parse_config_from_yaml(config_path)
     elif configs:
         return configs
+
+    # As a last resort, try the environment variable.
+    env_config_path = os.environ.get("QUACKPIPE_CONFIG_PATH")
+    if env_config_path:
+        return parse_config_from_yaml(env_config_path)
     else:
         # This provides a clear error message if no configuration source is given.
-        raise ConfigError("Must provide either a 'config_path' or a 'configs' list.")
+        raise ConfigError(
+            "Must provide either a 'config_path', a 'configs' list, or set the "
+            "'QUACKPIPE_CONFIG_PATH' environment variable."
+        )
 
 
 def is_connection_open(conn: DuckDBPyConnection) -> bool:

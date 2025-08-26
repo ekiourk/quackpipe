@@ -92,6 +92,10 @@ def session(
     The returned connection object is a context manager and can be used in a
     `with` statement, which will automatically handle closing the connection.
 
+    Configuration can be provided via the `config_path` parameter, the
+    `QUACKPIPE_CONFIG_PATH` environment variable, or by passing a list of
+    `SourceConfig` objects to the `configs` parameter.
+
     Example:
         # As a context manager
         with session(config_path="config.yml") as con:

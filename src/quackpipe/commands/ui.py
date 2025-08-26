@@ -7,7 +7,7 @@ from argparse import _SubParsersAction
 
 from .. import ConfigError
 from ..core import session
-from .common import setup_cli_logging
+from .common import get_default_config_path, setup_cli_logging
 
 
 def handler(args):
@@ -58,11 +58,14 @@ def register_command(subparsers: _SubParsersAction):
         "ui",
         help="Launch an interactive DuckDB UI with pre-configured sources."
     )
-    parser_ui.add_argument("-c", "--config", default="config.yml",
-                           help="Path to the input quackpipe config.yml file. (Default: config.yml)")
+    parser_ui.add_argument("-c", "--config", default=get_default_config_path(),
+                            help="Path to the quackpipe config.yml file. Defaults to 'config.yml' in the current "
+                                 "directory if it exists or else it will check the "
+                                 "QUACKPIPE_CONFIG_PATH environment variable.")
     parser_ui.add_argument("--env-file", default=".env",
                            help="Path to the environment file to load secrets from. (Default: .env)")
-    parser_ui.add_argument("-p", "--port", type=int, default=4213, help="Port to run the DuckDB UI on. (Default: 4213)")
+    parser_ui.add_argument("-p", "--port", type=int, default=4213,
+                           help="Port to run the DuckDB UI on. (Default: 4213)")
     parser_ui.add_argument(
         "-v", "--verbose",
         action="count",
@@ -70,5 +73,6 @@ def register_command(subparsers: _SubParsersAction):
         help="Increase output verbosity. Use -v for INFO and -vv for DEBUG."
     )
     parser_ui.add_argument("sources", nargs='*',
-                           help="Optional: A space-separated list of specific sources to load. If omitted, all sources are loaded.")
+                           help="Optional: A space-separated list of specific sources to load. "
+                                "If omitted, all sources are loaded.")
     parser_ui.set_defaults(func=handler)

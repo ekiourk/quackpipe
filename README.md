@@ -49,6 +49,16 @@ pip install "quackpipe[postgres,s3,azure,ui]"
 
 `quackpipe` uses a simple `config.yml` file to define your sources and an `.env` file to manage your secrets.
 
+### Configuration Priority
+
+Quackpipe loads its configuration in the following order of priority:
+
+1.  **Directly in code:** You can pass a `config_path` or a list of `configs` directly to functions like `quackpipe.session()` or `move_data()`. This always takes the highest priority.
+2.  **Environment Variable:** If no configuration is provided in code, Quackpipe will check for the `QUACKPIPE_CONFIG_PATH` environment variable. You can set this to the path of your `config.yml` file.
+3.  **Local `config.yml`:** When using the CLI, if a `config.yml` file exists in the current directory, it will be used automatically.
+
+This layered approach provides flexibility for both interactive use and production deployments.
+
 ### `config.yml` Example
 
 ```yaml
