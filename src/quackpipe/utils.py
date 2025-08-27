@@ -20,6 +20,15 @@ def parse_config_from_yaml(path: str) -> list[SourceConfig]:
     except FileNotFoundError as e:
         raise ConfigError(f"Configuration file not found at '{path}'.") from e
 
+    # We import here to avoid a circular import at the top level
+    from jsonschema.exceptions import ValidationError
+
+    from .config import validate_config
+    try:
+        validate_config(raw_config)
+    except ValidationError as e:
+        raise ConfigError(f"Configuration is invalid: {e.message}") from e
+
     source_configs = []
     for name, details in raw_config.get('sources', {}).items():
         details_copy = details.copy()

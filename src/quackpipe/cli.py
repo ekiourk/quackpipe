@@ -7,7 +7,7 @@ It discovers and registers commands from the 'commands' submodule.
 import argparse
 
 # Import the registration functions from each command module
-from .commands import generate_sqlmesh_config, ui
+from .commands import generate_sqlmesh_config, ui, validate
 
 
 def main():
@@ -18,6 +18,7 @@ def main():
     # Register all available commands
     generate_sqlmesh_config.register_command(subparsers)
     ui.register_command(subparsers)
+    validate.register_command(subparsers)
 
     # Parse the arguments and call the handler function assigned by the subparser
     args = parser.parse_args()

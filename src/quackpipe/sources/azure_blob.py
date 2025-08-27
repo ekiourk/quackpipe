@@ -48,7 +48,7 @@ class AzureBlobHandler(BaseSourceHandler):
         elif provider == 'service_principal':
             # Using a Service Principal (app registration)
             param_map = {
-                'account': 'account',
+                'account_name': 'account_name',
                 'tenant_id': 'tenant_id',
                 'client_id': 'client_id',
                 'client_secret': 'client_secret'
@@ -62,8 +62,8 @@ class AzureBlobHandler(BaseSourceHandler):
         elif provider == 'managed_identity':
             # Using a Managed Identity
             secret_parts.append(",  PROVIDER 'credential_chain'")
-            if 'account' in sql_context:
-                secret_parts.append(f",  ACCOUNT '{sql_context['account']}'")
+            if 'account_name' in sql_context:
+                secret_parts.append(f",  ACCOUNT_NAME '{sql_context['account_name']}'")
 
         else:
             raise ValueError(

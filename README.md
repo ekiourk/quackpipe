@@ -163,3 +163,28 @@ quackpipe ui
 
 # Or connect to specific sources
 quackpipe ui pg_warehouse s3_datalake
+```
+
+### 4. Validate Your Configuration
+
+Before running your scripts, you can validate your `config.yml` file against the built-in schema to catch errors early.
+
+```bash
+# Validate the default config.yml
+quackpipe validate
+
+# Or validate a specific file
+quackpipe validate --config /path/to/your/config.yml
+```
+
+If the configuration is valid, you'll see a success message:
+```
+✅ Configuration file at 'config.yml' is valid.
+```
+
+If it's invalid, `quackpipe` will tell you why:
+```
+❌ Configuration file at 'config.yml' is invalid.
+   Reason: 'port' in source 'pg_main' should be an integer.
+```
+
