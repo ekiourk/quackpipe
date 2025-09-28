@@ -72,10 +72,7 @@ def fetch_raw_secret_bundle(name: str) -> dict[str, str]:
     if not name:
         return {}
 
-    provider = _get_provider()
-    secrets = provider.get_raw_secret(name)
-
-    return secrets
+    return _get_provider().get_raw_secret(name)
 
 
 def fetch_secret_bundle(name: str) -> dict[str, str]:

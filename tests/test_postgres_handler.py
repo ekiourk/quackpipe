@@ -8,7 +8,9 @@ like parametrize and fixtures for setup.
 import os
 
 import pytest
+import yaml
 
+import quackpipe
 from quackpipe import configure_secret_provider
 from quackpipe.sources.postgres import PostgresHandler
 
@@ -176,3 +178,83 @@ def test_integration_with_postgres_e2e(quackpipe_with_pg_source, postgres_contai
 
         results = con.execute('FROM pg_source.vessels').fetchall()
         assert len(results) == 5
+
+
+@pytest.fixture
+def postgres_config_files(tmp_path, postgres_container):
+    """
+    Fixture that returns a function to create config + env files
+    for a postgres source. It normalizes host/port and writes both files.
+    """
+    def _make_files(source_config: dict, env_vars: dict, source_name: str = "my_postgres"):
+        # normalize config
+        source_config = dict(source_config)  # copy so we don’t mutate test data
+        source_config.update({"type": "postgres", "secret_name": "my_db"})
+
+        # write config.yaml
+        config_file = tmp_path / f"{source_name}.yaml"
+        data = {"sources": {source_name: source_config}}
+        config_file.write_text(yaml.safe_dump(data))
+
+        # write env.env
+        env_file = tmp_path / f"{source_name}.env"
+        if env_vars:
+            lines = [f"{k}={v}" for k, v in env_vars.items()]
+            env_file.write_text("\n".join(lines) + "\n")
+        else:
+            env_file.write_text("")  # create empty env file
+
+        return config_file, env_file
+
+    return _make_files
+
+
+@pytest.fixture(params=["all_env", "mixed", "all_config"])
+def pg_case(request, postgres_container, postgres_config_files):
+    """
+    Parametrized fixture that prepares different config/env setups
+    for Postgres. Expands host/port dynamically from the running container.
+    """
+    host = postgres_container.get_container_host_ip()
+    port = str(postgres_container.get_exposed_port(5432))
+
+    if request.param == "all_env":
+        source_config = {"read_only": False}
+        env_vars = {
+            "MY_DB_DATABASE": "test",
+            "MY_DB_USER": "test",
+            "MY_DB_PASSWORD": "test",
+            "MY_DB_HOST": host,
+            "MY_DB_PORT": port,
+        }
+    elif request.param == "mixed":
+        source_config = {"database": "test", "host": host, "port": port, "read_only": False}
+        env_vars = {"MY_DB_USER": "test", "MY_DB_PASSWORD": "test"}
+    elif request.param == "all_config":
+        source_config = {
+            "database": "test",
+            "user": "test",
+            "password": "test",
+            "host": host,
+            "port": port,
+            "read_only": False,
+        }
+        env_vars = {}
+    else:
+        raise ValueError(f"Unknown case {request.param}")
+
+    return postgres_config_files(source_config, env_vars)
+
+
+def test_postgres_configs(pg_case):
+    config_file, env_file = pg_case
+
+    with quackpipe.session(
+        config_path=str(config_file),
+        env_file=str(env_file),
+        sources=["my_postgres"],
+    ) as con:
+        con.execute("CREATE TABLE my_postgres.tbl (id INTEGER, name VARCHAR);")
+        con.execute("INSERT INTO my_postgres.tbl VALUES (42, 'DuckDB');")
+        assert len(con.execute("FROM my_postgres.tbl").df()) == 1
+        con.execute("DROP TABLE my_postgres.tbl;")

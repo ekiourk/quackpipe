@@ -8,6 +8,12 @@ properties:
     description: "A dictionary of data sources to configure."
     additionalProperties:
       $ref: "#/definitions/source"
+$defs:
+  port:
+    anyOf:
+      - type: integer
+      - type: string
+        pattern: '^[0-9]+$'
 definitions:
   source:
     type: object
@@ -37,7 +43,8 @@ definitions:
       type: { const: "postgres" }
       secret_name: { type: string }
       host: { type: string }
-      port: { type: integer }
+      port:
+        $ref: "#/$defs/port"
       database: { type: string }
       user: { type: string }
       password: { type: string }
@@ -158,7 +165,8 @@ definitions:
       type: { const: "mysql" }
       secret_name: { type: string }
       host: { type: string }
-      port: { type: integer }
+      port:
+        $ref: "#/$defs/port"
       database: { type: string }
       user: { type: string }
       password: { type: string }
