@@ -7,6 +7,7 @@ like parametrize and fixtures for setup.
 """
 import pytest
 
+import quackpipe
 from quackpipe import configure_secret_provider
 from quackpipe.sources.s3 import S3Handler
 
@@ -161,3 +162,61 @@ def test_integration_with_minio_e2e(minio_container_with_data, quackpipe_with_mi
         assert len(results) == 2
         assert results[0][1] == "Alice"
         assert results[1][1] == "Diana"
+
+
+@pytest.fixture(params=["all_env", "mixed", "all_config"])
+def s3_case(request, minio_container_with_data, quackpipe_config_files):
+    """
+    Parametrized fixture that prepares different config/env setups for S3.
+    Expands host/port dynamically from the running container.
+    """
+
+    if request.param == "all_env":
+        source_config = {}
+        env_vars = {
+            "STORAGE_ACCESS_KEY_ID": minio_container_with_data.access_key,
+            "STORAGE_SECRET_ACCESS_KEY": minio_container_with_data.secret_key,
+            "STORAGE_PATH": "s3://test-bucket/",
+            "STORAGE_ENDPOINT": minio_container_with_data.get_config()["endpoint"],
+            "STORAGE_URL_STYLE": "path",
+            "STORAGE_USE_SSL": False,
+        }
+    elif request.param == "mixed":
+        source_config = {
+            "path": "s3://test-bucket/",
+            "endpoint": minio_container_with_data.get_config()["endpoint"],
+            "use_ssl": False,
+            "url_style": "path"
+        }
+        env_vars = {
+            "STORAGE_ACCESS_KEY_ID": minio_container_with_data.access_key,
+            "STORAGE_SECRET_ACCESS_KEY": minio_container_with_data.secret_key
+        }
+    elif request.param == "all_config":
+        source_config = {
+            "access_key_id": minio_container_with_data.access_key,
+            "secret_access_key": minio_container_with_data.secret_key,
+            "path": "s3://test-bucket/",
+            "endpoint": minio_container_with_data.get_config()["endpoint"],
+            "use_ssl": False,
+            "url_style": "path"
+        }
+        env_vars = {}
+    else:
+        raise ValueError(f"Unknown case {request.param}")
+
+    return quackpipe_config_files(source_config, env_vars, source_name="s3_store", source_type="s3", secret_name="storage")
+
+
+def test_s3_configs(s3_case):
+    config_file, env_file = s3_case
+
+    with quackpipe.session(
+        config_path=str(config_file),
+        env_file=str(env_file),
+        sources=["s3_store"],
+    ) as con:
+        results = con.execute(
+            f"FROM read_parquet('s3://test-bucket/data/employees.parquet')"
+        ).fetchall()
+        assert len(results) == 5
