@@ -180,37 +180,8 @@ def test_integration_with_postgres_e2e(quackpipe_with_pg_source, postgres_contai
         assert len(results) == 5
 
 
-@pytest.fixture
-def postgres_config_files(tmp_path, postgres_container):
-    """
-    Fixture that returns a function to create config + env files
-    for a postgres source. It normalizes host/port and writes both files.
-    """
-    def _make_files(source_config: dict, env_vars: dict, source_name: str = "my_postgres"):
-        # normalize config
-        source_config = dict(source_config)  # copy so we don’t mutate test data
-        source_config.update({"type": "postgres", "secret_name": "my_db"})
-
-        # write config.yaml
-        config_file = tmp_path / f"{source_name}.yaml"
-        data = {"sources": {source_name: source_config}}
-        config_file.write_text(yaml.safe_dump(data))
-
-        # write env.env
-        env_file = tmp_path / f"{source_name}.env"
-        if env_vars:
-            lines = [f"{k}={v}" for k, v in env_vars.items()]
-            env_file.write_text("\n".join(lines) + "\n")
-        else:
-            env_file.write_text("")  # create empty env file
-
-        return config_file, env_file
-
-    return _make_files
-
-
 @pytest.fixture(params=["all_env", "mixed", "all_config"])
-def pg_case(request, postgres_container, postgres_config_files):
+def pg_case(request, postgres_container, quackpipe_config_files):
     """
     Parametrized fixture that prepares different config/env setups
     for Postgres. Expands host/port dynamically from the running container.
@@ -243,7 +214,7 @@ def pg_case(request, postgres_container, postgres_config_files):
     else:
         raise ValueError(f"Unknown case {request.param}")
 
-    return postgres_config_files(source_config, env_vars)
+    return quackpipe_config_files(source_config, env_vars, source_name="my_postgres", source_type="postgres", secret_name="my_db")
 
 
 def test_postgres_configs(pg_case):

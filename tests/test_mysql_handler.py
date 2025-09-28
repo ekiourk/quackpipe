@@ -189,41 +189,11 @@ def test_integration_with_mysql_e2e(quackpipe_with_mysql_source):
         assert len(results) == 5
 
 
-@pytest.fixture
-def mysql_config_files(tmp_path, mysql_container):
-    """
-    Fixture that returns a function to create config + env files
-    for a mysql source. It normalizes host/port and writes both files.
-    """
-    def _make_files(source_config: dict, env_vars: dict, source_name: str = "the_mysql"):
-        # normalize config
-        source_config = dict(source_config)  # copy so we don’t mutate test data
-        source_config.update({"type": "mysql", "secret_name": "my_db"})
-
-        # write config.yaml
-        config_file = tmp_path / f"{source_name}.yaml"
-        data = {"sources": {source_name: source_config}}
-        config_file.write_text(yaml.safe_dump(data))
-
-        # write env.env
-        env_file = tmp_path / f"{source_name}.env"
-        if env_vars:
-            lines = [f"{k}={v}" for k, v in env_vars.items()]
-            env_file.write_text("\n".join(lines) + "\n")
-        else:
-            env_file.write_text("")  # create empty env file
-
-        return config_file, env_file
-
-    return _make_files
-
-
-
 @pytest.fixture(params=["all_env", "mixed", "all_config"])
-def mysql_case(request, mysql_container, mysql_config_files):
+def mysql_case(request, mysql_container, quackpipe_config_files):
     """
     Parametrized fixture that prepares different config/env setups
-    for Postgres. Expands host/port dynamically from the running container.
+    for Mysql. Expands host/port dynamically from the running container.
     """
     host = mysql_container.get_container_host_ip()
     port = str(mysql_container.get_exposed_port(3306))
@@ -253,7 +223,7 @@ def mysql_case(request, mysql_container, mysql_config_files):
     else:
         raise ValueError(f"Unknown case {request.param}")
 
-    return mysql_config_files(source_config, env_vars)
+    return quackpipe_config_files(source_config, env_vars, source_name="the_mysql", source_type="mysql", secret_name="my_db")
 
 
 def test_mysql_configs(mysql_case):

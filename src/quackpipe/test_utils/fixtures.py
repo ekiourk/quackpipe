@@ -125,10 +125,6 @@ def mock_get_configs():
     with patch('quackpipe.etl_utils.get_configs') as mock:
         yield mock
 
-# ==================== PYTEST FIXTURES FOR POSTGRES CONTAINERS ====================
-
-
-
 
 # Helper fixture to get all test data as DataFrames (useful for tests)
 @pytest.fixture(scope="module")
@@ -145,3 +141,30 @@ def test_datasets():
         'ais_data': generate_synthetic_ais_data(vessels)
     }
 
+
+@pytest.fixture
+def quackpipe_config_files(tmp_path):
+    """
+    Fixture that returns a function to create config + env files for a source.
+    """
+    def _make_files(source_config: dict, env_vars: dict, source_name: str, source_type: str, secret_name: str):
+        # normalize config
+        source_config = dict(source_config)  # copy so we don’t mutate test data
+        source_config.update({"type": source_type, "secret_name": secret_name})
+
+        # write config.yaml
+        config_file = tmp_path / f"{source_name}.yaml"
+        data = {"sources": {source_name: source_config}}
+        config_file.write_text(yaml.safe_dump(data))
+
+        # write env.env
+        env_file = tmp_path / f"{source_name}.env"
+        if env_vars:
+            lines = [f"{k}={v}" for k, v in env_vars.items()]
+            env_file.write_text("\n".join(lines) + "\n")
+        else:
+            env_file.write_text("")  # create empty env file
+
+        return config_file, env_file
+
+    return _make_files
