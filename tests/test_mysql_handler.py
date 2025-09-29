@@ -8,7 +8,6 @@ like parametrize and fixtures for setup.
 import os
 
 import pytest
-import yaml
 
 import quackpipe
 from quackpipe import configure_secret_provider

@@ -217,6 +217,6 @@ def test_s3_configs(s3_case):
         sources=["s3_store"],
     ) as con:
         results = con.execute(
-            f"FROM read_parquet('s3://test-bucket/data/employees.parquet')"
+            "FROM read_parquet('s3://test-bucket/data/employees.parquet')"
         ).fetchall()
         assert len(results) == 5

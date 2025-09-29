@@ -147,10 +147,13 @@ def quackpipe_config_files(tmp_path):
     """
     Fixture that returns a function to create config + env files for a source.
     """
-    def _make_files(source_config: dict, env_vars: dict, source_name: str, source_type: str, secret_name: str):
+    def _make_files(source_config: dict, env_vars: dict, source_name: str, source_type: str = None, secret_name: str = None):
         # normalize config
         source_config = dict(source_config)  # copy so we don’t mutate test data
-        source_config.update({"type": source_type, "secret_name": secret_name})
+        if source_type:
+            source_config.update({"type": source_type})
+        if secret_name:
+            source_config.update({"secret_name": secret_name})
 
         # write config.yaml
         config_file = tmp_path / f"{source_name}.yaml"
