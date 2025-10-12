@@ -197,7 +197,7 @@ def test_parse_config_invalid_type(temp_dir):
     with open(config_path, 'w') as f:
         yaml.dump(invalid_config, f)
 
-    with pytest.raises(ConfigError, match="Missing or invalid 'type' for source 'bad_source'."):
+    with pytest.raises(ConfigError, match="Configuration is invalid"):
         parse_config_from_yaml(config_path)
 
 
@@ -385,8 +385,8 @@ def test_secret_error_inheritance():
 
 @pytest.mark.parametrize("config_data,expected_count", [
     ({'sources': {}}, 0),
-    ({'sources': {'pg1': {'type': 'postgres'}}}, 1),
-    ({'sources': {'pg1': {'type': 'postgres'}, 's3_1': {'type': 's3'}}}, 2),
+    ({'sources': {'pg1': {'type': 'postgres', "secret_name": "..."}}}, 1),
+    ({'sources': {'pg1': {'type': 'postgres', "secret_name": "..."}, 's3_1': {'type': 's3', "secret_name": "..."}}}, 2),
 ])
 def test_config_parsing_counts(temp_dir, config_data, expected_count):
     """Test configuration parsing with different source counts."""

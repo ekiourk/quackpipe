@@ -8,8 +8,8 @@ class QuackpipeError(Exception):
 
 class ConfigError(QuackpipeError):
     """Raised when there's an error with configuration."""
-    pass
+    message = "Configuration error"
 
 class SecretError(QuackpipeError):
     """Raised when there's an error with secret management."""
-    pass
+    message = "Secret management error"

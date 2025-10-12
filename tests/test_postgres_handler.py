@@ -9,6 +9,7 @@ import os
 
 import pytest
 
+import quackpipe
 from quackpipe import configure_secret_provider
 from quackpipe.sources.postgres import PostgresHandler
 
@@ -176,3 +177,54 @@ def test_integration_with_postgres_e2e(quackpipe_with_pg_source, postgres_contai
 
         results = con.execute('FROM pg_source.vessels').fetchall()
         assert len(results) == 5
+
+
+@pytest.fixture(params=["all_env", "mixed", "all_config"])
+def pg_case(request, postgres_container, quackpipe_config_files):
+    """
+    Parametrized fixture that prepares different config/env setups
+    for Postgres. Expands host/port dynamically from the running container.
+    """
+    host = postgres_container.get_container_host_ip()
+    port = str(postgres_container.get_exposed_port(5432))
+
+    if request.param == "all_env":
+        source_config = {"read_only": False}
+        env_vars = {
+            "MY_DB_DATABASE": "test",
+            "MY_DB_USER": "test",
+            "MY_DB_PASSWORD": "test",
+            "MY_DB_HOST": host,
+            "MY_DB_PORT": port,
+        }
+    elif request.param == "mixed":
+        source_config = {"database": "test", "host": host, "port": port, "read_only": False}
+        env_vars = {"MY_DB_USER": "test", "MY_DB_PASSWORD": "test"}
+    elif request.param == "all_config":
+        source_config = {
+            "database": "test",
+            "user": "test",
+            "password": "test",
+            "host": host,
+            "port": port,
+            "read_only": False,
+        }
+        env_vars = {}
+    else:
+        raise ValueError(f"Unknown case {request.param}")
+
+    return quackpipe_config_files(source_config, env_vars, source_name="my_postgres", source_type="postgres", secret_name="my_db")
+
+
+def test_postgres_configs(pg_case):
+    config_file, env_file = pg_case
+
+    with quackpipe.session(
+        config_path=str(config_file),
+        env_file=str(env_file),
+        sources=["my_postgres"],
+    ) as con:
+        con.execute("CREATE TABLE my_postgres.tbl (id INTEGER, name VARCHAR);")
+        con.execute("INSERT INTO my_postgres.tbl VALUES (42, 'DuckDB');")
+        assert len(con.execute("FROM my_postgres.tbl").df()) == 1
+        con.execute("DROP TABLE my_postgres.tbl;")

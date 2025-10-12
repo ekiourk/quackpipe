@@ -9,6 +9,7 @@ import os
 
 import pytest
 
+import quackpipe
 from quackpipe import configure_secret_provider
 from quackpipe.sources.mysql import MySQLHandler
 
@@ -185,3 +186,54 @@ def test_integration_with_mysql_e2e(quackpipe_with_mysql_source):
         # check the view
         results = con.execute("FROM mysql_source_vessels").fetchall()
         assert len(results) == 5
+
+
+@pytest.fixture(params=["all_env", "mixed", "all_config"])
+def mysql_case(request, mysql_container, quackpipe_config_files):
+    """
+    Parametrized fixture that prepares different config/env setups
+    for Mysql. Expands host/port dynamically from the running container.
+    """
+    host = mysql_container.get_container_host_ip()
+    port = str(mysql_container.get_exposed_port(3306))
+
+    if request.param == "all_env":
+        source_config = {"read_only": False}
+        env_vars = {
+            "MY_DB_DATABASE": "test",
+            "MY_DB_USER": "test",
+            "MY_DB_PASSWORD": "test",
+            "MY_DB_HOST": host,
+            "MY_DB_PORT": port,
+        }
+    elif request.param == "mixed":
+        source_config = {"database": "test", "host": host, "port": port, "read_only": False}
+        env_vars = {"MY_DB_USER": "test", "MY_DB_PASSWORD": "test"}
+    elif request.param == "all_config":
+        source_config = {
+            "database": "test",
+            "user": "test",
+            "password": "test",
+            "host": host,
+            "port": port,
+            "read_only": False,
+        }
+        env_vars = {}
+    else:
+        raise ValueError(f"Unknown case {request.param}")
+
+    return quackpipe_config_files(source_config, env_vars, source_name="the_mysql", source_type="mysql", secret_name="my_db")
+
+
+def test_mysql_configs(mysql_case):
+    config_file, env_file = mysql_case
+
+    with quackpipe.session(
+        config_path=str(config_file),
+        env_file=str(env_file),
+        sources=["the_mysql"],
+    ) as con:
+        con.execute("CREATE TABLE the_mysql.tbl (id INTEGER, name VARCHAR);")
+        con.execute("INSERT INTO the_mysql.tbl VALUES (42, 'DuckDB');")
+        assert len(con.execute("FROM the_mysql.tbl").df()) == 1
+        con.execute("DROP TABLE the_mysql.tbl;")

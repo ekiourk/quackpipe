@@ -57,7 +57,7 @@ def test_render_sql_with_service_principal(monkeypatch):
         "connection_name": "azure_sp",
         "secret_name": "azure_prod_sp",
         "provider": "service_principal",
-        "account": "myazurestorage"  # Can be in config or secret
+        "account_name": "myazurestorage"  # Can be in config or secret
     }
     monkeypatch.setenv("AZURE_PROD_SP_TENANT_ID", "tenant-id-123")
     monkeypatch.setenv("AZURE_PROD_SP_CLIENT_ID", "client-id-456")
@@ -75,7 +75,7 @@ def test_render_sql_with_service_principal(monkeypatch):
         "CREATE OR REPLACE SECRET azure_sp_secret",
         "TYPE AZURE",
         "PROVIDER 'service_principal'",
-        "ACCOUNT 'myazurestorage'",
+        "ACCOUNT_NAME 'myazurestorage'",
         "TENANT_ID 'tenant-id-123'",
         "CLIENT_ID 'client-id-456'",
         "CLIENT_SECRET 'client-secret-789'"
@@ -93,7 +93,7 @@ def test_render_sql_with_managed_identity():
     context = {
         "connection_name": "azure_mi",
         "provider": "managed_identity",
-        "account": "myazurestorage"
+        "account_name": "myazurestorage"
     }
     handler = AzureBlobHandler(context)
 
@@ -105,7 +105,7 @@ def test_render_sql_with_managed_identity():
         "CREATE OR REPLACE SECRET azure_mi_secret",
         "TYPE AZURE",
         "PROVIDER 'credential_chain'",
-        "ACCOUNT 'myazurestorage'"
+        "ACCOUNT_NAME 'myazurestorage'"
     ]
     normalized_sql = " ".join(generated_sql.split())
     for part in expected_parts:

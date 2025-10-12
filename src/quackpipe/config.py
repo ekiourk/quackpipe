@@ -1,9 +1,29 @@
 """
 Defines the typed configuration objects for quackpipe.
 """
+import os
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
+
+import yaml
+from jsonschema import validate
+
+
+def validate_config(config_data: dict) -> None:
+    """
+    Validates the given configuration data against the schema.
+
+    Args:
+        config_data: The configuration data to validate.
+
+    Raises:
+        ValidationError: If the configuration is invalid.
+    """
+    schema_path = os.path.join(os.path.dirname(__file__), "config.schema.yml")
+    with open(schema_path) as f:
+        schema = yaml.safe_load(f)
+    validate(instance=config_data, schema=schema)
 
 
 @dataclass(frozen=True)

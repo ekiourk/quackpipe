@@ -92,4 +92,4 @@ class QuackpipeBuilder:
 
         # Pass the built configs and any extra arguments (like `sources`)
         # to the core session manager.
-        return core_session(configs=self._sources, **kwargs)
+        return core_session(configs=self.get_configs(), **kwargs)

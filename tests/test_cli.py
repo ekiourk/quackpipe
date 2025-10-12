@@ -3,11 +3,16 @@ tests/test_cli.py
 
 This file contains pytest tests for the CLI functions in cli.py.
 """
+import io
+import os
+import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
+import yaml
 
 from quackpipe import configure_secret_provider
+from quackpipe.cli import main
 from quackpipe.commands.generate_sqlmesh_config import _replace_secrets_with_placeholders
 from quackpipe.config import SourceConfig, SourceType
 
@@ -136,3 +141,48 @@ def test_generate_sqlmesh_config_command(mock_open, mock_yaml_dump, mock_get_con
     assert "PASSWORD '${PROD_DB_PASSWORD}'" in init_sql
     # Verify that non-secret values remain untouched
     assert "HOST 'localhost'" in init_sql
+
+
+# ==================== TESTS FOR VALIDATE COMMAND ====================
+
+@patch('sys.stdout', new_callable=io.StringIO)
+def test_validate_command_valid_config(mock_stdout, tmpdir):
+    """Test the validate command with a valid config file."""
+    config_data = {"sources": {"my_source": {"type": "sqlite", "path": "test.db"}}}
+    config_path = os.path.join(tmpdir, "config.yml")
+    with open(config_path, 'w') as f:
+        yaml.dump(config_data, f)
+
+    with patch.object(sys, 'argv', ['quackpipe', 'validate', '--config', config_path]):
+        main()
+
+    output = mock_stdout.getvalue()
+    assert f"Attempting to validate configuration file: {config_path}" in output
+    assert f"✅ Configuration file at '{config_path}' is valid." in output
+
+@patch('sys.stdout', new_callable=io.StringIO)
+def test_validate_command_invalid_config(mock_stdout, tmpdir):
+    """Test the validate command with an invalid config file."""
+    config_data = {"sources": {"my_source": {"type": "sqlite"}}} # Missing path
+    config_path = os.path.join(tmpdir, "config.yml")
+    with open(config_path, 'w') as f:
+        yaml.dump(config_data, f)
+
+    with patch.object(sys, 'argv', ['quackpipe', 'validate', '--config', config_path]):
+        main()
+
+    output = mock_stdout.getvalue()
+    assert f"Attempting to validate configuration file: {config_path}" in output
+    assert f"❌ Configuration file at '{config_path}' is invalid." in output
+    assert "Reason:" in output
+
+@patch('sys.stdout', new_callable=io.StringIO)
+def test_validate_command_no_file(mock_stdout):
+    """Test the validate command with a non-existent config file."""
+    config_path = "non_existent_config.yml"
+    with patch.object(sys, 'argv', ['quackpipe', 'validate', '--config', config_path]):
+        main()
+
+    output = mock_stdout.getvalue()
+    assert f"Attempting to validate configuration file: {config_path}" in output
+    assert f"❌ Error: Configuration file not found at '{config_path}'." in output
