@@ -19,6 +19,8 @@ class BaseSourceHandler(ABC):
             context: A dictionary containing the combined config and secrets.
         """
         self.context = context
+        self.before_source_statements = context.get("before_source_statements", [])
+        self.after_source_statements = context.get("after_source_statements", [])
 
     @property
     @abstractmethod

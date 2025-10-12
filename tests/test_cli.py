@@ -98,7 +98,7 @@ def test_generate_sqlmesh_config_command(mock_open, mock_yaml_dump, mock_get_con
             config={"host": "localhost"}  # Non-secret config
         )
     ]
-    mock_get_configs.return_value = mock_configs
+    mock_get_configs.return_value = (mock_configs, {})
 
     # 2. Mock the environment variables that will be fetched
     monkeypatch.setenv("PROD_DB_USER", "test_user")

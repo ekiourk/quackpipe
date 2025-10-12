@@ -8,6 +8,16 @@ properties:
     description: "A dictionary of data sources to configure."
     additionalProperties:
       $ref: "#/definitions/source"
+  before_all_statements:
+    type: array
+    items:
+      type: string
+    description: "A list of custom SQL commands to run once before any sources are initialized."
+  after_all_statements:
+    type: array
+    items:
+      type: string
+    description: "A list of custom SQL commands to run once after all sources are initialized."
 $defs:
   port:
     anyOf:
@@ -29,6 +39,16 @@ definitions:
           - azure
           - sqlite
           - ducklake
+      before_source_statements:
+        type: array
+        items:
+          type: string
+        description: "A list of custom SQL commands to run right before this source is initialized."
+      after_source_statements:
+        type: array
+        items:
+          type: string
+        description: "A list of custom SQL commands to run right after this source is initialized."
     oneOf:
       - $ref: "#/definitions/postgres"
       - $ref: "#/definitions/mysql"

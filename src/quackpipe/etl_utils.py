@@ -51,7 +51,7 @@ def move_data(
         format: The file format for file-based destinations (e.g., 'parquet', 'csv').
     """
     # Load all configurations using the shared helper function.
-    all_configs = get_configs(config_path, configs)
+    all_configs, _ = get_configs(config_path, configs)
 
     try:
         # Find the destination config to determine its type.

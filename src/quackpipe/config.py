@@ -54,3 +54,5 @@ class SourceConfig:
     type: SourceType
     config: dict[str, Any] = field(default_factory=dict)
     secret_name: str | None = None
+    before_source_statements: list[str] = field(default_factory=list)
+    after_source_statements: list[str] = field(default_factory=list)

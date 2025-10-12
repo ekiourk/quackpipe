@@ -160,7 +160,7 @@ def test_builder_session_success(mock_session):
 
 def test_parse_config_from_yaml(sample_yaml_config):
     """Test parsing YAML configuration."""
-    configs = parse_config_from_yaml(sample_yaml_config)
+    configs, _ = parse_config_from_yaml(sample_yaml_config)
 
     assert len(configs) == 2
 
@@ -394,7 +394,7 @@ def test_config_parsing_counts(temp_dir, config_data, expected_count):
     with open(config_path, 'w') as f:
         yaml.dump(config_data, f)
 
-    configs = parse_config_from_yaml(config_path)
+    configs, _ = parse_config_from_yaml(config_path)
     assert len(configs) == expected_count
 
 
@@ -415,7 +415,7 @@ def test_large_config_handling(temp_dir):
     with open(config_path, 'w') as f:
         yaml.dump(large_config, f)
 
-    configs = parse_config_from_yaml(config_path)
+    configs, _ = parse_config_from_yaml(config_path)
     assert len(configs) == 50
 
 
@@ -432,3 +432,48 @@ def test_builder_with_none_config():
     builder.add_source("test", SourceType.POSTGRES, config=None)
 
     assert builder._sources[0].config == {}
+
+
+@patch('quackpipe.sources.sqlite.SQLiteHandler.render_sql', return_value="-- SOURCE-SPECIFIC SQL")
+@patch('quackpipe.core.get_configs')
+def test_full_statement_execution_order(mock_get_configs, mock_render_sql):
+    """Verify the execution order of all statement types."""
+    # Mock the config to return specific statements
+    mock_configs = [
+        SourceConfig(
+            name="test_sqlite",
+            type=SourceType.SQLITE,
+            config={"path": ":memory:"},
+            before_source_statements=["-- BEFORE-SOURCE"],
+            after_source_statements=["-- AFTER-SOURCE"]
+        )
+    ]
+    mock_global_statements = {
+        'before_all_statements': ["-- BEFORE-ALL"],
+        'after_all_statements': ["-- AFTER-ALL"]
+    }
+    mock_get_configs.return_value = (mock_configs, mock_global_statements)
+
+    # Mock the connection to trace executed SQL
+    mock_con = Mock(spec=DuckDBPyConnection)
+    executed_sql = []
+    mock_con.execute.side_effect = lambda sql: executed_sql.append(sql.strip())
+
+    mock_con.__enter__ = Mock(return_value=mock_con)
+    mock_con.__exit__ = Mock(return_value=None)
+
+    with patch('duckdb.connect', return_value=mock_con):
+        with session(config_path="dummy.yml"):
+            pass
+
+    # Define the expected order of SQL execution
+    expected_order = [
+        "-- BEFORE-ALL",
+        "-- BEFORE-SOURCE",
+        "-- SOURCE-SPECIFIC SQL",
+        "-- AFTER-SOURCE",
+        "-- AFTER-ALL"
+    ]
+
+    # Assert that the SQL was executed in the correct order
+    assert executed_sql == expected_order, "The SQL statements were not executed in the correct order."

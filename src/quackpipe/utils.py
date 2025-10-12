@@ -12,8 +12,11 @@ from .config import SourceConfig
 from .exceptions import ConfigError
 
 
-def parse_config_from_yaml(path: str) -> list[SourceConfig]:
-    """Loads a YAML file and parses it into a list of SourceConfig objects."""
+def parse_config_from_yaml(path: str) -> tuple[list[SourceConfig], dict]:
+    """
+    Loads a YAML file and parses it into a list of SourceConfig objects
+    and a dictionary of global statements.
+    """
     try:
         with open(path) as f:
             raw_config = yaml.safe_load(f)
@@ -42,21 +45,31 @@ def parse_config_from_yaml(path: str) -> list[SourceConfig]:
             raise ConfigError(f"Missing or invalid 'type' for source '{name}'.") from e
 
         secret_name = details_copy.pop('secret_name', None)
+        before_statements = details_copy.pop('before_source_statements', [])
+        after_statements = details_copy.pop('after_source_statements', [])
         source_specific_config = details_copy
 
         source_configs.append(SourceConfig(
             name=name,
             type=source_type,
             secret_name=secret_name,
+            before_source_statements=before_statements,
+            after_source_statements=after_statements,
             config=source_specific_config
         ))
-    return source_configs
+
+    global_statements = {
+        'before_all_statements': raw_config.get('before_all_statements', []),
+        'after_all_statements': raw_config.get('after_all_statements', []),
+    }
+
+    return source_configs, global_statements
 
 
 def get_configs(
         config_path: str | None = None,
         configs: list[SourceConfig] | None = None
-) -> list[SourceConfig]:
+) -> tuple[list[SourceConfig], dict]:
     """
     A helper function to load source configurations. The priority is:
     1. A file path from the `config_path` argument.
@@ -68,7 +81,7 @@ def get_configs(
     if config_path:
         return parse_config_from_yaml(config_path)
     elif configs:
-        return configs
+        return configs, {}
 
     # As a last resort, try the environment variable.
     env_config_path = os.environ.get("QUACKPIPE_CONFIG_PATH")
