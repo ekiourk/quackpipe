@@ -5,7 +5,7 @@ import textwrap
 
 import pytest
 
-from quackpipe import ConfigError, get_source_config
+from quackpipe import ConfigError, get_source_params
 
 
 def test_config(tmp_path):
@@ -28,7 +28,9 @@ def test_config(tmp_path):
     env_path = tmp_path / ".env"
     env_path.write_text(env_file)
 
-    merged_config = get_source_config("test_source", config_path=str(config_path), env_file=str(env_path))
+    merged_config = get_source_params("test_source", config_path=str(config_path), env_file=str(env_path))
+
+    assert merged_config.HOST == merged_config.host == merged_config['host'] == merged_config['HOST'] == merged_config['Host']
 
     assert merged_config == {
         "host": "localhost",
@@ -51,4 +53,4 @@ def test_config_source_not_found(tmp_path):
     config_path.write_text(config_yml)
 
     with pytest.raises(ConfigError):
-        get_source_config("not_found", config_path=str(config_path))
+        get_source_params("not_found", config_path=str(config_path))

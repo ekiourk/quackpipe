@@ -3,8 +3,8 @@ import os
 import pytest
 import yaml
 
+from quackpipe.config import get_config_yaml, parse_config_from_yaml
 from quackpipe.exceptions import ConfigError
-from quackpipe.utils import get_config_yaml, parse_config_from_yaml
 
 
 def run_validation_test(temp_dir, invalid_config, should_pass=False):

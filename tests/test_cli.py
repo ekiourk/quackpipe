@@ -14,7 +14,7 @@ import yaml
 from quackpipe import configure_secret_provider
 from quackpipe.cli import main
 from quackpipe.commands.generate_sqlmesh_config import _replace_secrets_with_placeholders
-from quackpipe.config import SourceConfig, SourceType
+from quackpipe.config import SourceConfig, SourceParams, SourceType
 
 # ==================== UNIT TESTS FOR HELPER FUNCTIONS ====================
 
@@ -95,7 +95,7 @@ def test_generate_sqlmesh_config_command(mock_open, mock_yaml_dump, mock_get_con
             name="my_source",
             type=SourceType.POSTGRES,
             secret_name="prod_db",
-            config={"host": "localhost"}  # Non-secret config
+            config=SourceParams({"host": "localhost"})  # Non-secret config
         )
     ]
     mock_get_configs.return_value = mock_configs

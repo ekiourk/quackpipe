@@ -6,13 +6,12 @@ from functools import wraps
 
 import duckdb
 
-from quackpipe.config import Plugin, SourceConfig, SourceType
+from quackpipe.config import Plugin, SourceConfig, SourceParams, SourceType, get_configs, get_global_statements
 from quackpipe.exceptions import ConfigError
 from quackpipe.secrets import configure_secret_provider, fetch_secret_bundle
 
 # Import all handlers
 from quackpipe.sources import azure_blob, ducklake, mysql, postgres, s3, sqlite
-from quackpipe.utils import get_configs, get_global_statements
 
 logger = logging.getLogger(__name__)
 
@@ -172,11 +171,11 @@ def with_session(**session_kwargs):
     return decorator
 
 
-def get_source_config(
+def get_source_params(
     source_name: str,
     config_path: str | None = None,
     env_file: str | None = None,
-) -> dict:
+) -> SourceParams:
     """
     Returns the configuration for a given source, merged with its secrets.
 
@@ -197,4 +196,4 @@ def get_source_config(
         raise ConfigError(f"Source '{source_name}' not found in configuration.")
 
     secrets = fetch_secret_bundle(source_config.secret_name)
-    return {**source_config.config, **secrets}
+    return SourceParams({**source_config.config, **secrets})

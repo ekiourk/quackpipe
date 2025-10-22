@@ -17,11 +17,11 @@ import yaml
 from duckdb import DuckDBPyConnection
 
 from quackpipe.builder import QuackpipeBuilder
-from quackpipe.config import SourceConfig, SourceType
+from quackpipe.config import SourceConfig, SourceType, get_config_yaml, parse_config_from_yaml
 from quackpipe.core import _prepare_connection, session
 from quackpipe.exceptions import ConfigError, QuackpipeError, SecretError
 from quackpipe.secrets import fetch_secret_bundle
-from quackpipe.utils import get_config_yaml, is_connection_open, parse_config_from_yaml
+from quackpipe.utils import is_connection_open
 
 sys.path.insert(0, 'src')
 

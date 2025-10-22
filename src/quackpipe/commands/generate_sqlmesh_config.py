@@ -7,10 +7,9 @@ from argparse import _SubParsersAction
 
 import yaml
 
-from ..config import SourceConfig
+from ..config import SourceConfig, get_configs
 from ..core import SOURCE_HANDLER_REGISTRY
 from ..secrets import configure_secret_provider, fetch_raw_secret_bundle
-from ..utils import get_configs
 from .common import get_default_config_path
 
 

@@ -6,11 +6,10 @@ import logging
 import duckdb
 import pandas as pd
 
-from .config import SourceConfig, SourceType
+from .config import SourceConfig, SourceType, get_configs
 
 # Import the session context manager from core and config loader from utils
 from .core import session
-from .utils import get_configs
 
 logger = logging.getLogger(__name__)
 
