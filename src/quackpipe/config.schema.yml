@@ -74,7 +74,7 @@ definitions:
         items: { type: string }
     required:
       - secret_name
-    additionalProperties: false
+    additionalProperties: true
 
   s3:
     type: object
@@ -91,7 +91,7 @@ definitions:
       use_ssl: { type: boolean }
     required:
       - secret_name
-    additionalProperties: false
+    additionalProperties: true
 
   azure:
     type: object
@@ -105,7 +105,7 @@ definitions:
           - type
           - provider
           - secret_name
-        additionalProperties: false
+        additionalProperties: true
       - type: object
         properties:
           type: { const: "azure" }
@@ -119,7 +119,7 @@ definitions:
           - type
           - provider
           - secret_name
-        additionalProperties: false
+        additionalProperties: true
       - type: object
         properties:
           type: { const: "azure" }
@@ -129,7 +129,7 @@ definitions:
         required:
           - type
           - provider
-        additionalProperties: false
+        additionalProperties: true
 
   sqlite:
     type: object
@@ -139,7 +139,7 @@ definitions:
       read_only: { type: boolean }
     required:
       - path
-    additionalProperties: false
+    additionalProperties: true
 
   ducklake:
     type: object
@@ -170,14 +170,14 @@ definitions:
               type: { const: "local" }
               path: { type: string }
             required: [ type, path ]
-            additionalProperties: false
+            additionalProperties: true
         required:
           - type
           - path
     required:
       - catalog
       - storage
-    additionalProperties: false
+    additionalProperties: true
 
   mysql:
     type: object
@@ -196,4 +196,4 @@ definitions:
         items: { type: string }
     required:
       - secret_name
-    additionalProperties: false
+    additionalProperties: true
