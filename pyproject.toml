@@ -1,6 +1,6 @@
 [project]
 name = "quackpipe"
-version = "0.6.7"
+version = "0.6.8"
 requires-python = ">=3.12"
 description = "A configuration-driven and programmatic ETL helper for DuckDB."
 license = {text = "MIT"}
