@@ -11,7 +11,7 @@ from quackpipe.secrets import configure_secret_provider
 
 # Import all handlers
 from quackpipe.sources import azure_blob, ducklake, mysql, postgres, s3, sqlite
-from quackpipe.utils import get_configs
+from quackpipe.utils import get_configs, get_global_statements
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +43,8 @@ def _prepare_connection(con: duckdb.DuckDBPyConnection, configs: list[SourceConf
             **cfg.config,
             "connection_name": cfg.name,
             "secret_name": cfg.secret_name,
+            "before_source_statements": cfg.before_source_statements,
+            "after_source_statements": cfg.after_source_statements,
         }
         handler_instance = HandlerClass(full_context)
         instantiated_handlers.append(handler_instance)
@@ -71,20 +73,42 @@ def _prepare_connection(con: duckdb.DuckDBPyConnection, configs: list[SourceConf
 
     # 4. Render and execute the setup SQL for each handler
     for handler in instantiated_handlers:
+        # Execute any before_source_statements
+        if handler.before_source_statements:
+            for custom_sql in handler.before_source_statements:
+                logger.debug("Executing custom SQL for %s:\n%s", handler.source_type, custom_sql)
+                try:
+                    con.execute(custom_sql)
+                except (duckdb.ParserException, duckdb.IOException):
+                    logger.exception("Error executing custom SQL for %s", handler.source_type)
+                    raise
+
+        # Execute the handler's main setup SQL
         setup_sql = handler.render_sql()
-        logger.debug(setup_sql)
-        try:
-            con.execute(setup_sql)
-        except (duckdb.ParserException, duckdb.IOException):
-            logger.exception(setup_sql)
-            raise
+        if setup_sql:
+            logger.debug("Executing setup SQL for %s:\n%s", handler.source_type, setup_sql)
+            try:
+                con.execute(setup_sql)
+            except (duckdb.ParserException, duckdb.IOException):
+                logger.exception("Error executing setup SQL for %s", handler.source_type)
+                raise
+
+        # Execute any additional custom SQL commands
+        if handler.after_source_statements:
+            for custom_sql in handler.after_source_statements:
+                logger.debug("Executing custom SQL for %s:\n%s", handler.source_type, custom_sql)
+                try:
+                    con.execute(custom_sql)
+                except (duckdb.ParserException, duckdb.IOException):
+                    logger.exception("Error executing custom SQL for %s", handler.source_type)
+                    raise
 
 
 def session(
         config_path: str | None = None,
         configs: list[SourceConfig] | None = None,
         sources: list[str] | None = None,
-        env_file: str | None = None
+        env_file: str | None = None,
 ) -> duckdb.DuckDBPyConnection:
     """
     Creates and returns a pre-configured DuckDB connection.
@@ -115,7 +139,19 @@ def session(
         active_configs = [c for c in all_configs if c.name in sources]
 
     con = duckdb.connect(database=':memory:')
+
+    global_statements = get_global_statements(config_path)
+
+    # Execute before_all_statements
+    for stmt in global_statements.get('before_all_statements', []):
+        con.execute(stmt)
+
     _prepare_connection(con, active_configs)
+
+    # Execute after_all_statements
+    for stmt in global_statements.get('after_all_statements', []):
+        con.execute(stmt)
+
     return con
 
 

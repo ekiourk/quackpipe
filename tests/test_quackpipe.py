@@ -21,7 +21,7 @@ from quackpipe.config import SourceConfig, SourceType
 from quackpipe.core import _prepare_connection, session
 from quackpipe.exceptions import ConfigError, QuackpipeError, SecretError
 from quackpipe.secrets import fetch_secret_bundle
-from quackpipe.utils import is_connection_open, parse_config_from_yaml
+from quackpipe.utils import get_config_yaml, is_connection_open, parse_config_from_yaml
 
 sys.path.insert(0, 'src')
 
@@ -160,7 +160,7 @@ def test_builder_session_success(mock_session):
 
 def test_parse_config_from_yaml(sample_yaml_config):
     """Test parsing YAML configuration."""
-    configs = parse_config_from_yaml(sample_yaml_config)
+    configs = parse_config_from_yaml(get_config_yaml(sample_yaml_config))
 
     assert len(configs) == 2
 
@@ -179,7 +179,7 @@ def test_parse_config_from_yaml(sample_yaml_config):
 def test_parse_config_from_yaml_not_found():
     """Test parsing non-existent YAML file."""
     with pytest.raises(ConfigError, match="Configuration file not found"):
-        parse_config_from_yaml("nonexistent.yml")
+        parse_config_from_yaml(get_config_yaml("nonexistent.yml"))
 
 
 def test_parse_config_invalid_type(temp_dir):
@@ -198,7 +198,7 @@ def test_parse_config_invalid_type(temp_dir):
         yaml.dump(invalid_config, f)
 
     with pytest.raises(ConfigError, match="Configuration is invalid"):
-        parse_config_from_yaml(config_path)
+        parse_config_from_yaml(get_config_yaml(config_path))
 
 
 @patch('duckdb.connect')
@@ -394,7 +394,7 @@ def test_config_parsing_counts(temp_dir, config_data, expected_count):
     with open(config_path, 'w') as f:
         yaml.dump(config_data, f)
 
-    configs = parse_config_from_yaml(config_path)
+    configs = parse_config_from_yaml(get_config_yaml(config_path))
     assert len(configs) == expected_count
 
 
@@ -415,7 +415,7 @@ def test_large_config_handling(temp_dir):
     with open(config_path, 'w') as f:
         yaml.dump(large_config, f)
 
-    configs = parse_config_from_yaml(config_path)
+    configs = parse_config_from_yaml(get_config_yaml(config_path))
     assert len(configs) == 50
 
 
@@ -432,3 +432,48 @@ def test_builder_with_none_config():
     builder.add_source("test", SourceType.POSTGRES, config=None)
 
     assert builder._sources[0].config == {}
+
+
+@patch('quackpipe.sources.sqlite.SQLiteHandler.render_sql', return_value="-- SOURCE-SPECIFIC SQL")
+@patch('quackpipe.core.get_global_statements')
+@patch('quackpipe.core.get_configs')
+def test_full_statement_execution_order(mock_get_configs, mock_get_global_statements, mock_render_sql):
+    """Verify the execution order of all statement types."""
+    # Mock the config to return specific statements
+    mock_get_configs.return_value = [
+        SourceConfig(
+            name="test_sqlite",
+            type=SourceType.SQLITE,
+            config={"path": ":memory:"},
+            before_source_statements=["-- BEFORE-SOURCE"],
+            after_source_statements=["-- AFTER-SOURCE"]
+        )
+    ]
+    mock_get_global_statements.return_value = {
+        'before_all_statements': ["-- BEFORE-ALL"],
+        'after_all_statements': ["-- AFTER-ALL"]
+    }
+
+    # Mock the connection to trace executed SQL
+    mock_con = Mock(spec=DuckDBPyConnection)
+    executed_sql = []
+    mock_con.execute.side_effect = lambda sql: executed_sql.append(sql.strip())
+
+    mock_con.__enter__ = Mock(return_value=mock_con)
+    mock_con.__exit__ = Mock(return_value=None)
+
+    with patch('duckdb.connect', return_value=mock_con):
+        with session(config_path="dummy.yml"):
+            pass
+
+    # Define the expected order of SQL execution
+    expected_order = [
+        "-- BEFORE-ALL",
+        "-- BEFORE-SOURCE",
+        "-- SOURCE-SPECIFIC SQL",
+        "-- AFTER-SOURCE",
+        "-- AFTER-ALL"
+    ]
+
+    # Assert that the SQL was executed in the correct order
+    assert executed_sql == expected_order, "The SQL statements were not executed in the correct order."
