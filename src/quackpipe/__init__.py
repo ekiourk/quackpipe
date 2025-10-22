@@ -12,7 +12,7 @@ import os
 # Expose the primary user-facing functions and classes.
 from .builder import QuackpipeBuilder
 from .config import SourceConfig, SourceType
-from .core import session, with_session
+from .core import get_source_config, session, with_session
 from .exceptions import ConfigError, QuackpipeError, SecretError
 from .secrets import configure_secret_provider
 
@@ -27,7 +27,7 @@ __all__ = [
     # Core API
     "session",
     "with_session",
-
+    "get_source_config",
     # Builder API
     "QuackpipeBuilder",
 

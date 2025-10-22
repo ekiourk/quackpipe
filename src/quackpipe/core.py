@@ -7,7 +7,8 @@ from functools import wraps
 import duckdb
 
 from quackpipe.config import Plugin, SourceConfig, SourceType
-from quackpipe.secrets import configure_secret_provider
+from quackpipe.exceptions import ConfigError
+from quackpipe.secrets import configure_secret_provider, fetch_secret_bundle
 
 # Import all handlers
 from quackpipe.sources import azure_blob, ducklake, mysql, postgres, s3, sqlite
@@ -169,3 +170,31 @@ def with_session(**session_kwargs):
         return wrapper
 
     return decorator
+
+
+def get_source_config(
+    source_name: str,
+    config_path: str | None = None,
+    env_file: str | None = None,
+) -> dict:
+    """
+    Returns the configuration for a given source, merged with its secrets.
+
+    Args:
+        source_name: The name of the source to get the configuration for.
+        config_path: The path to the configuration file.
+        env_file: The path to the environment file.
+
+    Returns:
+        A dictionary containing the merged configuration and secrets.
+    """
+    configure_secret_provider(env_file=env_file)
+
+    all_configs = get_configs(config_path)
+    source_config = next((c for c in all_configs if c.name == source_name), None)
+
+    if not source_config:
+        raise ConfigError(f"Source '{source_name}' not found in configuration.")
+
+    secrets = fetch_secret_bundle(source_config.secret_name)
+    return {**source_config.config, **secrets}
