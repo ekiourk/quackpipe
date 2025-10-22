@@ -55,7 +55,7 @@ def handler(args):
     """The main handler function for the generate-sqlmesh-config command."""
     configure_secret_provider(env_file=args.env_file)
     print(f"Reading quackpipe configuration from: {args.config}")
-    quackpipe_configs, _ = get_configs(config_path=args.config)
+    quackpipe_configs = get_configs(config_path=args.config)
     raw_sql = _generate_raw_sql(quackpipe_configs)
     final_sql_with_placeholders = _replace_secrets_with_placeholders(raw_sql, quackpipe_configs)
     sqlmesh_config_dict = _build_sqlmesh_dict(final_sql_with_placeholders, args.gateway_name, args.state_db)

@@ -12,16 +12,27 @@ from .config import SourceConfig
 from .exceptions import ConfigError
 
 
-def parse_config_from_yaml(path: str) -> tuple[list[SourceConfig], dict]:
+def get_config_yaml(path: str | None) -> dict | None:  # Add type hint
     """
-    Loads a YAML file and parses it into a list of SourceConfig objects
-    and a dictionary of global statements.
+    Loads and returns the parsed YAML configuration from the given path
+    or from the QUACKPIPE_CONFIG_PATH environment variable.
+
+    Returns None if no valid path is found.
     """
-    try:
-        with open(path) as f:
-            raw_config = yaml.safe_load(f)
-    except FileNotFoundError as e:
-        raise ConfigError(f"Configuration file not found at '{path}'.") from e
+    config_path = path or os.environ.get("QUACKPIPE_CONFIG_PATH")
+    if config_path:
+        try:
+            with open(config_path) as f:
+                return yaml.safe_load(f)
+        except FileNotFoundError as e:
+            raise ConfigError(f"Configuration file not found at '{config_path}'.") from e
+    return None
+
+
+def parse_config_from_yaml(raw_config: dict) -> list[SourceConfig]:
+    """
+    Gets the content of a parsed YAML file, validates it and prepares a list of SourceConfig objects
+    """
 
     # We import here to avoid a circular import at the top level
     from jsonschema.exceptions import ValidationError
@@ -58,41 +69,49 @@ def parse_config_from_yaml(path: str) -> tuple[list[SourceConfig], dict]:
             config=source_specific_config
         ))
 
-    global_statements = {
-        'before_all_statements': raw_config.get('before_all_statements', []),
-        'after_all_statements': raw_config.get('after_all_statements', []),
-    }
-
-    return source_configs, global_statements
+    return source_configs
 
 
 def get_configs(
         config_path: str | None = None,
         configs: list[SourceConfig] | None = None
-) -> tuple[list[SourceConfig], dict]:
+) -> list[SourceConfig]:
     """
     A helper function to load source configurations. The priority is:
-    1. A file path from the `config_path` argument.
-    2. A direct list from the `configs` argument.
+    1. A direct list from the `configs` argument.
+    2. A file path from the `config_path` argument.
     3. A file path from the `QUACKPIPE_CONFIG_PATH` environment variable.
 
     This logic is shared by `session` and `etl_utils`.
     """
-    if config_path:
-        return parse_config_from_yaml(config_path)
-    elif configs:
-        return configs, {}
+    # If configs are directly provided, return them immediately
+    if configs:
+        return configs
 
-    # As a last resort, try the environment variable.
-    env_config_path = os.environ.get("QUACKPIPE_CONFIG_PATH")
-    if env_config_path:
-        return parse_config_from_yaml(env_config_path)
-    else:
-        # This provides a clear error message if no configuration source is given.
-        raise ConfigError(
-            "Must provide either a 'config_path', a 'configs' list, or set the "
-            "'QUACKPIPE_CONFIG_PATH' environment variable."
-        )
+    # Try to load from config_path or environment variable
+    config_yaml = get_config_yaml(config_path)
+    if config_yaml:
+        return parse_config_from_yaml(config_yaml)
+
+    # This provides a clear error message if no configuration source is given.
+    raise ConfigError(
+        "Must provide either a 'config_path', a 'configs' list, or set the "
+        "'QUACKPIPE_CONFIG_PATH' environment variable to a valid config yaml file."
+    )
+
+
+def get_global_statements(config_path: str | None = None) -> dict:
+    """
+    Extracts global statements from the configuration file.
+
+    Returns a dictionary with 'before_all_statements' and 'after_all_statements'.
+    Returns empty lists if no configuration is found.
+    """
+    raw_config = get_config_yaml(config_path) or {}
+    return {
+        'before_all_statements': raw_config.get('before_all_statements', []),
+        'after_all_statements': raw_config.get('after_all_statements', []),
+    }
 
 
 def is_connection_open(conn: DuckDBPyConnection) -> bool:

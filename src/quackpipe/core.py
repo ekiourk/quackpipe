@@ -11,7 +11,7 @@ from quackpipe.secrets import configure_secret_provider
 
 # Import all handlers
 from quackpipe.sources import azure_blob, ducklake, mysql, postgres, s3, sqlite
-from quackpipe.utils import get_configs
+from quackpipe.utils import get_configs, get_global_statements
 
 logger = logging.getLogger(__name__)
 
@@ -132,13 +132,15 @@ def session(
     """
     configure_secret_provider(env_file=env_file)
 
-    all_configs, global_statements = get_configs(config_path, configs)
+    all_configs = get_configs(config_path, configs)
 
     active_configs = all_configs
     if sources:
         active_configs = [c for c in all_configs if c.name in sources]
 
     con = duckdb.connect(database=':memory:')
+
+    global_statements = get_global_statements(config_path)
 
     # Execute before_all_statements
     for stmt in global_statements.get('before_all_statements', []):

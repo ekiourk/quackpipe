@@ -69,7 +69,7 @@ def test_move_data_to_s3(mock_session, mock_get_configs, mock_duckdb_connection,
     # Arrange
     source_query = "SELECT * FROM source_table"
     s3_configs = [SourceConfig(name="s3_dest", type=SourceType.S3, config={"path": "s3://bucket/"})]
-    mock_get_configs.return_value = (s3_configs, {})
+    mock_get_configs.return_value = s3_configs
 
     # Act
     move_data(
@@ -96,7 +96,7 @@ def test_move_data_to_writeable_postgres(mock_session, mock_get_configs, mock_du
     # Arrange
     source_query = "SELECT id, name FROM source"
     pg_configs = [SourceConfig(name="pg_dest", type=SourceType.POSTGRES, config={"read_only": False})]
-    mock_get_configs.return_value = (pg_configs, {})
+    mock_get_configs.return_value = pg_configs
 
     # Mock the DROP TABLE call for replace mode
     if mode == 'replace':
@@ -123,7 +123,7 @@ def test_move_data_to_readonly_postgres_raises_error(mock_session, mock_get_conf
     """Test that moving data to a read-only destination raises a PermissionError."""
     # Arrange
     pg_configs = [SourceConfig(name="pg_dest", type=SourceType.POSTGRES, config={"read_only": True})]
-    mock_get_configs.return_value = (pg_configs, {})
+    mock_get_configs.return_value = pg_configs
 
     # Act & Assert
     with pytest.raises(PermissionError,
@@ -139,7 +139,7 @@ def test_move_data_to_readonly_postgres_raises_error(mock_session, mock_get_conf
 def test_move_data_destination_not_found_raises_error(mock_get_configs):
     """Test that a ValueError is raised if the destination config is not found."""
     # Arrange
-    mock_get_configs.return_value = ([SourceConfig(name="some_other_source", type=SourceType.S3)], {})
+    mock_get_configs.return_value = [SourceConfig(name="some_other_source", type=SourceType.S3)]
 
     # Act & Assert
     with pytest.raises(ValueError, match="Destination 'non_existent_dest' not found in the provided configuration."):
@@ -164,7 +164,7 @@ def test_full_workflow_with_move_data(mock_get_configs, mock_session, mock_duckd
         SourceConfig(name="pg_main", type=SourceType.POSTGRES),
         SourceConfig(name="s3_lake", type=SourceType.S3, config={"path": "s3://my-lake/"})
     ]
-    mock_get_configs.return_value = (all_configs, {})
+    mock_get_configs.return_value = all_configs
 
     # The session mock will be used by the move_data function internally
     mock_session.return_value.__enter__.return_value = mock_duckdb_connection

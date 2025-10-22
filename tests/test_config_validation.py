@@ -4,7 +4,7 @@ import pytest
 import yaml
 
 from quackpipe.exceptions import ConfigError
-from quackpipe.utils import parse_config_from_yaml
+from quackpipe.utils import get_config_yaml, parse_config_from_yaml
 
 
 def run_validation_test(temp_dir, invalid_config, should_pass=False):
@@ -13,10 +13,10 @@ def run_validation_test(temp_dir, invalid_config, should_pass=False):
         yaml.dump(invalid_config, f)
 
     if should_pass:
-        parse_config_from_yaml(config_path)
+        parse_config_from_yaml(get_config_yaml(config_path))
     else:
         with pytest.raises(ConfigError):
-            parse_config_from_yaml(config_path)
+            parse_config_from_yaml(get_config_yaml(config_path))
 
 @pytest.mark.parametrize("source_config, should_pass", [
     # Valid configs
