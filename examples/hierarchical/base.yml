@@ -1,0 +1,19 @@
+# base.yml
+# This file contains configuration shared across all environments.
+
+sources:
+  # The main application database.
+  # Note that we don't specify the secret_name here, as it changes per environment.
+  app_db:
+    type: postgres
+    port: 5432
+    # By default, we want safety.
+    read_only: true
+    tables:
+      - users
+      - products
+      - orders
+
+# Global settings applied to all sessions
+before_all_statements:
+  - "SET timezone = 'UTC';"

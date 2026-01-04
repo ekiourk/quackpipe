@@ -1,0 +1,20 @@
+# dev.yml
+# Configuration specific to the development environment.
+
+sources:
+  app_db:
+    # Use development credentials
+    secret_name: "pg_dev"
+    # We might want to write to the DB during development
+    read_only: false
+
+  # A local SQLite database for rapid testing, only available in dev.
+  local_scratch:
+    type: sqlite
+    path: "./dev_scratch.db"
+
+# We can override lists completely.
+# In dev, maybe we want to log queries?
+before_all_statements:
+  - "SET timezone = 'UTC';"
+  - "PRAGMA enable_profiling = 'query_tree';"

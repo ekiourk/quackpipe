@@ -121,6 +121,7 @@ def test_generate_sqlmesh_config_command(mock_open, mock_yaml_dump, mock_get_con
         args.output = "sqlmesh_config.yml"
         args.gateway_name = "test_gateway"
         args.state_db = "state.db"
+        args.verbose = 1  # Enable INFO logging
 
         # Act
         from quackpipe.commands.generate_sqlmesh_config import handler
@@ -153,12 +154,12 @@ def test_validate_command_valid_config(mock_stdout, tmpdir):
     with open(config_path, 'w') as f:
         yaml.dump(config_data, f)
 
-    with patch.object(sys, 'argv', ['quackpipe', 'validate', '--config', config_path]):
+    with patch.object(sys, 'argv', ['quackpipe', 'validate', '-v', '--config', config_path]):
         main()
 
     output = mock_stdout.getvalue()
-    assert f"Attempting to validate configuration file: {config_path}" in output
-    assert f"✅ Configuration file at '{config_path}' is valid." in output
+    assert f"Attempting to validate configuration from: ['{config_path}']" in output
+    assert f"✅ Configuration from '['{config_path}']' is valid." in output
 
 @patch('sys.stdout', new_callable=io.StringIO)
 def test_validate_command_invalid_config(mock_stdout, tmpdir):
@@ -168,21 +169,71 @@ def test_validate_command_invalid_config(mock_stdout, tmpdir):
     with open(config_path, 'w') as f:
         yaml.dump(config_data, f)
 
-    with patch.object(sys, 'argv', ['quackpipe', 'validate', '--config', config_path]):
+    with patch.object(sys, 'argv', ['quackpipe', 'validate', '-v', '--config', config_path]):
         main()
 
     output = mock_stdout.getvalue()
-    assert f"Attempting to validate configuration file: {config_path}" in output
-    assert f"❌ Configuration file at '{config_path}' is invalid." in output
+    assert f"Attempting to validate configuration from: ['{config_path}']" in output
+    assert "❌ Configuration is invalid." in output
     assert "Reason:" in output
 
 @patch('sys.stdout', new_callable=io.StringIO)
 def test_validate_command_no_file(mock_stdout):
     """Test the validate command with a non-existent config file."""
     config_path = "non_existent_config.yml"
-    with patch.object(sys, 'argv', ['quackpipe', 'validate', '--config', config_path]):
+    with patch.object(sys, 'argv', ['quackpipe', 'validate', '-v', '--config', config_path]):
         main()
 
     output = mock_stdout.getvalue()
-    assert f"Attempting to validate configuration file: {config_path}" in output
-    assert f"❌ Error: Configuration file not found at '{config_path}'." in output
+    assert f"Attempting to validate configuration from: ['{config_path}']" in output
+    # The error is raised by get_config_yaml when it tries to open the file
+    assert f"Configuration file not found at '{config_path}'." in output
+
+@patch('sys.stdout', new_callable=io.StringIO)
+def test_validate_command_multiple_valid_configs(mock_stdout, tmpdir):
+    """Test the validate command with multiple valid config files."""
+    base_data = {"sources": {"my_source": {"type": "sqlite", "path": "base.db"}}}
+    dev_data = {"sources": {"my_source": {"path": "dev.db"}}}
+
+    f1 = os.path.join(tmpdir, "base.yml")
+    f2 = os.path.join(tmpdir, "dev.yml")
+
+    with open(f1, 'w') as f:
+        yaml.dump(base_data, f)
+    with open(f2, 'w') as f:
+        yaml.dump(dev_data, f)
+
+    with patch.object(sys, 'argv', ['quackpipe', 'validate', '-v', '--config', f1, f2]):
+        main()
+
+    output = mock_stdout.getvalue()
+    assert f"Attempting to validate configuration from: ['{f1}', '{f2}']" in output
+    assert f"✅ Configuration from '['{f1}', '{f2}']' is valid." in output
+
+@patch('sys.stdout', new_callable=io.StringIO)
+def test_preview_config_command(mock_stdout, tmpdir):
+    """Test the preview-config command with multiple config files."""
+    base_data = {"sources": {"my_source": {"type": "sqlite", "path": "base.db"}}}
+    dev_data = {"sources": {"my_source": {"path": "dev.db"}}}
+
+    f1 = os.path.join(tmpdir, "base.yml")
+    f2 = os.path.join(tmpdir, "dev.yml")
+
+    with open(f1, 'w') as f:
+        yaml.dump(base_data, f)
+    with open(f2, 'w') as f:
+        yaml.dump(dev_data, f)
+
+    with patch.object(sys, 'argv', ['quackpipe', 'preview-config', '--config', f1, f2]):
+        main()
+
+    output = mock_stdout.getvalue()
+    # Check that the output contains the merged YAML.
+    # yaml.dump output might vary slightly, so we parse it back to check structure.
+    # Note: the output might contain other print statements if not careful,
+    # but preview-config only prints the YAML or error.
+
+    parsed_output = yaml.safe_load(output)
+
+    assert parsed_output['sources']['my_source']['type'] == 'sqlite'
+    assert parsed_output['sources']['my_source']['path'] == 'dev.db'

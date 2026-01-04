@@ -10,7 +10,7 @@ import yaml
 from ..config import SourceConfig, get_configs
 from ..core import SOURCE_HANDLER_REGISTRY
 from ..secrets import configure_secret_provider, fetch_raw_secret_bundle
-from .common import get_default_config_path
+from .common import get_default_config_path, normalize_arg_to_list, setup_cli_logging
 
 
 def _generate_raw_sql(configs: list[SourceConfig]) -> str:
@@ -52,9 +52,13 @@ def _build_sqlmesh_dict(init_sql_block: str, gateway_name: str, state_db: str) -
 
 def handler(args):
     """The main handler function for the generate-sqlmesh-config command."""
-    configure_secret_provider(env_file=args.env_file)
-    print(f"Reading quackpipe configuration from: {args.config}")
-    quackpipe_configs = get_configs(config_path=args.config)
+    log = setup_cli_logging(args.verbose)
+    env_files = normalize_arg_to_list(args.env_file)
+    config_paths = normalize_arg_to_list(args.config)
+
+    configure_secret_provider(env_file=env_files)
+    log.info(f"Reading quackpipe configuration from: {config_paths}")
+    quackpipe_configs = get_configs(config_path=config_paths)
     raw_sql = _generate_raw_sql(quackpipe_configs)
     final_sql_with_placeholders = _replace_secrets_with_placeholders(raw_sql, quackpipe_configs)
     sqlmesh_config_dict = _build_sqlmesh_dict(final_sql_with_placeholders, args.gateway_name, args.state_db)
@@ -72,8 +76,8 @@ def register_command(subparsers: _SubParsersAction):
         "generate-sqlmesh-config",
         help="Generate a SQLMesh config file from a quackpipe config."
     )
-    parser_gen.add_argument("-c", "--config", default=get_default_config_path(),
-                            help="Path to the quackpipe config.yml file. Defaults to 'config.yml' in the current "
+    parser_gen.add_argument("-c", "--config", default=get_default_config_path(), nargs='+',
+                            help="Path(s) to the quackpipe config.yml file(s). Defaults to 'config.yml' in the current "
                                  "directory if it exists or else it will check the "
                                  "QUACKPIPE_CONFIG_PATH environment variable.")
     parser_gen.add_argument("-o", "--output", default="sqlmesh_config.yml",
@@ -82,6 +86,12 @@ def register_command(subparsers: _SubParsersAction):
                             help="The name for the gateway in the SQLMesh config. (Default: quackpipe_gateway)")
     parser_gen.add_argument("--state-db", default=".sqlmesh/state.db",
                             help="The path for the SQLMesh state database. (Default: .sqlmesh/state.db)")
-    parser_gen.add_argument("--env-file", default=".env",
-                            help="Path to the environment file to load secrets from. (Default: .env)")
+    parser_gen.add_argument("--env-file", default=[".env"], nargs='+',
+                            help="Path(s) to the environment file(s) to load secrets from. (Default: .env)")
+    parser_gen.add_argument(
+        "-v", "--verbose",
+        action="count",
+        default=0,
+        help="Increase output verbosity. Use -v for INFO and -vv for DEBUG."
+    )
     parser_gen.set_defaults(func=handler)

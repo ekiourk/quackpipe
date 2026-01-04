@@ -4,27 +4,41 @@ Handles secret management for quackpipe.
 import logging
 import os
 
-from dotenv import load_dotenv
+from dotenv import dotenv_values
 
 logger = logging.getLogger(__name__)
 
 
 class EnvSecretProvider:
     """
-    Fetches secrets from environment variables. If an env_file is provided
-    during initialization, it loads that file first.
+    Fetches secrets from environment variables. If env_file(s) are provided
+    during initialization, it loads them in order.
     """
 
-    def __init__(self, env_file: str | None = None):
+    def __init__(self, env_file: str | list[str] | None = None):
+        # Start with a copy of the system environment
         self.env_vars = os.environ.copy()
-        if env_file:
-            if os.path.exists(env_file):
-                logger.info("Loading environment variables from: %s", env_file)
-                load_dotenv(dotenv_path=env_file, override=True)
-                self.env_vars.update(os.environ)
-            else:
-                logger.warning("Warning: env_file '%s' not found. Using system environment.", env_file)
 
+        env_files = []
+        if env_file:
+            if isinstance(env_file, str):
+                env_files = [env_file]
+            elif isinstance(env_file, list):
+                env_files = env_file
+
+        # We want files to override the system environment to match previous behavior (load_dotenv(override=True)).
+        # And later files override earlier files.
+        for file_path in env_files:
+            if os.path.exists(file_path):
+                logger.info("Loading environment variables from: %s", file_path)
+                # dotenv_values returns a dict of variables defined in the file.
+                file_vars = dotenv_values(dotenv_path=file_path)
+                # Filter out None values to avoid inserting non-strings into the environment emulation
+                clean_vars = {k: v for k, v in file_vars.items() if v is not None}
+                # Update our local dictionary. This does NOT affect os.environ.
+                self.env_vars.update(clean_vars)
+            else:
+                logger.warning("Warning: env_file '%s' not found. Skipping.", file_path)
     def get_raw_secret(self, name: str) -> dict[str, str]:
         """
         Retrieves secrets from the loaded environment variables by prefix.
@@ -54,10 +68,10 @@ def _get_provider() -> EnvSecretProvider:
     return _provider
 
 
-def configure_secret_provider(env_file: str | None = None):
+def configure_secret_provider(env_file: str | list[str] | None = None):
     """
     Initializes or re-initializes the secret provider, optionally loading
-    an environment file.
+    environment file(s).
     """
     global _provider
     _provider = EnvSecretProvider(env_file=env_file)
