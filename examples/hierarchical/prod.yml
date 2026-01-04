@@ -1,0 +1,15 @@
+# prod.yml
+# Configuration specific to the production environment.
+
+sources:
+  app_db:
+    # Use production credentials
+    secret_name: "pg_prod"
+    # Ensure strict read-only mode is enforced (matches base, but good to be explicit)
+    read_only: true
+
+  # A data lake source that is only relevant in production.
+  archive_s3:
+    type: s3
+    secret_name: "aws_prod"
+    region: "us-east-1"
