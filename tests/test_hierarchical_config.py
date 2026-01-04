@@ -1,9 +1,11 @@
 
 import os
 
+import pytest
 import yaml
 
 from quackpipe.config import deep_merge, get_config_yaml
+from quackpipe.exceptions import ConfigError
 
 
 def test_deep_merge():
@@ -74,3 +76,30 @@ def test_config_env_var(tmp_path, monkeypatch):
 
     merged = get_config_yaml(None)
     assert merged["foo"] == "baz"
+
+def test_invalid_yaml_type_list(tmp_path):
+    f = tmp_path / "invalid.yml"
+    with open(f, "w") as file:
+        yaml.dump(["item1", "item2"], file)
+
+    with pytest.raises(ConfigError, match="must be a YAML mapping"):
+        get_config_yaml(str(f))
+
+def test_invalid_yaml_type_scalar(tmp_path):
+    f = tmp_path / "invalid.yml"
+    with open(f, "w") as file:
+        yaml.dump("just a string", file)
+
+    with pytest.raises(ConfigError, match="must be a YAML mapping"):
+        get_config_yaml(str(f))
+
+def test_mix_existing_missing_files(tmp_path):
+    f1 = tmp_path / "valid.yml"
+    with open(f1, "w") as file:
+        yaml.dump({"sources": {}}, file)
+
+    f2 = tmp_path / "missing.yml"
+
+    # It should raise ConfigError for the missing file
+    with pytest.raises(ConfigError, match="Configuration file not found"):
+        get_config_yaml([str(f1), str(f2)])

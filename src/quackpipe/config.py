@@ -32,10 +32,12 @@ def validate_config(config_data: dict) -> None:
 
 def deep_merge(base: dict, override: dict) -> dict:
     """
-    Recursively merges the 'override' dict into the 'base' dict.
+    Recursively merges the 'override' dict into the 'base' dict IN-PLACE.
+
     - Dictionaries are merged recursively.
     - Lists in 'override' replace lists in 'base' (no merging).
     - Other values in 'override' overwrite 'base'.
+
     Returns the mutated base dict.
     """
     for key, val in override.items():
@@ -112,6 +114,8 @@ def get_config_yaml(path: str | list[str] | None) -> dict | None:
         try:
             with open(p) as f:
                 current_config = yaml.safe_load(f) or {}
+                if not isinstance(current_config, dict):
+                    raise ConfigError(f"Configuration file '{p}' must be a YAML mapping (dictionary), got {type(current_config).__name__}.")
                 deep_merge(merged_config, current_config)
         except FileNotFoundError as e:
             raise ConfigError(f"Configuration file not found at '{p}'.") from e

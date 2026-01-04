@@ -9,13 +9,14 @@ from jsonschema.exceptions import ValidationError
 
 from ..config import get_config_yaml, validate_config
 from ..exceptions import ConfigError
-from .common import get_default_config_path
+from .common import get_default_config_path, setup_cli_logging
 
 
 def handler(args):
     """The main handler function for the validate command."""
+    log = setup_cli_logging(args.verbose)
     config_paths = args.config
-    print(f"Attempting to validate configuration from: {config_paths}")
+    log.info(f"Attempting to validate configuration from: {config_paths}")
 
     try:
         merged_config = get_config_yaml(config_paths)
@@ -45,4 +46,10 @@ def register_command(subparsers: _SubParsersAction):
                                  help="Path(s) to the quackpipe config.yml file(s). Defaults to 'config.yml' in the "
                                       "current directory if it exists or else it will check the "
                                       "QUACKPIPE_CONFIG_PATH environment variable.")
+    parser_validate.add_argument(
+        "-v", "--verbose",
+        action="count",
+        default=0,
+        help="Increase output verbosity. Use -v for INFO and -vv for DEBUG."
+    )
     parser_validate.set_defaults(func=handler)

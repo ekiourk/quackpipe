@@ -10,7 +10,7 @@ import yaml
 from ..config import SourceConfig, get_configs
 from ..core import SOURCE_HANDLER_REGISTRY
 from ..secrets import configure_secret_provider, fetch_raw_secret_bundle
-from .common import get_default_config_path
+from .common import get_default_config_path, setup_cli_logging
 
 
 def _generate_raw_sql(configs: list[SourceConfig]) -> str:
@@ -52,8 +52,9 @@ def _build_sqlmesh_dict(init_sql_block: str, gateway_name: str, state_db: str) -
 
 def handler(args):
     """The main handler function for the generate-sqlmesh-config command."""
+    log = setup_cli_logging(args.verbose)
     configure_secret_provider(env_file=args.env_file)
-    print(f"Reading quackpipe configuration from: {args.config}")
+    log.info(f"Reading quackpipe configuration from: {args.config}")
     quackpipe_configs = get_configs(config_path=args.config)
     raw_sql = _generate_raw_sql(quackpipe_configs)
     final_sql_with_placeholders = _replace_secrets_with_placeholders(raw_sql, quackpipe_configs)
@@ -84,4 +85,10 @@ def register_command(subparsers: _SubParsersAction):
                             help="The path for the SQLMesh state database. (Default: .sqlmesh/state.db)")
     parser_gen.add_argument("--env-file", default=[".env"], nargs='+',
                             help="Path(s) to the environment file(s) to load secrets from. (Default: .env)")
+    parser_gen.add_argument(
+        "-v", "--verbose",
+        action="count",
+        default=0,
+        help="Increase output verbosity. Use -v for INFO and -vv for DEBUG."
+    )
     parser_gen.set_defaults(func=handler)

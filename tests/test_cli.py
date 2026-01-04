@@ -121,6 +121,7 @@ def test_generate_sqlmesh_config_command(mock_open, mock_yaml_dump, mock_get_con
         args.output = "sqlmesh_config.yml"
         args.gateway_name = "test_gateway"
         args.state_db = "state.db"
+        args.verbose = 1  # Enable INFO logging
 
         # Act
         from quackpipe.commands.generate_sqlmesh_config import handler
@@ -153,7 +154,7 @@ def test_validate_command_valid_config(mock_stdout, tmpdir):
     with open(config_path, 'w') as f:
         yaml.dump(config_data, f)
 
-    with patch.object(sys, 'argv', ['quackpipe', 'validate', '--config', config_path]):
+    with patch.object(sys, 'argv', ['quackpipe', 'validate', '-v', '--config', config_path]):
         main()
 
     output = mock_stdout.getvalue()
@@ -168,7 +169,7 @@ def test_validate_command_invalid_config(mock_stdout, tmpdir):
     with open(config_path, 'w') as f:
         yaml.dump(config_data, f)
 
-    with patch.object(sys, 'argv', ['quackpipe', 'validate', '--config', config_path]):
+    with patch.object(sys, 'argv', ['quackpipe', 'validate', '-v', '--config', config_path]):
         main()
 
     output = mock_stdout.getvalue()
@@ -180,7 +181,7 @@ def test_validate_command_invalid_config(mock_stdout, tmpdir):
 def test_validate_command_no_file(mock_stdout):
     """Test the validate command with a non-existent config file."""
     config_path = "non_existent_config.yml"
-    with patch.object(sys, 'argv', ['quackpipe', 'validate', '--config', config_path]):
+    with patch.object(sys, 'argv', ['quackpipe', 'validate', '-v', '--config', config_path]):
         main()
 
     output = mock_stdout.getvalue()
@@ -202,7 +203,7 @@ def test_validate_command_multiple_valid_configs(mock_stdout, tmpdir):
     with open(f2, 'w') as f:
         yaml.dump(dev_data, f)
 
-    with patch.object(sys, 'argv', ['quackpipe', 'validate', '--config', f1, f2]):
+    with patch.object(sys, 'argv', ['quackpipe', 'validate', '-v', '--config', f1, f2]):
         main()
 
     output = mock_stdout.getvalue()

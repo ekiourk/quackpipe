@@ -4,7 +4,7 @@ Handles secret management for quackpipe.
 import logging
 import os
 
-from dotenv import load_dotenv
+from dotenv import dotenv_values
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +16,7 @@ class EnvSecretProvider:
     """
 
     def __init__(self, env_file: str | list[str] | None = None):
+        # Start with a copy of the system environment
         self.env_vars = os.environ.copy()
 
         env_files = []
@@ -25,16 +26,17 @@ class EnvSecretProvider:
             elif isinstance(env_file, list):
                 env_files = env_file
 
+        # We want files to override the system environment to match previous behavior (load_dotenv(override=True)).
+        # And later files override earlier files.
         for file_path in env_files:
             if os.path.exists(file_path):
                 logger.info("Loading environment variables from: %s", file_path)
-                load_dotenv(dotenv_path=file_path, override=True)
+                # dotenv_values returns a dict of variables defined in the file.
+                file_vars = dotenv_values(dotenv_path=file_path)
+                # Update our local dictionary. This does NOT affect os.environ.
+                self.env_vars.update(file_vars)
             else:
                 logger.warning("Warning: env_file '%s' not found. Skipping.", file_path)
-
-        # Update our copy after loading all files
-        self.env_vars.update(os.environ)
-
     def get_raw_secret(self, name: str) -> dict[str, str]:
         """
         Retrieves secrets from the loaded environment variables by prefix.

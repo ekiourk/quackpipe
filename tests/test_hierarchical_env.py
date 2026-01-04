@@ -1,3 +1,5 @@
+import os
+
 from quackpipe.secrets import EnvSecretProvider
 
 
@@ -33,3 +35,36 @@ def test_missing_env_file_warning(caplog):
         EnvSecretProvider(env_file=["non_existent_file"])
 
     assert "Warning: env_file 'non_existent_file' not found" in caplog.text
+
+def test_env_loading_no_side_effects(tmp_path):
+    f = tmp_path / ".env.test"
+    with open(f, "w") as file:
+        file.write("SIDE_EFFECT_VAR=should_not_leak\n")
+
+    # Ensure variable is not in os.environ initially
+    assert "SIDE_EFFECT_VAR" not in os.environ
+
+    provider = EnvSecretProvider(env_file=str(f))
+
+    # Check it exists in provider
+    assert provider.env_vars.get("SIDE_EFFECT_VAR") == "should_not_leak"
+
+    # Check it does NOT exist in os.environ
+    assert "SIDE_EFFECT_VAR" not in os.environ
+
+def test_env_loading_overrides_system(tmp_path, monkeypatch):
+    """
+    Verify that env files override system variables (File > System),
+    matching the library's documented behavior.
+    """
+    monkeypatch.setenv("TEST_VAR", "system_value")
+
+    f = tmp_path / ".env.override"
+    with open(f, "w") as file:
+        file.write("TEST_VAR=file_value\n")
+
+    provider = EnvSecretProvider(env_file=str(f))
+
+    assert provider.env_vars.get("TEST_VAR") == "file_value"
+    # System env should remain untouched
+    assert os.environ["TEST_VAR"] == "system_value"
