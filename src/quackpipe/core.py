@@ -108,7 +108,7 @@ def session(
         config_path: str | list[str] | None = None,
         configs: list[SourceConfig] | None = None,
         sources: list[str] | None = None,
-        env_file: str | None = None,
+        env_file: str | list[str] | None = None,
 ) -> duckdb.DuckDBPyConnection:
     """
     Creates and returns a pre-configured DuckDB connection.
@@ -174,7 +174,7 @@ def with_session(**session_kwargs):
 def get_source_params(
     source_name: str,
     config_path: str | list[str] | None = None,
-    env_file: str | None = None,
+    env_file: str | list[str] | None = None,
 ) -> SourceParams:
     """
     Returns the configuration for a given source, merged with its secrets.

@@ -100,7 +100,7 @@ sources:
 
 ### Secret Management with `.env`
 
-Quackpipe uses a `secret_name` in the config to refer to a bundle of credentials. These are loaded from an `.env` file using a simple prefix convention: `SECRET_NAME_KEY`.
+Quackpipe uses a `secret_name` in the config to refer to a bundle of credentials. These are loaded from `.env` files using a simple prefix convention: `SECRET_NAME_KEY`.
 
 Create an `.env` file in your project root:
 
@@ -120,6 +120,16 @@ AWS_PROD_SECRET_ACCESS_KEY=YOUR_AWS_SECRET_KEY
 # Secrets for secret_name: "azure_prod"
 AZURE_PROD_CONNECTION_STRING="DefaultEndpointsProtocol=https..."
 ```
+
+**Multiple Environment Files:**
+You can load secrets from multiple files. This is useful for separating default/shared configuration from local secrets.
+
+```bash
+# Load base.env first, then override with .env.local
+quackpipe ui --env-file base.env .env.local
+```
+
+The "last one wins" rule applies: variables in later files will overwrite those in earlier files.
 
 ## Usage Highlights
 

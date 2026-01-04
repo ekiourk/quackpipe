@@ -62,8 +62,8 @@ def register_command(subparsers: _SubParsersAction):
                             help="Path(s) to the quackpipe config.yml file(s). Defaults to 'config.yml' in the current "
                                  "directory if it exists or else it will check the "
                                  "QUACKPIPE_CONFIG_PATH environment variable.")
-    parser_ui.add_argument("--env-file", default=".env",
-                           help="Path to the environment file to load secrets from. (Default: .env)")
+    parser_ui.add_argument("--env-file", default=[".env"], nargs='+',
+                           help="Path(s) to the environment file(s) to load secrets from. (Default: .env)")
     parser_ui.add_argument("-p", "--port", type=int, default=4213,
                            help="Port to run the DuckDB UI on. (Default: 4213)")
     parser_ui.add_argument(

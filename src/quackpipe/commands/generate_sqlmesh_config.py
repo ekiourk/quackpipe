@@ -82,6 +82,6 @@ def register_command(subparsers: _SubParsersAction):
                             help="The name for the gateway in the SQLMesh config. (Default: quackpipe_gateway)")
     parser_gen.add_argument("--state-db", default=".sqlmesh/state.db",
                             help="The path for the SQLMesh state database. (Default: .sqlmesh/state.db)")
-    parser_gen.add_argument("--env-file", default=".env",
-                            help="Path to the environment file to load secrets from. (Default: .env)")
+    parser_gen.add_argument("--env-file", default=[".env"], nargs='+',
+                            help="Path(s) to the environment file(s) to load secrets from. (Default: .env)")
     parser_gen.set_defaults(func=handler)
