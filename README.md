@@ -188,3 +188,25 @@ If it's invalid, `quackpipe` will tell you why:
    Reason: 'port' in source 'pg_main' should be an integer.
 ```
 
+## Development
+
+To set up the development environment for `quackpipe`, we recommend using [uv](https://github.com/astral-sh/uv).
+
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/ekiourk/quackpipe.git
+    cd quackpipe
+    ```
+
+2.  **Install dependencies:**
+    This command will create a virtual environment and install the package in editable mode along with all optional dependencies (including dev tools, fixtures, linting, etc.):
+    ```bash
+    uv sync --all-extras
+    ```
+
+3.  **Run tests:**
+    Validate your setup by running the test suite with `pytest`:
+    ```bash
+    uv run pytest
+    ```
+
