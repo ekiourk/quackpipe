@@ -6,8 +6,16 @@ to various data sources based on a YAML configuration file or a
 programmatic builder.
 """
 
+import importlib.metadata
 import logging
 import os
+
+try:
+    __version__ = importlib.metadata.version("quackpipe")
+except importlib.metadata.PackageNotFoundError:
+    # Handle the case where the package is not installed (e.g., during development)
+    __version__ = "unknown"
+
 
 # Expose the primary user-facing functions and classes.
 from .builder import QuackpipeBuilder
@@ -24,6 +32,8 @@ _root_logger.addHandler(logging.NullHandler())
 
 
 __all__ = [
+    # Metadata
+    "__version__",
     # Core API
     "session",
     "with_session",

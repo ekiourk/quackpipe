@@ -233,7 +233,42 @@ def test_preview_config_command(mock_stdout, tmpdir):
     # Note: the output might contain other print statements if not careful,
     # but preview-config only prints the YAML or error.
 
+
+
     parsed_output = yaml.safe_load(output)
 
+
+
     assert parsed_output['sources']['my_source']['type'] == 'sqlite'
+
     assert parsed_output['sources']['my_source']['path'] == 'dev.db'
+
+
+
+@patch('sys.stdout', new_callable=io.StringIO)
+def test_version_flag(mock_stdout):
+    """Test the --version flag."""
+    with pytest.raises(SystemExit) as e:
+        with patch.object(sys, 'argv', ['quackpipe', '--version']):
+            main()
+
+    assert e.value.code == 0
+    output = mock_stdout.getvalue()
+    # The version output format is "%(prog)s {__version__}"
+    # By default, prog is the script name (or sys.argv[0]), here mocked as 'quackpipe'
+    assert "quackpipe" in output
+    assert "." in output  # Basic check for version number structure
+
+
+def test_main_module_entry_point():
+    """Test that python -m quackpipe works via __main__.py."""
+    import subprocess
+    result = subprocess.run(
+        [sys.executable, '-m', 'quackpipe', '--help'],
+        capture_output=True,
+        text=True
+    )
+    assert result.returncode == 0
+    assert "quackpipe" in result.stdout
+    assert "--version" in result.stdout
+

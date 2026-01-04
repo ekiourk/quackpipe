@@ -25,6 +25,16 @@ from quackpipe.utils import is_connection_open
 
 sys.path.insert(0, 'src')
 
+import quackpipe
+
+# ==================== GENERAL TESTS ====================
+
+def test_version_exposed():
+    """Test that the library version is exposed and not 'unknown'."""
+    assert quackpipe.__version__ != "unknown"
+    # Basic semver check (e.g., 0.7.0)
+    assert quackpipe.__version__.count(".") >= 2
+
 
 # ==================== CONFIG TESTS ====================
 
