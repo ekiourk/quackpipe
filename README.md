@@ -49,15 +49,20 @@ pip install "quackpipe[postgres,s3,azure,ui]"
 
 `quackpipe` uses a simple `config.yml` file to define your sources and an `.env` file to manage your secrets.
 
-### Configuration Priority
+### Configuration Priority & Hierarchical Merging
 
-Quackpipe loads its configuration in the following order of priority:
+Quackpipe supports loading configuration from multiple sources, merging them into a single final configuration. This allows you to have a base configuration and override specific parts for different environments (e.g., `base.yml` + `dev.yml`).
 
-1.  **Directly in code:** You can pass a `config_path` or a list of `configs` directly to functions like `quackpipe.session()` or `move_data()`. This always takes the highest priority.
-2.  **Environment Variable:** If no configuration is provided in code, Quackpipe will check for the `QUACKPIPE_CONFIG_PATH` environment variable. You can set this to the path of your `config.yml` file.
-3.  **Local `config.yml`:** When using the CLI, if a `config.yml` file exists in the current directory, it will be used automatically.
+The configuration is loaded and merged in the following order (later sources override earlier ones):
 
-This layered approach provides flexibility for both interactive use and production deployments.
+1.  **Environment Variable (`QUACKPIPE_CONFIG_PATH`):** You can set this to a single path or multiple paths separated by your system's path separator (e.g., `:` on Linux/macOS, `;` on Windows).
+2.  **CLI Arguments / Function Arguments:** When using the CLI, you can pass one or more file paths using `-c/--config`. When using the Python API, you can pass a list of paths to `config_path`.
+3.  **Direct `configs` list:** In the Python API, passing a list of `SourceConfig` objects directly always takes the highest priority.
+
+**Merging Logic:**
+*   **Dictionaries (e.g., `sources`):** Deep merged. Keys in later configs overwrite keys in earlier ones. New keys are added.
+*   **Lists (e.g., `before_all_statements`):** Replaced. If a later config defines a list, it completely replaces the list from earlier configs.
+*   **Values:** Overwritten.
 
 ### `config.yml` Example
 
@@ -167,26 +172,36 @@ quackpipe ui pg_warehouse s3_datalake
 
 ### 4. Validate Your Configuration
 
-Before running your scripts, you can validate your `config.yml` file against the built-in schema to catch errors early.
+Before running your scripts, you can validate your `config.yml` file (or a set of merged files) against the built-in schema to catch errors early.
 
 ```bash
 # Validate the default config.yml
 quackpipe validate
 
-# Or validate a specific file
-quackpipe validate --config /path/to/your/config.yml
+# Or validate multiple files (they will be merged)
+quackpipe validate --config base.yml dev.yml
 ```
 
 If the configuration is valid, you'll see a success message:
 ```
-✅ Configuration file at 'config.yml' is valid.
+✅ Configuration from '['base.yml', 'dev.yml']' is valid.
 ```
 
 If it's invalid, `quackpipe` will tell you why:
 ```
-❌ Configuration file at 'config.yml' is invalid.
+❌ Configuration is invalid.
    Reason: 'port' in source 'pg_main' should be an integer.
 ```
+
+### 5. Inspect Merged Configuration
+
+When using multiple configuration files, it can be helpful to see the final result after merging.
+
+```bash
+quackpipe preview-config -c base.yml dev.yml
+```
+
+This will print the full, merged YAML configuration to the console.
 
 ## Development
 
