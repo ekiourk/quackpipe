@@ -157,8 +157,8 @@ def test_validate_command_valid_config(mock_stdout, tmpdir):
         main()
 
     output = mock_stdout.getvalue()
-    assert f"Attempting to validate configuration file: {config_path}" in output
-    assert f"✅ Configuration file at '{config_path}' is valid." in output
+    assert f"Attempting to validate configuration from: ['{config_path}']" in output
+    assert f"✅ Configuration from '['{config_path}']' is valid." in output
 
 @patch('sys.stdout', new_callable=io.StringIO)
 def test_validate_command_invalid_config(mock_stdout, tmpdir):
@@ -172,8 +172,8 @@ def test_validate_command_invalid_config(mock_stdout, tmpdir):
         main()
 
     output = mock_stdout.getvalue()
-    assert f"Attempting to validate configuration file: {config_path}" in output
-    assert f"❌ Configuration file at '{config_path}' is invalid." in output
+    assert f"Attempting to validate configuration from: ['{config_path}']" in output
+    assert "❌ Configuration is invalid." in output
     assert "Reason:" in output
 
 @patch('sys.stdout', new_callable=io.StringIO)
@@ -184,5 +184,6 @@ def test_validate_command_no_file(mock_stdout):
         main()
 
     output = mock_stdout.getvalue()
-    assert f"Attempting to validate configuration file: {config_path}" in output
-    assert f"❌ Error: Configuration file not found at '{config_path}'." in output
+    assert f"Attempting to validate configuration from: ['{config_path}']" in output
+    # The error is raised by get_config_yaml when it tries to open the file
+    assert f"Configuration file not found at '{config_path}'." in output

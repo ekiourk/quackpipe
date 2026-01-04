@@ -72,8 +72,8 @@ def register_command(subparsers: _SubParsersAction):
         "generate-sqlmesh-config",
         help="Generate a SQLMesh config file from a quackpipe config."
     )
-    parser_gen.add_argument("-c", "--config", default=get_default_config_path(),
-                            help="Path to the quackpipe config.yml file. Defaults to 'config.yml' in the current "
+    parser_gen.add_argument("-c", "--config", default=get_default_config_path(), nargs='+',
+                            help="Path(s) to the quackpipe config.yml file(s). Defaults to 'config.yml' in the current "
                                  "directory if it exists or else it will check the "
                                  "QUACKPIPE_CONFIG_PATH environment variable.")
     parser_gen.add_argument("-o", "--output", default="sqlmesh_config.yml",

@@ -5,34 +5,33 @@ This module contains the implementation for the 'validate' CLI command.
 """
 from argparse import _SubParsersAction
 
-import yaml
 from jsonschema.exceptions import ValidationError
 
-from ..config import validate_config
+from ..config import get_config_yaml, validate_config
 from ..exceptions import ConfigError
 from .common import get_default_config_path
 
 
 def handler(args):
     """The main handler function for the validate command."""
-    config_path = args.config
-    print(f"Attempting to validate configuration file: {config_path}")
+    config_paths = args.config
+    print(f"Attempting to validate configuration from: {config_paths}")
 
     try:
-        if not config_path:
+        merged_config = get_config_yaml(config_paths)
+
+        if merged_config is None:
             raise ConfigError("No config file found. Please specify one with -c/--config or set QUACKPIPE_CONFIG_PATH.")
 
-        with open(config_path) as f:
-            raw_config = yaml.safe_load(f)
+        validate_config(merged_config)
+        print(f"✅ Configuration from '{config_paths}' is valid.")
 
-        validate_config(raw_config)
-        print(f"✅ Configuration file at '{config_path}' is valid.")
-
-    except FileNotFoundError:
-        print(f"❌ Error: Configuration file not found at '{config_path}'.")
-    except (ValidationError, ConfigError) as e:
-        print(f"❌ Configuration file at '{config_path}' is invalid.")
+    except ValidationError as e:
+        print("❌ Configuration is invalid.")
         print(f"   Reason: {e.message}")
+    except ConfigError as e:
+        print("❌ Configuration is invalid.")
+        print(f"   Reason: {e}")
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
 
@@ -40,10 +39,10 @@ def register_command(subparsers: _SubParsersAction):
     """Registers the command and its arguments to the main CLI parser."""
     parser_validate = subparsers.add_parser(
         "validate",
-        help="Validate a quackpipe configuration file against the schema."
+        help="Validate a quackpipe configuration file (or merged files) against the schema."
     )
-    parser_validate.add_argument("-c", "--config", default=get_default_config_path(),
-                                 help="Path to the quackpipe config.yml file. Defaults to 'config.yml' in the current "
-                                      "directory if it exists or else it will check the "
+    parser_validate.add_argument("-c", "--config", default=get_default_config_path(), nargs='+',
+                                 help="Path(s) to the quackpipe config.yml file(s). Defaults to 'config.yml' in the "
+                                      "current directory if it exists or else it will check the "
                                       "QUACKPIPE_CONFIG_PATH environment variable.")
     parser_validate.set_defaults(func=handler)

@@ -58,8 +58,8 @@ def register_command(subparsers: _SubParsersAction):
         "ui",
         help="Launch an interactive DuckDB UI with pre-configured sources."
     )
-    parser_ui.add_argument("-c", "--config", default=get_default_config_path(),
-                            help="Path to the quackpipe config.yml file. Defaults to 'config.yml' in the current "
+    parser_ui.add_argument("-c", "--config", default=get_default_config_path(), nargs='+',
+                            help="Path(s) to the quackpipe config.yml file(s). Defaults to 'config.yml' in the current "
                                  "directory if it exists or else it will check the "
                                  "QUACKPIPE_CONFIG_PATH environment variable.")
     parser_ui.add_argument("--env-file", default=".env",

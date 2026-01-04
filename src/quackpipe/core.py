@@ -105,7 +105,7 @@ def _prepare_connection(con: duckdb.DuckDBPyConnection, configs: list[SourceConf
 
 
 def session(
-        config_path: str | None = None,
+        config_path: str | list[str] | None = None,
         configs: list[SourceConfig] | None = None,
         sources: list[str] | None = None,
         env_file: str | None = None,
@@ -173,7 +173,7 @@ def with_session(**session_kwargs):
 
 def get_source_params(
     source_name: str,
-    config_path: str | None = None,
+    config_path: str | list[str] | None = None,
     env_file: str | None = None,
 ) -> SourceParams:
     """
