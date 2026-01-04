@@ -33,8 +33,10 @@ class EnvSecretProvider:
                 logger.info("Loading environment variables from: %s", file_path)
                 # dotenv_values returns a dict of variables defined in the file.
                 file_vars = dotenv_values(dotenv_path=file_path)
+                # Filter out None values to avoid inserting non-strings into the environment emulation
+                clean_vars = {k: v for k, v in file_vars.items() if v is not None}
                 # Update our local dictionary. This does NOT affect os.environ.
-                self.env_vars.update(file_vars)
+                self.env_vars.update(clean_vars)
             else:
                 logger.warning("Warning: env_file '%s' not found. Skipping.", file_path)
     def get_raw_secret(self, name: str) -> dict[str, str]:

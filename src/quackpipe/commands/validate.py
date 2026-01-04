@@ -9,13 +9,13 @@ from jsonschema.exceptions import ValidationError
 
 from ..config import get_config_yaml, validate_config
 from ..exceptions import ConfigError
-from .common import get_default_config_path, setup_cli_logging
+from .common import get_default_config_path, normalize_arg_to_list, setup_cli_logging
 
 
 def handler(args):
     """The main handler function for the validate command."""
     log = setup_cli_logging(args.verbose)
-    config_paths = args.config
+    config_paths = normalize_arg_to_list(args.config)
     log.info(f"Attempting to validate configuration from: {config_paths}")
 
     try:

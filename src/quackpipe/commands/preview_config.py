@@ -9,12 +9,12 @@ import yaml
 
 from ..config import get_config_yaml
 from ..exceptions import ConfigError
-from .common import get_default_config_path
+from .common import get_default_config_path, normalize_arg_to_list
 
 
 def handler(args):
     """The main handler function for the preview-config command."""
-    config_paths = args.config
+    config_paths = normalize_arg_to_list(args.config)
     try:
         merged_config = get_config_yaml(config_paths)
         if merged_config is None:

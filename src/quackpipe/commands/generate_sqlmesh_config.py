@@ -10,7 +10,7 @@ import yaml
 from ..config import SourceConfig, get_configs
 from ..core import SOURCE_HANDLER_REGISTRY
 from ..secrets import configure_secret_provider, fetch_raw_secret_bundle
-from .common import get_default_config_path, setup_cli_logging
+from .common import get_default_config_path, normalize_arg_to_list, setup_cli_logging
 
 
 def _generate_raw_sql(configs: list[SourceConfig]) -> str:
@@ -53,9 +53,12 @@ def _build_sqlmesh_dict(init_sql_block: str, gateway_name: str, state_db: str) -
 def handler(args):
     """The main handler function for the generate-sqlmesh-config command."""
     log = setup_cli_logging(args.verbose)
-    configure_secret_provider(env_file=args.env_file)
-    log.info(f"Reading quackpipe configuration from: {args.config}")
-    quackpipe_configs = get_configs(config_path=args.config)
+    env_files = normalize_arg_to_list(args.env_file)
+    config_paths = normalize_arg_to_list(args.config)
+
+    configure_secret_provider(env_file=env_files)
+    log.info(f"Reading quackpipe configuration from: {config_paths}")
+    quackpipe_configs = get_configs(config_path=config_paths)
     raw_sql = _generate_raw_sql(quackpipe_configs)
     final_sql_with_placeholders = _replace_secrets_with_placeholders(raw_sql, quackpipe_configs)
     sqlmesh_config_dict = _build_sqlmesh_dict(final_sql_with_placeholders, args.gateway_name, args.state_db)

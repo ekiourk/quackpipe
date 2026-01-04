@@ -7,7 +7,7 @@ from argparse import _SubParsersAction
 
 from .. import ConfigError
 from ..core import session
-from .common import get_default_config_path, setup_cli_logging
+from .common import get_default_config_path, normalize_arg_to_list, setup_cli_logging
 
 
 def handler(args):
@@ -16,10 +16,13 @@ def handler(args):
 
     sources_to_load = args.sources if args.sources else "all configured sources"
     log.info(f"Attempting to start UI session for: {sources_to_load}")
-    log.debug(f"Using config file: {args.config} and env file: {args.env_file}")
+
+    config_paths = normalize_arg_to_list(args.config)
+    env_files = normalize_arg_to_list(args.env_file)
+    log.debug(f"Using config file(s): {config_paths} and env file(s): {env_files}")
 
     try:
-        with session(config_path=args.config, env_file=args.env_file, sources=args.sources) as con:
+        with session(config_path=config_paths, env_file=env_files, sources=args.sources) as con:
             log.info("Session created.")
 
             log.info(f"Setting UI port to {args.port}...")

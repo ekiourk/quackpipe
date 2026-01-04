@@ -54,3 +54,15 @@ def setup_cli_logging(verbose_level: int = 0):
     log.addHandler(handler)
 
     return log
+
+
+def normalize_arg_to_list(arg: str | list[str] | None) -> list[str]:
+    """
+    Helper to normalize CLI arguments that might be a string (default), a list (nargs='+'), or None.
+    Always returns a list of strings (empty if None).
+    """
+    if arg is None:
+        return []
+    if isinstance(arg, str):
+        return [arg]
+    return arg
