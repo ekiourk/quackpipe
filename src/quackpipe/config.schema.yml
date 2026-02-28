@@ -73,6 +73,7 @@ definitions:
       user: { type: string }
       password: { type: string }
       read_only: { type: boolean }
+      encryption_key: { type: string }
       tables:
         type: array
         items: { type: string }
@@ -140,6 +141,7 @@ definitions:
       type: { const: "sqlite" }
       path: { type: string }
       read_only: { type: boolean }
+      encryption_key: { type: string }
     required:
       - type
       - path
@@ -196,6 +198,7 @@ definitions:
       user: { type: string }
       password: { type: string }
       read_only: { type: boolean }
+      encryption_key: { type: string }
       tables:
         type: array
         items: { type: string }

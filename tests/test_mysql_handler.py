@@ -91,6 +91,19 @@ def test_mysql_handler_properties(mysql_env_vars):
             ],
             []
         ),
+        (
+            "with_encryption",
+            {
+                "connection_name": "mysql_secure",
+                "secret_name": "mysql_creds",
+                "encryption_key": "my_mysql_key"
+            },
+            [
+                "CREATE OR REPLACE SECRET mysql_secure_secret",
+                "ATTACH '' AS mysql_secure (TYPE MYSQL, SECRET mysql_secure_secret, READ_ONLY, ENCRYPTION_KEY 'my_mysql_key');"
+            ],
+            []
+        ),
     ]
 )
 def test_mysql_render_sql(mysql_env_vars, test_id, context, expected_sql_parts, unexpected_sql_parts):

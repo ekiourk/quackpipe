@@ -98,6 +98,18 @@ sources:
       path: "/path/to/lake_storage/"
 ```
 
+### Encrypted Databases
+
+Quackpipe supports DuckDB's native **AES-256-GCM** encryption for local and remote databases. You can provide an `encryption_key` directly in your configuration for SQLite, PostgreSQL, and MySQL sources:
+
+```yaml
+sources:
+  secure_sqlite:
+    type: sqlite
+    path: "path/to/encrypted.db"
+    encryption_key: "your-32-byte-key-here"
+```
+
 ### Secret Management with `.env`
 
 Quackpipe uses a `secret_name` in the config to refer to a bundle of credentials. These are loaded from `.env` files using a simple prefix convention: `SECRET_NAME_KEY`.

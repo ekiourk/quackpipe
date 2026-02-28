@@ -53,6 +53,16 @@ def test_sqlite_handler_properties():
                 "ATTACH 'archive.db' AS archive (TYPE SQLITE, READ_ONLY);",
                 []
         ),
+        (
+                "with_encryption",
+                {
+                    "connection_name": "secure_db",
+                    "path": "secure.db",
+                    "encryption_key": "secret_key_123"
+                },
+                "ATTACH 'secure.db' AS secure_db (TYPE SQLITE, READ_ONLY, ENCRYPTION_KEY 'secret_key_123');",
+                []
+        ),
     ]
 )
 def test_sqlite_render_sql(test_id, context, expected_sql, unexpected_sql_parts):

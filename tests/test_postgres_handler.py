@@ -91,6 +91,19 @@ def test_postgres_handler_properties(postgres_env_vars):
                 ],
                 []
         ),
+        (
+                "with_encryption",
+                {
+                    "connection_name": "pg_secure",
+                    "secret_name": "pg_creds",
+                    "encryption_key": "my_pg_key"
+                },
+                [
+                    "CREATE OR REPLACE SECRET pg_secure_secret",
+                    "ATTACH 'dbname=testdb' AS pg_secure (TYPE POSTGRES, SECRET 'pg_secure_secret', READ_ONLY, ENCRYPTION_KEY 'my_pg_key');"
+                ],
+                []
+        ),
     ]
 )
 def test_postgres_render_sql(postgres_env_vars, test_id, context, expected_sql_parts, unexpected_sql_parts):

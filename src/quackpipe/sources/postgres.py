@@ -51,9 +51,13 @@ class PostgresHandler(BaseSourceHandler):
         connection_name = self.context['connection_name']
         read_only_flag = ", READ_ONLY" if self.context.get('read_only', True) else ""
 
+        # Handle native encryption (DuckDB 1.4+)
+        encryption_key = self.context.get('encryption_key')
+        encryption_flag = f", ENCRYPTION_KEY '{encryption_key}'" if encryption_key else ""
+
         attach_sql = (
             f"ATTACH 'dbname={self.context.get('database')}' AS {connection_name} "
-            f"(TYPE POSTGRES, SECRET '{duckdb_secret_name}'{read_only_flag});"
+            f"(TYPE POSTGRES, SECRET '{duckdb_secret_name}'{read_only_flag}{encryption_flag});"
         )
 
         view_sqls = []
