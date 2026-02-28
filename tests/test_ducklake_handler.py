@@ -5,8 +5,8 @@ This file contains pytest tests for the DuckLakeHandler class in quackpipe.
 """
 import pytest
 
-from quackpipe import configure_secret_provider
-from quackpipe.exceptions import ConfigError
+from quackpipe import QuackpipeBuilder, configure_secret_provider
+from quackpipe.exceptions import ValidationError
 from quackpipe.sources.ducklake import DuckLakeHandler
 
 
@@ -141,16 +141,22 @@ def test_render_sql_with_postgres_and_minio(monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "test_id, invalid_context",
+    "test_id, invalid_context, expected_message",
     [
-        ("missing_catalog", {"connection_name": "test", "storage": {}}),
-        ("missing_storage", {"connection_name": "test", "catalog": {}}),
+        ("missing_catalog", {"connection_name": "test", "storage": {"type": "local", "path": "/tmp"}}, "requires a 'catalog' section"),
+        ("missing_storage", {"connection_name": "test", "catalog": {"type": "sqlite", "path": "/tmp/db"}}, "requires a 'storage' section"),
+        ("missing_path", {"connection_name": "test", "catalog": {"type": "sqlite", "path": "/tmp/db"}, "storage": {"type": "local"}}, "Ducklake storage source requires 'path'"),
     ]
 )
-def test_init_raises_error_for_invalid_config(test_id, invalid_context):
+def test_validation_raises_error_for_invalid_config(test_id, invalid_context, expected_message):
     """
-    Tests that the DuckLakeHandler's __init__ raises a ConfigError if the
-    'catalog' or 'storage' sections are missing from the configuration context.
+    Tests that the DuckLake validation raises a ValidationError if the
+    'catalog' or 'storage' sections (or path) are missing from the configuration.
     """
-    with pytest.raises(ConfigError, match="DuckLake source requires 'catalog' and 'storage' sections in config."):
-        DuckLakeHandler(invalid_context)
+    builder = QuackpipeBuilder()
+    with pytest.raises(ValidationError, match=expected_message):
+        builder.add_source(
+            name=invalid_context.get("connection_name"),
+            type="ducklake",
+            config={k: v for k, v in invalid_context.items() if k != "connection_name"}
+        )

@@ -5,6 +5,8 @@ This file contains pytest tests for the SQLiteHandler class in quackpipe.
 """
 import pytest
 
+from quackpipe import QuackpipeBuilder
+from quackpipe.exceptions import ValidationError
 from quackpipe.sources.sqlite import SQLiteHandler
 
 
@@ -77,13 +79,9 @@ def test_sqlite_render_sql(test_id, context, expected_sql, unexpected_sql_parts)
 
 def test_sqlite_render_sql_raises_error_if_path_is_missing():
     """
-    Tests that render_sql raises a ValueError if the 'path' key is
-    missing from the configuration context.
+    Tests that a ValidationError is raised if the 'path' key is
+    missing from the configuration.
     """
-    # Arrange
-    context = {"connection_name": "bad_config"}  # Missing 'path'
-    handler = SQLiteHandler(context)
-
-    # Act & Assert
-    with pytest.raises(ValueError, match="SQLite source 'bad_config' requires a 'path' in its configuration."):
-        handler.render_sql()
+    builder = QuackpipeBuilder()
+    with pytest.raises(ValidationError, match="Sqlite source requires 'path' in its configuration."):
+        builder.add_source(name="bad_config", type="sqlite", config={})

@@ -7,6 +7,7 @@ from typing import Any, Self
 
 from .config import SourceConfig, SourceType
 from .core import session as core_session  # Avoid circular import
+from .sources import SOURCE_HANDLER_REGISTRY
 
 
 class QuackpipeBuilder:
@@ -15,23 +16,39 @@ class QuackpipeBuilder:
     def __init__(self):
         self._sources: list[SourceConfig] = []
 
-    def add_source(self, name: str, type: SourceType, config: dict[str, Any] = None, secret_name: str = None) -> Self:
+    def add_source(self, name: str, type: SourceType | str, config: dict[str, Any] = None, secret_name: str = None) -> Self:
         """
         Adds a data source to the configuration by specifying its components.
 
         Args:
             name: The name for the data source (e.g., 'pg_main').
-            type: The type of the source, using the SourceType enum.
+            type: The type of the source, using the SourceType enum or its string value.
             config: A dictionary of non-secret parameters.
             secret_name: The logical name of the secret bundle.
 
         Returns:
             The builder instance for chaining.
         """
+        if isinstance(type, str):
+            try:
+                type = SourceType(type)
+            except ValueError:
+                # If it's not a valid enum value, we keep it as a string
+                # so that SourceConfig or others can handle it (or fail later)
+                pass
+
+        config = config or {}
+        # Perform semantic validation if a handler exists for this type
+        HandlerClass = SOURCE_HANDLER_REGISTRY.get(type)
+        if HandlerClass:
+            # We don't resolve secrets at 'add_source' time by default,
+            # as the environment might not be set yet.
+            HandlerClass.validate(config, secret_name, resolve_secrets=False)
+
         source = SourceConfig(
             name=name,
             type=type,
-            config=config or {},
+            config=config,
             secret_name=secret_name
         )
         self._sources.append(source)

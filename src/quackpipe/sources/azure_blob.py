@@ -1,8 +1,10 @@
 """Source Handler for Azure Blob Storage."""
 from typing import Any
 
+from quackpipe.exceptions import ValidationError
 from quackpipe.secrets import fetch_secret_bundle
 from quackpipe.sources.base import BaseSourceHandler
+from quackpipe.validation_utils import get_merged_params, validate_required_fields
 
 
 class AzureBlobHandler(BaseSourceHandler):
@@ -22,6 +24,22 @@ class AzureBlobHandler(BaseSourceHandler):
     def required_plugins(self) -> list[str]:
         return ["azure", "httpfs"]
 
+    @classmethod
+    def validate(cls, config: dict[str, Any], secret_name: str | None = None, resolve_secrets: bool = False):
+        """Validates Azure Blob Storage configuration parameters."""
+        params = get_merged_params(config, secret_name, resolve_secrets)
+        provider = params.get('provider', 'connection_string').lower()
+
+        if provider == 'connection_string':
+            validate_required_fields(params, ['connection_string'], "azure", secret_name, resolve_secrets)
+        elif provider == 'service_principal':
+            required = ['account_name', 'tenant_id', 'client_id', 'client_secret']
+            validate_required_fields(params, required, "azure", secret_name, resolve_secrets)
+        elif provider == 'managed_identity':
+            pass # No specific fields required for managed identity
+        else:
+            raise ValidationError(f"Unsupported Azure provider type: '{provider}'. Must be 'connection_string', 'service_principal', or 'managed_identity'.")
+
     def render_sql(self) -> str:
         """
         Renders the CREATE SECRET statement for Azure Blob Storage.
@@ -40,9 +58,6 @@ class AzureBlobHandler(BaseSourceHandler):
         if provider == 'connection_string':
             # This is the simplest method, using a single connection string
             connection_string = sql_context.get('connection_string')
-            if not connection_string:
-                raise ValueError(
-                    f"Azure source '{connection_name}' with provider 'connection_string' requires a 'connection_string' parameter.")
             secret_parts.append(f",  CONNECTION_STRING '{connection_string}'")
 
         elif provider == 'service_principal':
@@ -66,8 +81,8 @@ class AzureBlobHandler(BaseSourceHandler):
                 secret_parts.append(f",  ACCOUNT_NAME '{sql_context['account_name']}'")
 
         else:
-            raise ValueError(
-                f"Unsupported Azure provider type: '{provider}'. Must be 'connection_string', 'service_principal', or 'managed_identity'.")
+            # Defensive check: should be unreachable due to validate()
+            raise ValidationError(f"Unsupported Azure provider type in render_sql: '{provider}'")
 
         secret_parts.append(");")
 

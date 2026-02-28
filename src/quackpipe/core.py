@@ -6,24 +6,14 @@ from functools import wraps
 
 import duckdb
 
-from quackpipe.config import Plugin, SourceConfig, SourceParams, SourceType, get_configs, get_global_statements
+from quackpipe.config import Plugin, SourceConfig, SourceParams, get_configs, get_global_statements
 from quackpipe.exceptions import ConfigError
 from quackpipe.secrets import configure_secret_provider, fetch_secret_bundle
 
-# Import all handlers
-from quackpipe.sources import azure_blob, ducklake, mysql, postgres, s3, sqlite
+# Import the registry of handlers
+from quackpipe.sources import SOURCE_HANDLER_REGISTRY
 
 logger = logging.getLogger(__name__)
-
-# The registry stores the handler CLASSES, not instances.
-SOURCE_HANDLER_REGISTRY = {
-    SourceType.POSTGRES: postgres.PostgresHandler,
-    SourceType.MYSQL: mysql.MySQLHandler,
-    SourceType.S3: s3.S3Handler,
-    SourceType.AZURE: azure_blob.AzureBlobHandler,
-    SourceType.DUCKLAKE: ducklake.DuckLakeHandler,
-    SourceType.SQLITE: sqlite.SQLiteHandler,
-}
 
 
 def _prepare_connection(con: duckdb.DuckDBPyConnection, configs: list[SourceConfig]):
@@ -138,9 +128,15 @@ def session(
     if sources:
         active_configs = [c for c in all_configs if c.name in sources]
 
+    # Perform pre-flight validation (checking that both config and environment variables are present)
+    for cfg in active_configs:
+        HandlerClass = SOURCE_HANDLER_REGISTRY.get(cfg.type)
+        if HandlerClass:
+            HandlerClass.validate(cfg.config, cfg.secret_name, resolve_secrets=True)
+
     con = duckdb.connect(database=':memory:')
 
-    global_statements = get_global_statements(config_path)
+    global_statements = get_global_statements(config_path) if config_path else {}
 
     # Execute before_all_statements
     for stmt in global_statements.get('before_all_statements', []):

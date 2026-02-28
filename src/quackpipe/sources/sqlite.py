@@ -2,6 +2,7 @@
 from typing import Any
 
 from quackpipe.sources.base import BaseSourceHandler
+from quackpipe.validation_utils import get_merged_params, validate_required_fields
 
 
 class SQLiteHandler(BaseSourceHandler):
@@ -20,15 +21,18 @@ class SQLiteHandler(BaseSourceHandler):
     def required_plugins(self) -> list[str]:
         return ["sqlite"]
 
+    @classmethod
+    def validate(cls, config: dict[str, Any], secret_name: str | None = None, resolve_secrets: bool = False):
+        """Validates SQLite configuration parameters."""
+        params = get_merged_params(config, secret_name, resolve_secrets)
+        validate_required_fields(params, ["path"], "sqlite", secret_name, resolve_secrets)
+
     def render_sql(self) -> str:
         """
         Renders the ATTACH statement for a SQLite database file.
         """
         connection_name = self.context.get('connection_name')
         db_path = self.context.get('path')
-
-        if not db_path:
-            raise ValueError(f"SQLite source '{connection_name}' requires a 'path' in its configuration.")
 
         # The READ_ONLY flag is present if true, and absent if false.
         read_only_flag = ", READ_ONLY" if self.context.get('read_only', True) else ""

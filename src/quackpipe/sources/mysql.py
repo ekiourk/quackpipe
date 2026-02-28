@@ -3,6 +3,7 @@ from typing import Any
 
 from quackpipe.secrets import fetch_secret_bundle
 from quackpipe.sources.base import BaseSourceHandler
+from quackpipe.validation_utils import get_merged_params, validate_required_fields
 
 
 class MySQLHandler(BaseSourceHandler):
@@ -22,6 +23,12 @@ class MySQLHandler(BaseSourceHandler):
     @property
     def required_plugins(self) -> list[str]:
         return ["mysql"]
+
+    @classmethod
+    def validate(cls, config: dict[str, Any], secret_name: str | None = None, resolve_secrets: bool = False):
+        """Validates MySQL configuration parameters."""
+        params = get_merged_params(config, secret_name, resolve_secrets)
+        validate_required_fields(params, ["host", "database"], "mysql", secret_name, resolve_secrets)
 
     def render_create_secret_sql(self, duckdb_secret_name: str) -> str:
         """Renders only the CREATE SECRET statement for MySQL."""

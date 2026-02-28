@@ -182,7 +182,12 @@ quackpipe ui pg_warehouse s3_datalake
 
 ### 4. Validate Your Configuration
 
-Before running your scripts, you can validate your `config.yml` file (or a set of merged files) against the built-in schema to catch errors early.
+Quackpipe provides a two-layer validation system to catch errors before you run your ETL scripts:
+
+1.  **Structural Validation:** Checks your YAML files against the built-in JSON schema (e.g., "is the port an integer?").
+2.  **Semantic (Pre-flight) Validation:** Checks if the configuration makes sense for the source type (e.g., "does this Postgres source have a host?").
+
+By default, the `validate` command only performs structural and static semantic checks:
 
 ```bash
 # Validate the default config.yml
@@ -192,15 +197,27 @@ quackpipe validate
 quackpipe validate --config base.yml dev.yml
 ```
 
+#### Deep Validation (Secret Resolution)
+
+If you use `secret_name` in your config, you can perform a "deep check" to ensure the required environment variables are actually set:
+
+```bash
+# Check that all required secrets for your sources are present in the environment
+quackpipe validate --resolve-secrets
+
+# You can also specify an .env file to load for the check
+quackpipe validate --resolve-secrets --env-file .env.prod
+```
+
 If the configuration is valid, you'll see a success message:
 ```
 ✅ Configuration from '['base.yml', 'dev.yml']' is valid.
 ```
 
-If it's invalid, `quackpipe` will tell you why:
+If it's invalid, `quackpipe` will provide a descriptive error:
 ```
 ❌ Configuration is invalid.
-   Reason: 'port' in source 'pg_main' should be an integer.
+   Reason: Postgres source requires 'host', 'database' (Checked both config and environment variables for secret name: 'pg_prod')
 ```
 
 ### 5. Inspect Merged Configuration
