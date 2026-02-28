@@ -34,6 +34,15 @@ class BaseSourceHandler(ABC):
         """A list of DuckDB extensions needed for this source."""
         pass
 
+    @classmethod
+    @abstractmethod
+    def validate(cls, config: dict[str, Any], secret_name: str | None = None, resolve_secrets: bool = False):
+        """
+        Validates the source-specific configuration.
+        Must be implemented by subclasses.
+        """
+        pass
+
     @abstractmethod
     def render_sql(self) -> str:
         """

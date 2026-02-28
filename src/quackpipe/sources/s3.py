@@ -21,6 +21,12 @@ class S3Handler(BaseSourceHandler):
     def required_plugins(self) -> list[str]:
         return ["httpfs"]
 
+    @classmethod
+    def validate(cls, config: dict[str, Any], secret_name: str | None = None, resolve_secrets: bool = False):
+        """Validates S3 configuration."""
+        # S3 is highly flexible (can use IAM roles), so we don't enforce fields by default.
+        pass
+
     def render_create_secret_sql(self, duckdb_secret_name: str) -> str:
         """Builds a CREATE SECRET statement for S3."""
         secrets = fetch_secret_bundle(self.context.get('secret_name'))

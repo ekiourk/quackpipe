@@ -19,7 +19,7 @@ from duckdb import DuckDBPyConnection
 from quackpipe.builder import QuackpipeBuilder
 from quackpipe.config import SourceConfig, SourceType, get_config_yaml, parse_config_from_yaml
 from quackpipe.core import _prepare_connection, session
-from quackpipe.exceptions import ConfigError, QuackpipeError, SecretError
+from quackpipe.exceptions import ConfigError, QuackpipeError, SecretError, ValidationError
 from quackpipe.secrets import fetch_secret_bundle
 from quackpipe.utils import is_connection_open
 
@@ -159,15 +159,29 @@ def test_builder_session_empty():
 def test_builder_session_success(mock_session):
     """Test successful builder session creation."""
     builder = QuackpipeBuilder()
-    builder.add_source("test", SourceType.POSTGRES)
+    builder.add_source("test", SourceType.POSTGRES, secret_name="dummy")
 
     builder.session()
 
     mock_session.assert_called_once_with(configs=builder._sources)
 
 
-# ==================== CORE FUNCTIONALITY TESTS ====================
+def test_postgres_validation():
+    """Test the new semantic validation for Postgres."""
+    builder = QuackpipeBuilder()
 
+    # Fails without host/database OR secret_name
+    with pytest.raises(ValidationError, match="requires 'host', 'database'"):
+        builder.add_source("pg", SourceType.POSTGRES, config={})
+
+    # Passes with secret_name
+    builder.add_source("pg_ok", SourceType.POSTGRES, secret_name="my_secret")
+
+    # Passes with host/database
+    builder.add_source("pg_ok2", SourceType.POSTGRES, config={"host": "localhost", "database": "db"})
+
+
+# ==================== CORE FUNCTIONALITY TESTS ====================
 def test_parse_config_from_yaml(sample_yaml_config):
     """Test parsing YAML configuration."""
     configs = parse_config_from_yaml(get_config_yaml(sample_yaml_config))
@@ -246,7 +260,7 @@ def test_prepare_connection_empty():
 
 
 @patch('quackpipe.core._prepare_connection')
-def test_session_with_config_path(mock_prepare, sample_yaml_config):
+def test_session_with_config_path(mock_prepare, sample_yaml_config, env_secrets):
     """Test session creation with config path."""
 
     with session(config_path=sample_yaml_config) as con:
@@ -258,8 +272,9 @@ def test_session_with_config_path(mock_prepare, sample_yaml_config):
 
 
 @patch('quackpipe.core._prepare_connection')
-def test_session_with_env_var(mock_prepare, sample_yaml_config, monkeypatch):
+def test_session_with_env_var(mock_prepare, sample_yaml_config, env_secrets):
     """Test session creation with environment variable."""
+    monkeypatch = pytest.MonkeyPatch()
     monkeypatch.setenv("QUACKPIPE_CONFIG_PATH", sample_yaml_config)
 
     with session() as con:
@@ -271,7 +286,7 @@ def test_session_with_env_var(mock_prepare, sample_yaml_config, monkeypatch):
 
 
 @patch('duckdb.connect')
-def test_session_with_configs(mock_connect, mock_duckdb_connection, monkeypatch):
+def test_session_with_configs(mock_connect, mock_duckdb_connection, monkeypatch, env_secrets):
     """Test session creation with direct configs."""
     mock_connect.return_value = mock_duckdb_connection
 
@@ -302,8 +317,9 @@ def test_session_with_configs(mock_connect, mock_duckdb_connection, monkeypatch)
     assert "ATTACH 'dbname=test_db' AS test (TYPE POSTGRES, SECRET 'test_secret', READ_ONLY)" in last_call_args[0]
 
 
-def test_session_no_config():
+def test_session_no_config(monkeypatch):
     """Test session creation without config."""
+    monkeypatch.delenv("QUACKPIPE_CONFIG_PATH", raising=False)
     with pytest.raises(ConfigError, match="Must provide either a 'config_path', a 'configs' list, or set the 'QUACKPIPE_CONFIG_PATH' environment variable."):
         with session():
             pass
@@ -316,7 +332,7 @@ def test_session_prioritizes_configs_over_env_var(mock_prepare, sample_yaml_conf
     monkeypatch.setenv("QUACKPIPE_CONFIG_PATH", sample_yaml_config)
 
     # Provide a different, direct config
-    direct_configs = [SourceConfig(name="direct_config", type=SourceType.SQLITE)]
+    direct_configs = [SourceConfig(name="direct_config", type=SourceType.SQLITE, config={"path": ":memory:"})]
 
     with session(configs=direct_configs):
         pass
@@ -332,13 +348,13 @@ def test_session_prioritizes_configs_over_env_var(mock_prepare, sample_yaml_conf
 
 @patch('duckdb.connect')
 @patch('quackpipe.core._prepare_connection')
-def test_session_with_sources_filter(mock_prepare, mock_connect, mock_duckdb_connection):
+def test_session_with_sources_filter(mock_prepare, mock_connect, mock_duckdb_connection, env_secrets):
     """Test session with sources filter."""
     mock_connect.return_value = mock_duckdb_connection
 
     configs = [
-        SourceConfig(name="pg1", type=SourceType.POSTGRES),
-        SourceConfig(name="pg2", type=SourceType.POSTGRES),
+        SourceConfig(name="pg1", type=SourceType.POSTGRES, config={"host": "h", "database": "d"}),
+        SourceConfig(name="pg2", type=SourceType.POSTGRES, config={"host": "h", "database": "d"}),
         SourceConfig(name="s3_1", type=SourceType.S3)
     ]
 
@@ -353,12 +369,12 @@ def test_session_with_sources_filter(mock_prepare, mock_connect, mock_duckdb_con
 
 @patch('duckdb.connect')
 @patch('quackpipe.core._prepare_connection')
-def test_session_as_function(mock_prepare, mock_connect, mock_duckdb_connection):
+def test_session_as_function(mock_prepare, mock_connect, mock_duckdb_connection, env_secrets):
     """Test session creation as a direct function call."""
     mock_connect.return_value = mock_duckdb_connection
 
     # Call session as a regular function
-    con = session(configs=[SourceConfig(name="test", type=SourceType.POSTGRES)])
+    con = session(configs=[SourceConfig(name="test", type=SourceType.POSTGRES, config={"host": "h", "database": "d"})])
 
     # Assert that a connection was returned
     assert con is mock_duckdb_connection
@@ -439,7 +455,7 @@ def test_empty_secret_bundle_handling():
 def test_builder_with_none_config():
     """Test builder with None config parameter."""
     builder = QuackpipeBuilder()
-    builder.add_source("test", SourceType.POSTGRES, config=None)
+    builder.add_source("test", SourceType.POSTGRES, config=None, secret_name="dummy")
 
     assert builder._sources[0].config == {}
 

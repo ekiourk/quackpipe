@@ -95,7 +95,11 @@ def test_move_data_to_writeable_postgres(mock_session, mock_get_configs, mock_du
     """Test moving data to a writeable Postgres destination."""
     # Arrange
     source_query = "SELECT id, name FROM source"
-    pg_configs = [SourceConfig(name="pg_dest", type=SourceType.POSTGRES, config={"read_only": False})]
+    pg_configs = [SourceConfig(
+        name="pg_dest",
+        type=SourceType.POSTGRES,
+        config={"read_only": False, "host": "localhost", "database": "db"}
+    )]
     mock_get_configs.return_value = pg_configs
 
     # Mock the DROP TABLE call for replace mode
@@ -122,7 +126,11 @@ def test_move_data_to_writeable_postgres(mock_session, mock_get_configs, mock_du
 def test_move_data_to_readonly_postgres_raises_error(mock_session, mock_get_configs):
     """Test that moving data to a read-only destination raises a PermissionError."""
     # Arrange
-    pg_configs = [SourceConfig(name="pg_dest", type=SourceType.POSTGRES, config={"read_only": True})]
+    pg_configs = [SourceConfig(
+        name="pg_dest",
+        type=SourceType.POSTGRES,
+        config={"read_only": True, "host": "localhost", "database": "db"}
+    )]
     mock_get_configs.return_value = pg_configs
 
     # Act & Assert
@@ -161,7 +169,7 @@ def test_full_workflow_with_move_data(mock_get_configs, mock_session, mock_duckd
     """
     # Arrange: Setup mock configurations for both a source and a destination
     all_configs = [
-        SourceConfig(name="pg_main", type=SourceType.POSTGRES),
+        SourceConfig(name="pg_main", type=SourceType.POSTGRES, config={"host": "h", "database": "d"}),
         SourceConfig(name="s3_lake", type=SourceType.S3, config={"path": "s3://my-lake/"})
     ]
     mock_get_configs.return_value = all_configs

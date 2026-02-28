@@ -1,7 +1,9 @@
 """Source Handler for DuckLake, combining a catalog and storage."""
 from typing import Any
 
-from ...exceptions import ConfigError
+from quackpipe.validation_utils import get_merged_params, validate_required_fields
+
+from ...exceptions import ConfigError, ValidationError
 from ..base import BaseSourceHandler
 from ..s3 import S3Handler
 from .providers import (
@@ -24,12 +26,30 @@ class DuckLakeHandler(BaseSourceHandler):
         self.catalog_config = self.context.get('catalog', {})
         self.storage_config = self.context.get('storage', {})
 
-        if not self.catalog_config or not self.storage_config:
-            raise ConfigError("DuckLake source requires 'catalog' and 'storage' sections in config.")
-
         # Instantiate the appropriate provider classes
         self.catalog_provider: CatalogProvider = self._get_catalog_provider()
         self.storage_provider: StorageProvider | None = self._get_storage_provider()
+
+    @classmethod
+    def validate(cls, config: dict[str, Any], secret_name: str | None = None, resolve_secrets: bool = False):
+        """Validates DuckLake configuration parameters."""
+        params = get_merged_params(config, secret_name, resolve_secrets)
+        catalog_config = params.get('catalog', {})
+        storage_config = params.get('storage', {})
+
+        if not catalog_config:
+            raise ValidationError("DuckLake source requires a 'catalog' section.")
+        if not storage_config:
+            raise ValidationError("DuckLake source requires a 'storage' section.")
+
+        validate_required_fields(storage_config, ["path"], "ducklake storage", secret_name, resolve_secrets)
+
+        catalog_type = catalog_config.get('type')
+        if catalog_type not in ['postgres', 'sqlite']:
+            raise ValidationError(f"Unsupported DuckLake catalog type: '{catalog_type}'. Must be 'postgres' or 'sqlite'.")
+
+        if catalog_type == 'sqlite':
+            validate_required_fields(catalog_config, ["path"], "ducklake sqlite catalog", secret_name, resolve_secrets)
 
     def _get_catalog_provider(self) -> CatalogProvider:
         """Factory function to create the catalog provider instance."""
@@ -86,8 +106,6 @@ class DuckLakeHandler(BaseSourceHandler):
 
         # --- Part 2: Generate the main DUCKLAKE secret ---
         data_path = self.storage_config.get('path')
-        if not data_path:
-            raise ConfigError(f"DuckLake source '{connection_name}' requires a 'path' for storage.")
 
         ducklake_secret_parts = [
             f"CREATE OR REPLACE SECRET {ducklake_secret_name} (",
@@ -102,6 +120,9 @@ class DuckLakeHandler(BaseSourceHandler):
         elif self.catalog_config.get('type') == 'sqlite':
             metadata_path = self.catalog_config.get('path')
             ducklake_secret_parts.append(f",   METADATA_PATH '{metadata_path}'")
+        else:
+            # Defensive check
+            raise ConfigError(f"Unsupported DuckLake catalog type in render_sql: '{self.catalog_config.get('type')}'")
 
         ducklake_secret_parts.append(");")
         sql_statements.append("\n".join(ducklake_secret_parts))

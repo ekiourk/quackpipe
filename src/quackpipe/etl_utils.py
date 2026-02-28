@@ -52,6 +52,17 @@ def move_data(
     # Load all configurations using the shared helper function.
     all_configs = get_configs(config_path, configs)
 
+    # Configure secret provider before validation
+    from quackpipe.secrets import configure_secret_provider
+    configure_secret_provider(env_file=env_file)
+
+    # Perform pre-flight validation
+    from quackpipe.sources import SOURCE_HANDLER_REGISTRY
+    for cfg in all_configs:
+        HandlerClass = SOURCE_HANDLER_REGISTRY.get(cfg.type)
+        if HandlerClass:
+            HandlerClass.validate(cfg.config, cfg.secret_name, resolve_secrets=True)
+
     try:
         # Find the destination config to determine its type.
         dest_config = next(c for c in all_configs if c.name == destination_name)

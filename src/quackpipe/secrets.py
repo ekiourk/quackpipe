@@ -53,8 +53,9 @@ class EnvSecretProvider:
         return secrets
 
 
-# Global variable holding the current secret provider instance.
+# Global variable holding the current secret provider instance and its cache.
 _provider: EnvSecretProvider | None = None
+_bundle_cache: dict[str, dict[str, str]] = {}
 
 
 def _get_provider() -> EnvSecretProvider:
@@ -73,8 +74,9 @@ def configure_secret_provider(env_file: str | list[str] | None = None):
     Initializes or re-initializes the secret provider, optionally loading
     environment file(s).
     """
-    global _provider
+    global _provider, _bundle_cache
     _provider = EnvSecretProvider(env_file=env_file)
+    _bundle_cache.clear()
 
 
 def fetch_raw_secret_bundle(name: str) -> dict[str, str]:
@@ -98,6 +100,10 @@ def fetch_secret_bundle(name: str) -> dict[str, str]:
     if not name:
         return {}
 
+    global _bundle_cache
+    if name in _bundle_cache:
+        return _bundle_cache[name]
+
     raw_secrets = fetch_raw_secret_bundle(name)
     normalized_secrets = {}
     prefix = f"{name.upper()}_"
@@ -108,4 +114,5 @@ def fetch_secret_bundle(name: str) -> dict[str, str]:
             normalized_key = key[len(prefix):].lower()
             normalized_secrets[normalized_key] = value
 
+    _bundle_cache[name] = normalized_secrets
     return normalized_secrets

@@ -12,6 +12,12 @@ from jsonschema import validate
 from quackpipe.exceptions import ConfigError
 from quackpipe.utils import DotDict
 
+
+# Lazy import of registry to avoid circular dependency
+def get_registry():
+    from quackpipe.sources import SOURCE_HANDLER_REGISTRY
+    return SOURCE_HANDLER_REGISTRY
+
 SourceParams = DotDict
 
 def validate_config(config_data: dict) -> None:
@@ -123,9 +129,18 @@ def get_config_yaml(path: str | list[str] | None) -> dict | None:
     return merged_config
 
 
-def parse_config_from_yaml(raw_config: dict) -> list[SourceConfig]:
+def parse_config_from_yaml(raw_config: dict, resolve_secrets: bool = False) -> list[SourceConfig]:
     """
-    Gets the content of a parsed YAML file, validates it and prepares a list of SourceConfig objects
+    Parses a dictionary (from YAML) into a list of SourceConfig objects.
+
+    Args:
+        raw_config: The raw dictionary loaded from YAML.
+        resolve_secrets: If True, performs a 'deep' validation by attempting to
+            fetch secrets from the environment to ensure all required fields
+            for each source are present. Defaults to False.
+
+    Returns:
+        A list of SourceConfig objects.
     """
 
     # We import here to avoid a circular import at the top level
@@ -151,6 +166,12 @@ def parse_config_from_yaml(raw_config: dict) -> list[SourceConfig]:
         after_statements = details_copy.pop('after_source_statements', [])
         source_specific_config = details_copy
 
+        # Perform semantic validation if a handler exists for this type
+        registry = get_registry()
+        HandlerClass = registry.get(source_type)
+        if HandlerClass:
+            HandlerClass.validate(source_specific_config, secret_name, resolve_secrets=resolve_secrets)
+
         source_configs.append(SourceConfig(
             name=name,
             type=source_type,
@@ -165,7 +186,8 @@ def parse_config_from_yaml(raw_config: dict) -> list[SourceConfig]:
 
 def get_configs(
         config_path: str | list[str] | None = None,
-        configs: list[SourceConfig] | None = None
+        configs: list[SourceConfig] | None = None,
+        resolve_secrets: bool = False
 ) -> list[SourceConfig]:
     """
     A helper function to load source configurations. The priority is:
@@ -182,7 +204,7 @@ def get_configs(
     # Try to load from config_path or environment variable
     config_yaml = get_config_yaml(config_path)
     if config_yaml:
-        return parse_config_from_yaml(config_yaml)
+        return parse_config_from_yaml(config_yaml, resolve_secrets=resolve_secrets)
 
     # This provides a clear error message if no configuration source is given.
     raise ConfigError(

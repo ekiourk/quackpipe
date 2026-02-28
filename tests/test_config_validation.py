@@ -31,6 +31,7 @@ def run_validation_test(temp_dir, invalid_config, should_pass=False):
     # Invalid postgres
     ({"type": "postgres", "port": "not-a-number", "secret_name": "..."}, False),
     ({"type": "postgres", "tables": "not-a-list", "secret_name": "..."}, False),
+    ({"type": "postgres", "port": 5432}, False),  # inline, no secret, missing host + database
 
     # Invalid s3
     ({"type": "s3", "use_ssl": "not-a-boolean", "secret_name": "..."}, False),
