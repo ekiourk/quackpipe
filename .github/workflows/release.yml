@@ -20,13 +20,15 @@ jobs:
           python-version: "3.12"
 
       - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
-      - name: Install ruff via uv
-        run: uv pip install --system ruff
+      - name: Install project with lint dependencies
+        run: uv sync --extra lint --frozen
 
       - name: Run ruff
-        run: ruff check .
+        run: uv run ruff check .
 
   test:
     name: Pytest (with Testcontainers)
@@ -41,13 +43,15 @@ jobs:
           python-version: "3.12"
 
       - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
-      - name: Install project dependencies (including [dev,s3,postgres])
-        run: uv pip install --system -e ".[dev,s3,postgres]"
+      - name: Install project dependencies (all extras)
+        run: uv sync --all-extras --frozen
 
       - name: Run tests with coverage
-        run: pytest --cov=quackpipe --cov-branch --cov-report=term --cov-report=xml
+        run: uv run pytest --cov=quackpipe --cov-branch --cov-report=term --cov-report=xml
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
@@ -68,16 +72,14 @@ jobs:
           python-version: "3.12"
 
       - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
-
-      - name: Install build tools
-        run: uv pip install --system build twine
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
       - name: Build package
-        run: python -m build
+        run: uv build
 
       - name: Publish to PyPI
         env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: twine upload dist/*
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: uv publish

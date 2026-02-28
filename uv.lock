@@ -999,6 +999,9 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+azure = [
+    { name = "azure-storage-blob" },
+]
 dev = [
     { name = "httpx" },
     { name = "ipdb" },
@@ -1036,6 +1039,7 @@ s3 = [
 
 [package.metadata]
 requires-dist = [
+    { name = "azure-storage-blob", marker = "extra == 'azure'" },
     { name = "colorlog", marker = "extra == 'logging'", specifier = ">=6.0.0" },
     { name = "confluent-kafka", marker = "extra == 'kafka'" },
     { name = "duckdb", specifier = ">=0.9.0" },
@@ -1057,7 +1061,7 @@ requires-dist = [
     { name = "structlog", marker = "extra == 'logging'", specifier = ">=23.0.0" },
     { name = "testcontainers", extras = ["postgres", "minio", "mysql", "azurite"], marker = "extra == 'fixtures'", specifier = "==4.12.0" },
 ]
-provides-extras = ["dev", "fixtures", "lint", "logging", "postgres", "mysql", "s3", "kafka"]
+provides-extras = ["dev", "fixtures", "lint", "logging", "postgres", "mysql", "s3", "kafka", "azure"]
 
 [[package]]
 name = "referencing"

@@ -37,6 +37,7 @@ postgres = ["psycopg"]
 mysql = ["mysql-connector-python"]
 s3 = ["pyarrow"]
 kafka = ["confluent-kafka"]
+azure = ["azure-storage-blob"]
 
 [build-system]
 requires = ["setuptools>=61.0"]
