@@ -32,7 +32,8 @@ def move_data(
         configs: list[SourceConfig] | None = None,
         env_file: str | None = None,
         mode: str = 'replace',
-        format: str = 'parquet'
+        format: str = 'parquet',
+        primary_key: str | list[str] | None = None
 ):
     """
     A self-contained utility to move data from a source query to a destination.
@@ -46,8 +47,10 @@ def move_data(
             `QUACKPIPE_CONFIG_PATH` environment variable.
         configs: A direct list of SourceConfig objects.
         env_file: Path to an env file to use.
-        mode: Write mode. 'replace' or 'append'.
+        mode: Write mode. 'replace', 'append', or 'merge'.
         format: The file format for file-based destinations (e.g., 'parquet', 'csv').
+        primary_key: The primary key(s) to use for 'merge' mode. Can be a string
+            or a list of strings.
     """
     # Load all configurations using the shared helper function.
     all_configs = get_configs(config_path, configs)
@@ -69,9 +72,27 @@ def move_data(
     except StopIteration as e:
         raise ValueError(f"Destination '{destination_name}' not found in the provided configuration.") from e
 
+    # Helper function to generate MERGE SQL
+    def _generate_merge_sql(target_table: str, source_q: str, pk: str | list[str]) -> str:
+        if not pk:
+            raise ValueError("Primary key(s) must be provided for 'merge' mode.")
+
+        pk_list = [pk] if isinstance(pk, str) else pk
+        on_clause = " AND ".join([f"target.{k} = source.{k}" for k in pk_list])
+
+        return f"""
+            MERGE INTO {target_table} AS target
+            USING ({source_q}) AS source
+            ON {on_clause}
+            WHEN MATCHED THEN UPDATE SET *
+            WHEN NOT MATCHED THEN INSERT BY NAME;
+        """
+
     # This utility creates its own session to perform the work.
     with session(configs=all_configs, env_file=env_file) as con:
         if dest_config.type == SourceType.S3:
+            if mode == 'merge':
+                raise ValueError("Mode 'merge' is not supported for S3 file destinations.")
             base_path = dest_config.config.get('path', f"s3://{destination_name}/")
             if not base_path.endswith('/'):
                 base_path += '/'
@@ -86,8 +107,10 @@ def move_data(
                 sql = f"CREATE OR REPLACE TABLE {full_table_name} AS ({source_query});"
             elif mode == 'append':
                 sql = f"INSERT INTO {full_table_name} ({source_query});"
+            elif mode == 'merge':
+                sql = _generate_merge_sql(full_table_name, source_query, primary_key)
             else:
-                raise ValueError(f"Invalid mode '{mode}'. Use 'replace' or 'append'.")
+                raise ValueError(f"Invalid mode '{mode}'. Use 'replace', 'append' or 'merge'.")
             con.execute(sql)
             logger.info("Data successfully moved to table %s", full_table_name)
 
@@ -105,8 +128,10 @@ def move_data(
                 sql = f"CREATE TABLE {full_table_name} AS ({source_query});"
             elif mode == 'append':
                 sql = f"INSERT INTO {full_table_name} ({source_query});"
+            elif mode == 'merge':
+                sql = _generate_merge_sql(full_table_name, source_query, primary_key)
             else:
-                raise ValueError(f"Invalid mode '{mode}'. Use 'replace' or 'append'.")
+                raise ValueError(f"Invalid mode '{mode}'. Use 'replace', 'append' or 'merge'.")
             con.execute(sql)
             logger.info("Data successfully moved to table %s", full_table_name)
 
@@ -115,7 +140,10 @@ def move_data(
                 sql = f"CREATE OR REPLACE TABLE {table_name} AS ({source_query});"
             elif mode == 'append':
                 sql = f"INSERT INTO {table_name} ({source_query});"
+            elif mode == 'merge':
+                sql = _generate_merge_sql(table_name, source_query, primary_key)
             else:
-                raise ValueError(f"Invalid mode '{mode}'. Use 'replace' or 'append'.")
+                raise ValueError(f"Invalid mode '{mode}'. Use 'replace', 'append' or 'merge'.")
             con.execute(sql)
             logger.info("Data successfully moved to in-memory table '%s'", table_name)
+

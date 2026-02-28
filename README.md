@@ -168,6 +168,19 @@ move_data(
 )
 ```
 
+**Sync data using `merge` (upsert) mode:**
+
+```python
+# Update existing records and insert new ones based on a primary key
+move_data(
+    source_query="SELECT * FROM new_data",
+    destination_name="pg_warehouse",
+    table_name="users",
+    mode="merge",
+    primary_key="user_id"
+)
+```
+
 ### 3. Instant Data Exploration with the CLI
 
 Launch a web browser UI with all your sources attached and ready for ad-hoc queries.
