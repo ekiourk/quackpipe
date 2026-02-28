@@ -75,17 +75,18 @@ sources:
     secret_name: "pg_prod" # See Secret Management section below
     read_only: false       # Allows writing data back to this source
 
-  # An S3 data lake for Parquet files.
+  # S3 with path-based scoping (Highly Recommended)
   s3_datalake:
     type: s3
     secret_name: "aws_prod"
     region: "us-east-1"
+    scope: "s3://my-bucket/production-data/" # Credentials only work for this path
 
-  # An Azure Blob Storage container.
+  # Azure using Managed Identity (Zero-Key Security)
   azure_datalake:
     type: azure
-    provider: connection_string
-    secret_name: "azure_prod"
+    provider: managed_identity
+    account_name: "mystorageaccount"
 
   # A composite DuckLake source.
   my_lake:
@@ -109,6 +110,14 @@ sources:
     path: "path/to/encrypted.db"
     encryption_key: "your-32-byte-key-here"
 ```
+
+### Cloud Security & Hardening (DuckDB 1.4+)
+
+Quackpipe leverages DuckDB 1.4's Secrets Manager for enhanced cloud security:
+
+*   **Scoping:** Use the `scope` parameter to restrict credentials to a specific bucket or path.
+*   **Credential Chains:** Set `provider: credential_chain` (Azure) or `use_credential_chain: true` (S3) to use your environment's native authentication (e.g., AWS IAM Roles, Azure CLI login) without storing keys in your configuration.
+*   **Temporary Credentials:** S3 sources now support `session_token` for use with AWS STS tokens.
 
 ### Secret Management with `.env`
 
