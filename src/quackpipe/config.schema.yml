@@ -140,6 +140,7 @@ definitions:
     properties:
       type: { const: "sqlite" }
       path: { type: string }
+      secret_name: { type: string }
       read_only: { type: boolean }
       encryption_key: { type: string }
     required:

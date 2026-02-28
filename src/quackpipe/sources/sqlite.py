@@ -1,6 +1,7 @@
 """Source Handler for SQLite databases."""
 from typing import Any
 
+from quackpipe.secrets import fetch_secret_bundle
 from quackpipe.sources.base import BaseSourceHandler
 from quackpipe.validation_utils import get_merged_params, validate_required_fields
 
@@ -12,6 +13,8 @@ class SQLiteHandler(BaseSourceHandler):
 
     def __init__(self, context: dict[str, Any]):
         super().__init__(context)
+        secrets = fetch_secret_bundle(self.context.get('secret_name'))
+        self.context = {**self.context, **secrets}
 
     @property
     def source_type(self) -> str:
