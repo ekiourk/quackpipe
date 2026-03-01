@@ -19,7 +19,13 @@ from duckdb import DuckDBPyConnection
 from quackpipe.builder import QuackpipeBuilder
 from quackpipe.config import SourceConfig, SourceType, get_config_yaml, parse_config_from_yaml
 from quackpipe.core import _prepare_connection, session
-from quackpipe.exceptions import ConfigError, QuackpipeError, SecretError, ValidationError
+from quackpipe.exceptions import (
+    ConfigError,
+    ExecutionError,
+    QuackpipeError,
+    SecretError,
+    ValidationError,
+)
 from quackpipe.secrets import fetch_secret_bundle
 from quackpipe.utils import is_connection_open
 
@@ -151,7 +157,7 @@ def test_builder_session_empty():
     """Test builder session with no sources."""
     builder = QuackpipeBuilder()
 
-    with pytest.raises(ValueError, match="Cannot build a session with no sources"):
+    with pytest.raises(ExecutionError, match="Cannot build a session with no sources"):
         builder.session()
 
 

@@ -10,6 +10,7 @@ import pytest
 
 from quackpipe.config import SourceConfig, SourceType
 from quackpipe.etl_utils import create_table_from_df, move_data, to_df
+from quackpipe.exceptions import AccessDeniedError, ValidationError
 
 # ==================== FIXTURES ====================
 
@@ -167,7 +168,7 @@ def test_move_data_merge_mode_missing_pk_raises_error(mock_session, mock_get_con
     mock_get_configs.return_value = pg_configs
 
     # Act & Assert
-    with pytest.raises(ValueError, match=r"Primary key\(s\) must be provided for 'merge' mode."):
+    with pytest.raises(ValidationError, match=r"Primary key\(s\) must be provided for 'merge' mode."):
         move_data(
             source_query="SELECT 1",
             destination_name="pg_dest",
@@ -178,7 +179,7 @@ def test_move_data_merge_mode_missing_pk_raises_error(mock_session, mock_get_con
 
 
 def test_move_data_to_readonly_postgres_raises_error(mock_session, mock_get_configs):
-    """Test that moving data to a read-only destination raises a PermissionError."""
+    """Test that moving data to a read-only destination raises an AccessDeniedError."""
     # Arrange
     pg_configs = [SourceConfig(
         name="pg_dest",
@@ -188,7 +189,7 @@ def test_move_data_to_readonly_postgres_raises_error(mock_session, mock_get_conf
     mock_get_configs.return_value = pg_configs
 
     # Act & Assert
-    with pytest.raises(PermissionError,
+    with pytest.raises(AccessDeniedError,
                        match="Cannot write to destination 'pg_dest' because it is configured as read-only."):
         move_data(
             source_query="SELECT 1",
