@@ -73,6 +73,7 @@ definitions:
       user: { type: string }
       password: { type: string }
       read_only: { type: boolean }
+      encryption_key: { type: string }
       tables:
         type: array
         items: { type: string }
@@ -91,6 +92,8 @@ definitions:
       session_token: { type: string }
       endpoint: { type: string }
       path: { type: string }
+      scope: { type: string }
+      use_credential_chain: { type: boolean }
       url_style: { type: string, enum: ["path", "virtual"] }
       use_ssl: { type: boolean }
     required:
@@ -103,32 +106,17 @@ definitions:
       - type: object
         properties:
           type: { const: "azure" }
-          provider: { const: "connection_string" }
+          provider: { enum: ["connection_string", "service_principal", "managed_identity", "credential_chain"] }
           secret_name: { type: string }
           connection_string: { type: string }
-        required:
-          - type
-          - provider
-        additionalProperties: true
-      - type: object
-        properties:
-          type: { const: "azure" }
-          provider: { const: "service_principal" }
-          secret_name: { type: string }
           account_name: { type: string }
           tenant_id: { type: string }
           client_id: { type: string }
           client_secret: { type: string }
-        required:
-          - type
-          - provider
-        additionalProperties: true
-      - type: object
-        properties:
-          type: { const: "azure" }
-          provider: { const: "managed_identity" }
-          secret_name: { type: string }
-          account_name: { type: string }
+          scope: { type: string }
+          http_proxy: { type: string }
+          proxy_user_name: { type: string }
+          proxy_password: { type: string }
         required:
           - type
           - provider
@@ -139,7 +127,9 @@ definitions:
     properties:
       type: { const: "sqlite" }
       path: { type: string }
+      secret_name: { type: string }
       read_only: { type: boolean }
+      encryption_key: { type: string }
     required:
       - type
       - path
@@ -196,6 +186,7 @@ definitions:
       user: { type: string }
       password: { type: string }
       read_only: { type: boolean }
+      encryption_key: { type: string }
       tables:
         type: array
         items: { type: string }

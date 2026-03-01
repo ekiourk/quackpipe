@@ -1,6 +1,7 @@
 """Source Handler for SQLite databases."""
 from typing import Any
 
+from quackpipe.secrets import fetch_secret_bundle
 from quackpipe.sources.base import BaseSourceHandler
 from quackpipe.validation_utils import get_merged_params, validate_required_fields
 
@@ -12,6 +13,8 @@ class SQLiteHandler(BaseSourceHandler):
 
     def __init__(self, context: dict[str, Any]):
         super().__init__(context)
+        secrets = fetch_secret_bundle(self.context.get('secret_name'))
+        self.context = {**self.context, **secrets}
 
     @property
     def source_type(self) -> str:
@@ -37,10 +40,14 @@ class SQLiteHandler(BaseSourceHandler):
         # The READ_ONLY flag is present if true, and absent if false.
         read_only_flag = ", READ_ONLY" if self.context.get('read_only', True) else ""
 
+        # Handle native encryption (DuckDB 1.4+)
+        encryption_key = self.context.get('encryption_key')
+        encryption_flag = f", ENCRYPTION_KEY '{encryption_key}'" if encryption_key else ""
+
         # Build the ATTACH statement
         attach_sql = (
             f"ATTACH '{db_path}' AS {connection_name} "
-            f"(TYPE SQLITE{read_only_flag});"
+            f"(TYPE SQLITE{read_only_flag}{encryption_flag});"
         )
 
         return attach_sql

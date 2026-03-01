@@ -123,6 +123,60 @@ def test_move_data_to_writeable_postgres(mock_session, mock_get_configs, mock_du
     mock_duckdb_connection.execute.assert_called_with(final_sql)
 
 
+def test_move_data_merge_mode_postgres(mock_session, mock_get_configs, mock_duckdb_connection):
+    """Test moving data to a Postgres destination using merge mode."""
+    # Arrange
+    source_query = "SELECT id, name FROM source"
+    pg_configs = [SourceConfig(
+        name="pg_dest",
+        type=SourceType.POSTGRES,
+        config={"read_only": False, "host": "localhost", "database": "db"}
+    )]
+    mock_get_configs.return_value = pg_configs
+
+    # Act
+    move_data(
+        source_query=source_query,
+        destination_name="pg_dest",
+        table_name="output_table",
+        configs=pg_configs,
+        mode="merge",
+        primary_key="id"
+    )
+
+    # Assert
+    # Verify that the MERGE statement was executed
+    # We check for key parts of the MERGE SQL
+    args, kwargs = mock_duckdb_connection.execute.call_args
+    sql = args[0]
+    assert "MERGE INTO pg_dest.output_table AS target" in sql
+    assert "USING (SELECT id, name FROM source) AS source" in sql
+    assert "ON target.id = source.id" in sql
+    assert "WHEN MATCHED THEN UPDATE SET *" in sql
+    assert "WHEN NOT MATCHED THEN INSERT BY NAME" in sql
+
+
+def test_move_data_merge_mode_missing_pk_raises_error(mock_session, mock_get_configs):
+    """Test that merge mode raises an error if primary_key is missing."""
+    # Arrange
+    pg_configs = [SourceConfig(
+        name="pg_dest",
+        type=SourceType.POSTGRES,
+        config={"read_only": False, "host": "localhost", "database": "db"}
+    )]
+    mock_get_configs.return_value = pg_configs
+
+    # Act & Assert
+    with pytest.raises(ValueError, match=r"Primary key\(s\) must be provided for 'merge' mode."):
+        move_data(
+            source_query="SELECT 1",
+            destination_name="pg_dest",
+            table_name="output_table",
+            configs=pg_configs,
+            mode="merge"
+        )
+
+
 def test_move_data_to_readonly_postgres_raises_error(mock_session, mock_get_configs):
     """Test that moving data to a read-only destination raises a PermissionError."""
     # Arrange

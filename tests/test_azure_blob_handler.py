@@ -105,8 +105,66 @@ def test_render_sql_with_managed_identity():
     expected_parts = [
         "CREATE OR REPLACE SECRET azure_mi_secret",
         "TYPE AZURE",
-        "PROVIDER 'credential_chain'",
+        "PROVIDER 'managed_identity'",
         "ACCOUNT_NAME 'myazurestorage'"
+    ]
+    normalized_sql = " ".join(generated_sql.split())
+    for part in expected_parts:
+        assert part in normalized_sql
+
+
+def test_render_sql_with_credential_chain():
+    """
+    Tests the handler when using the full credential chain provider.
+    """
+    # Arrange
+    context = {
+        "connection_name": "azure_chain",
+        "provider": "credential_chain",
+        "account_name": "chainstorage"
+    }
+    handler = AzureBlobHandler(context)
+
+    # Act
+    generated_sql = handler.render_sql()
+
+    # Assert
+    expected_parts = [
+        "CREATE OR REPLACE SECRET azure_chain_secret",
+        "TYPE AZURE",
+        "PROVIDER 'credential_chain'",
+        "ACCOUNT_NAME 'chainstorage'"
+    ]
+    normalized_sql = " ".join(generated_sql.split())
+    for part in expected_parts:
+        assert part in normalized_sql
+
+
+def test_render_sql_with_proxy_and_scope():
+    """
+    Tests the handler with proxy settings and path scoping.
+    """
+    # Arrange
+    context = {
+        "connection_name": "azure_proxy",
+        "provider": "connection_string",
+        "connection_string": "DefaultEndpoints...",
+        "scope": "azure://my-container/",
+        "http_proxy": "http://proxy:3128",
+        "proxy_user_name": "u",
+        "proxy_password": "p"
+    }
+    handler = AzureBlobHandler(context)
+
+    # Act
+    generated_sql = handler.render_sql()
+
+    # Assert
+    expected_parts = [
+        "SCOPE 'azure://my-container/'",
+        "HTTP_PROXY 'http://proxy:3128'",
+        "PROXY_USER_NAME 'u'",
+        "PROXY_PASSWORD 'p'"
     ]
     normalized_sql = " ".join(generated_sql.split())
     for part in expected_parts:

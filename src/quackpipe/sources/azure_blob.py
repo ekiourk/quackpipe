@@ -32,13 +32,12 @@ class AzureBlobHandler(BaseSourceHandler):
 
         if provider == 'connection_string':
             validate_required_fields(params, ['connection_string'], "azure", secret_name, resolve_secrets)
-        elif provider == 'service_principal':
-            required = ['account_name', 'tenant_id', 'client_id', 'client_secret']
-            validate_required_fields(params, required, "azure", secret_name, resolve_secrets)
-        elif provider == 'managed_identity':
-            pass # No specific fields required for managed identity
+        elif provider in ['service_principal', 'managed_identity', 'credential_chain']:
+            if provider == 'service_principal':
+                required = ['account_name', 'tenant_id', 'client_id', 'client_secret']
+                validate_required_fields(params, required, "azure", secret_name, resolve_secrets)
         else:
-            raise ValidationError(f"Unsupported Azure provider type: '{provider}'. Must be 'connection_string', 'service_principal', or 'managed_identity'.")
+            raise ValidationError(f"Unsupported Azure provider type: '{provider}'. Must be 'connection_string', 'service_principal', 'managed_identity', or 'credential_chain'.")
 
     def render_sql(self) -> str:
         """
@@ -76,6 +75,12 @@ class AzureBlobHandler(BaseSourceHandler):
 
         elif provider == 'managed_identity':
             # Using a Managed Identity
+            secret_parts.append(",  PROVIDER 'managed_identity'")
+            if 'account_name' in sql_context:
+                secret_parts.append(f",  ACCOUNT_NAME '{sql_context['account_name']}'")
+
+        elif provider == 'credential_chain':
+            # Using the full credential chain (CLI, env vars, etc.)
             secret_parts.append(",  PROVIDER 'credential_chain'")
             if 'account_name' in sql_context:
                 secret_parts.append(f",  ACCOUNT_NAME '{sql_context['account_name']}'")
@@ -83,6 +88,18 @@ class AzureBlobHandler(BaseSourceHandler):
         else:
             # Defensive check: should be unreachable due to validate()
             raise ValidationError(f"Unsupported Azure provider type in render_sql: '{provider}'")
+
+        # Handle optional common parameters (1.4 hardening)
+        if 'scope' in sql_context:
+            secret_parts.append(f",  SCOPE '{sql_context['scope']}'")
+
+        # Proxy support
+        if 'http_proxy' in sql_context:
+            secret_parts.append(f",  HTTP_PROXY '{sql_context['http_proxy']}'")
+            if 'proxy_user_name' in sql_context:
+                secret_parts.append(f",  PROXY_USER_NAME '{sql_context['proxy_user_name']}'")
+            if 'proxy_password' in sql_context:
+                secret_parts.append(f",  PROXY_PASSWORD '{sql_context['proxy_password']}'")
 
         secret_parts.append(");")
 

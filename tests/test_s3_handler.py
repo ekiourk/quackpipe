@@ -75,6 +75,23 @@ def test_s3_handler_properties():
                     ");"
                 ]
         ),
+        (
+                "aws_with_hardening",
+                {
+                    "connection_name": "aws_scoped",
+                    "secret_name": "aws_creds",
+                    "scope": "s3://my-bucket/",
+                    "use_credential_chain": True
+                },
+                {}, # No keys needed if using credential chain
+                [
+                    "CREATE OR REPLACE SECRET aws_scoped_secret (",
+                    "TYPE S3",
+                    "PROVIDER CREDENTIAL_CHAIN",
+                    "SCOPE 's3://my-bucket/'",
+                    ");"
+                ]
+        ),
     ]
 )
 def test_render_sql_with_secret_creation(monkeypatch, test_id, context, secret_bundle, expected_sql_parts):

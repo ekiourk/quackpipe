@@ -5,7 +5,7 @@ This file contains pytest tests for the SQLiteHandler class in quackpipe.
 """
 import pytest
 
-from quackpipe import QuackpipeBuilder
+from quackpipe import QuackpipeBuilder, configure_secret_provider
 from quackpipe.exceptions import ValidationError
 from quackpipe.sources.sqlite import SQLiteHandler
 
@@ -53,6 +53,16 @@ def test_sqlite_handler_properties():
                 "ATTACH 'archive.db' AS archive (TYPE SQLITE, READ_ONLY);",
                 []
         ),
+        (
+                "with_encryption",
+                {
+                    "connection_name": "secure_db",
+                    "path": "secure.db",
+                    "encryption_key": "secret_key_123"
+                },
+                "ATTACH 'secure.db' AS secure_db (TYPE SQLITE, READ_ONLY, ENCRYPTION_KEY 'secret_key_123');",
+                []
+        ),
     ]
 )
 def test_sqlite_render_sql(test_id, context, expected_sql, unexpected_sql_parts):
@@ -75,6 +85,29 @@ def test_sqlite_render_sql(test_id, context, expected_sql, unexpected_sql_parts)
 
     for part in unexpected_sql_parts:
         assert part not in normalized_sql
+
+
+def test_sqlite_render_sql_with_secrets(monkeypatch):
+    """
+    Tests that the SQLiteHandler correctly fetches and merges secrets.
+    """
+    # Arrange
+    secret_name = "my_sqlite_secret"
+    monkeypatch.setenv("MY_SQLITE_SECRET_ENCRYPTION_KEY", "secret_from_env")
+    configure_secret_provider(env_file=None)
+
+    context = {
+        "connection_name": "secure_sqlite",
+        "path": "secure.db",
+        "secret_name": secret_name
+    }
+    handler = SQLiteHandler(context)
+
+    # Act
+    generated_sql = handler.render_sql()
+
+    # Assert
+    assert "ENCRYPTION_KEY 'secret_from_env'" in generated_sql
 
 
 def test_sqlite_render_sql_raises_error_if_path_is_missing():

@@ -120,6 +120,11 @@ class DuckLakeHandler(BaseSourceHandler):
         elif self.catalog_config.get('type') == 'sqlite':
             metadata_path = self.catalog_config.get('path')
             ducklake_secret_parts.append(f",   METADATA_PATH '{metadata_path}'")
+
+            # Pass encryption key if present for SQLite catalog
+            encryption_key = self.catalog_config.get('encryption_key')
+            if encryption_key:
+                ducklake_secret_parts.append(f",   METADATA_PARAMETERS MAP {{'ENCRYPTION_KEY': '{encryption_key}'}}")
         else:
             # Defensive check
             raise ConfigError(f"Unsupported DuckLake catalog type in render_sql: '{self.catalog_config.get('type')}'")

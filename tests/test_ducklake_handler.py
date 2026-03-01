@@ -140,6 +140,30 @@ def test_render_sql_with_postgres_and_minio(monkeypatch):
         assert normalized_part in normalized_sql
 
 
+def test_render_sql_with_encrypted_sqlite_catalog():
+    """
+    Tests that render_sql correctly includes the ENCRYPTION_KEY for a DuckLake
+    using an encrypted SQLite catalog.
+    """
+    # Arrange
+    context = {
+        "connection_name": "secure_lake",
+        "catalog": {
+            "type": "sqlite",
+            "path": "/tmp/secure.db",
+            "encryption_key": "lake_key_123"
+        },
+        "storage": {"type": "local", "path": "/tmp/data/"}
+    }
+    handler = DuckLakeHandler(context)
+
+    # Act
+    generated_sql = handler.render_sql()
+
+    # Assert
+    assert "METADATA_PARAMETERS MAP {'ENCRYPTION_KEY': 'lake_key_123'}" in generated_sql
+
+
 @pytest.mark.parametrize(
     "test_id, invalid_context, expected_message",
     [

@@ -35,10 +35,15 @@ class S3Handler(BaseSourceHandler):
         param_map = {
             'key_id': 'access_key_id', 'secret': 'secret_access_key',
             'region': 'region', 'session_token': 'session_token',
-            'endpoint': 'endpoint', 'url_style': 'url_style', 'use_ssl': 'use_ssl'
+            'endpoint': 'endpoint', 'url_style': 'url_style', 'use_ssl': 'use_ssl',
+            'scope': 'scope'
         }
 
         parts = [f"CREATE OR REPLACE SECRET {duckdb_secret_name} (", "  TYPE S3"]
+
+        # Handle the PROVIDER if credential chain is requested
+        if sql_context.get('use_credential_chain', False):
+            parts.append(",  PROVIDER CREDENTIAL_CHAIN")
 
         for duckdb_key, context_key in param_map.items():
             value = sql_context.get(context_key)
