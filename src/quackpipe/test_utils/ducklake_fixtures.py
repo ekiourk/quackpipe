@@ -26,7 +26,7 @@ def postgres_s3_ducklake_config(catalog_postgres_container, minio_container) -> 
                 "port": int(catalog_postgres_container.get_exposed_port(5432)),
                 "user": catalog_postgres_container.username,
                 "password": catalog_postgres_container.password,
-                "database": catalog_postgres_container.dbname
+                "database": catalog_postgres_container.dbname,
             },
             "storage": {
                 "type": "s3",
@@ -35,9 +35,9 @@ def postgres_s3_ducklake_config(catalog_postgres_container, minio_container) -> 
                 "access_key_id": minio_container.access_key,
                 "secret_access_key": minio_container.secret_key,
                 "use_ssl": False,
-                "url_style": "path"  # Important for MinIO
-            }
-        }
+                "url_style": "path",  # Important for MinIO
+            },
+        },
     )
 
 
@@ -56,6 +56,6 @@ def local_ducklake_config(tmp_path) -> SourceConfig:
         type=SourceType.DUCKLAKE,
         config={
             "catalog": {"type": "sqlite", "path": str(catalog_db_path)},
-            "storage": {"type": "local", "path": str(storage_dir)}
-        }
+            "storage": {"type": "local", "path": str(storage_dir)},
+        },
     )

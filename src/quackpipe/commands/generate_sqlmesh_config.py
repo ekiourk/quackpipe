@@ -3,6 +3,7 @@ src/quackpipe/commands/generate_sqlmesh_config.py
 
 This module contains the implementation for the 'generate-sqlmesh-config' CLI command.
 """
+
 from argparse import _SubParsersAction
 
 import yaml
@@ -45,9 +46,15 @@ def _replace_secrets_with_placeholders(sql_string: str, configs: list[SourceConf
 
 def _build_sqlmesh_dict(init_sql_block: str, gateway_name: str, state_db: str) -> dict:
     """Constructs the Python dictionary for the SQLMesh config YAML."""
-    return {'gateways': {gateway_name: {'connection': {'type': 'duckdb', 'init': init_sql_block},
-                                        'state_connection': {'type': 'duckdb', 'database': state_db}}},
-            'default_gateway': gateway_name}
+    return {
+        "gateways": {
+            gateway_name: {
+                "connection": {"type": "duckdb", "init": init_sql_block},
+                "state_connection": {"type": "duckdb", "database": state_db},
+            }
+        },
+        "default_gateway": gateway_name,
+    }
 
 
 def handler(args):
@@ -63,7 +70,7 @@ def handler(args):
     final_sql_with_placeholders = _replace_secrets_with_placeholders(raw_sql, quackpipe_configs)
     sqlmesh_config_dict = _build_sqlmesh_dict(final_sql_with_placeholders, args.gateway_name, args.state_db)
     try:
-        with open(args.output, 'w') as f:
+        with open(args.output, "w") as f:
             yaml.dump(sqlmesh_config_dict, f, sort_keys=False, default_flow_style=False, indent=2)
         print(f"✅ Successfully generated SQLMesh config at: {args.output}")
     except Exception as e:
@@ -73,25 +80,44 @@ def handler(args):
 def register_command(subparsers: _SubParsersAction):
     """Registers the command and its arguments to the main CLI parser."""
     parser_gen = subparsers.add_parser(
-        "generate-sqlmesh-config",
-        help="Generate a SQLMesh config file from a quackpipe config."
+        "generate-sqlmesh-config", help="Generate a SQLMesh config file from a quackpipe config."
     )
-    parser_gen.add_argument("-c", "--config", default=get_default_config_path(), nargs='+',
-                            help="Path(s) to the quackpipe config.yml file(s). Defaults to 'config.yml' in the current "
-                                 "directory if it exists or else it will check the "
-                                 "QUACKPIPE_CONFIG_PATH environment variable.")
-    parser_gen.add_argument("-o", "--output", default="sqlmesh_config.yml",
-                            help="Path for the output SQLMesh config file. (Default: sqlmesh_config.yml)")
-    parser_gen.add_argument("--gateway-name", default="quackpipe_gateway",
-                            help="The name for the gateway in the SQLMesh config. (Default: quackpipe_gateway)")
-    parser_gen.add_argument("--state-db", default=".sqlmesh/state.db",
-                            help="The path for the SQLMesh state database. (Default: .sqlmesh/state.db)")
-    parser_gen.add_argument("--env-file", default=[".env"], nargs='+',
-                            help="Path(s) to the environment file(s) to load secrets from. (Default: .env)")
     parser_gen.add_argument(
-        "-v", "--verbose",
+        "-c",
+        "--config",
+        default=get_default_config_path(),
+        nargs="+",
+        help="Path(s) to the quackpipe config.yml file(s). Defaults to 'config.yml' in the current "
+        "directory if it exists or else it will check the "
+        "QUACKPIPE_CONFIG_PATH environment variable.",
+    )
+    parser_gen.add_argument(
+        "-o",
+        "--output",
+        default="sqlmesh_config.yml",
+        help="Path for the output SQLMesh config file. (Default: sqlmesh_config.yml)",
+    )
+    parser_gen.add_argument(
+        "--gateway-name",
+        default="quackpipe_gateway",
+        help="The name for the gateway in the SQLMesh config. (Default: quackpipe_gateway)",
+    )
+    parser_gen.add_argument(
+        "--state-db",
+        default=".sqlmesh/state.db",
+        help="The path for the SQLMesh state database. (Default: .sqlmesh/state.db)",
+    )
+    parser_gen.add_argument(
+        "--env-file",
+        default=[".env"],
+        nargs="+",
+        help="Path(s) to the environment file(s) to load secrets from. (Default: .env)",
+    )
+    parser_gen.add_argument(
+        "-v",
+        "--verbose",
         action="count",
         default=0,
-        help="Increase output verbosity. Use -v for INFO and -vv for DEBUG."
+        help="Increase output verbosity. Use -v for INFO and -vv for DEBUG.",
     )
     parser_gen.set_defaults(func=handler)

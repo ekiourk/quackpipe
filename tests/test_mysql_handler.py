@@ -5,6 +5,7 @@ This file contains pytest tests for the MySQLHandler class in quackpipe.
 The tests are written as standalone functions, leveraging pytest features
 like parametrize and fixtures for setup.
 """
+
 import os
 
 import pytest
@@ -16,7 +17,7 @@ from quackpipe.sources.mysql import MySQLHandler
 
 @pytest.fixture(scope="function")
 def mysql_env_vars(monkeypatch) -> dict[str, str]:
-    secret_name = 'mysql_creds'
+    secret_name = "mysql_creds"
     # Use monkeypatch to set the environment variables for the secret bundle.
     monkeypatch.setenv(f"{secret_name.upper()}_DATABASE", "testdb")
     monkeypatch.setenv(f"{secret_name.upper()}_USER", "mysqluser")
@@ -31,12 +32,14 @@ def mysql_env_vars(monkeypatch) -> dict[str, str]:
 def test_mysql_handler_properties(mysql_env_vars):
     """Verify that the handler correctly reports its static properties."""
     # Arrange
-    handler = MySQLHandler({
-        "connection_name": "mysql_test",
-        "secret_name": "mysql_creds",
-        "port": 3306
-        # read_only defaults to True
-    })
+    handler = MySQLHandler(
+        {
+            "connection_name": "mysql_test",
+            "secret_name": "mysql_creds",
+            "port": 3306,
+            # read_only defaults to True
+        }
+    )
 
     # Assert
     assert handler.required_plugins == ["mysql"]
@@ -51,14 +54,14 @@ def test_mysql_handler_properties(mysql_env_vars):
             {
                 "connection_name": "mysql_test",
                 "secret_name": "mysql_creds",
-                "port": 3306
+                "port": 3306,
                 # read_only defaults to True
             },
             [
                 "CREATE OR REPLACE SECRET mysql_test_secret",
-                "ATTACH '' AS mysql_test (TYPE MYSQL, SECRET mysql_test_secret, READ_ONLY);"
+                "ATTACH '' AS mysql_test (TYPE MYSQL, SECRET mysql_test_secret, READ_ONLY);",
             ],
-            []  # No unexpected parts
+            [],  # No unexpected parts
         ),
         (
             "read_write_config",
@@ -66,13 +69,10 @@ def test_mysql_handler_properties(mysql_env_vars):
                 "connection_name": "mysql_rw",
                 "secret_name": "mysql_creds",
                 "port": 3306,
-                "read_only": False  # Explicitly set to read-write
+                "read_only": False,  # Explicitly set to read-write
             },
-            [
-                "CREATE OR REPLACE SECRET mysql_rw_secret",
-                "ATTACH '' AS mysql_rw (TYPE MYSQL, SECRET mysql_rw_secret);"
-            ],
-            ["READ_ONLY"]  # Should NOT contain the READ_ONLY flag
+            ["CREATE OR REPLACE SECRET mysql_rw_secret", "ATTACH '' AS mysql_rw (TYPE MYSQL, SECRET mysql_rw_secret);"],
+            ["READ_ONLY"],  # Should NOT contain the READ_ONLY flag
         ),
         (
             "with_table_views",
@@ -80,31 +80,27 @@ def test_mysql_handler_properties(mysql_env_vars):
                 "connection_name": "mysql_views",
                 "secret_name": "mysql_creds",
                 "port": 3306,
-                "tables": ["users", "products"]
+                "tables": ["users", "products"],
             },
             [
                 "CREATE OR REPLACE SECRET mysql_views_secret",
                 "ATTACH '' AS mysql_views",
                 "READ_ONLY",  # Default is read-only
                 "CREATE OR REPLACE VIEW mysql_views_users AS SELECT * FROM mysql_views.users;",
-                "CREATE OR REPLACE VIEW mysql_views_products AS SELECT * FROM mysql_views.products;"
+                "CREATE OR REPLACE VIEW mysql_views_products AS SELECT * FROM mysql_views.products;",
             ],
-            []
+            [],
         ),
         (
             "with_encryption",
-            {
-                "connection_name": "mysql_secure",
-                "secret_name": "mysql_creds",
-                "encryption_key": "my_mysql_key"
-            },
+            {"connection_name": "mysql_secure", "secret_name": "mysql_creds", "encryption_key": "my_mysql_key"},
             [
                 "CREATE OR REPLACE SECRET mysql_secure_secret",
-                "ATTACH '' AS mysql_secure (TYPE MYSQL, SECRET mysql_secure_secret, READ_ONLY, ENCRYPTION_KEY 'my_mysql_key');"
+                "ATTACH '' AS mysql_secure (TYPE MYSQL, SECRET mysql_secure_secret, READ_ONLY, ENCRYPTION_KEY 'my_mysql_key');",
             ],
-            []
+            [],
         ),
-    ]
+    ],
 )
 def test_mysql_render_sql(mysql_env_vars, test_id, context, expected_sql_parts, unexpected_sql_parts):
     """
@@ -132,14 +128,14 @@ def test_mysql_handler_render_sql():
     """Test MySQLHandler SQL rendering."""
 
     context = {
-        'database': 'testdb',
-        'user': 'testuser',
-        'password': 'testpass',
-        'host': 'localhost',
-        'port': 3306,
-        'connection_name': 'mysql_main',
-        'read_only': True,
-        'tables': ['users', 'orders']
+        "database": "testdb",
+        "user": "testuser",
+        "password": "testpass",
+        "host": "localhost",
+        "port": 3306,
+        "connection_name": "mysql_main",
+        "read_only": True,
+        "tables": ["users", "orders"],
     }
     handler = MySQLHandler(context)
 
@@ -157,13 +153,13 @@ def test_mysql_handler_no_tables():
     """Test MySQLHandler without tables."""
 
     context = {
-        'database': 'testdb',
-        'user': 'testuser',
-        'password': 'testpass',
-        'host': 'localhost',
-        'port': 3306,
-        'connection_name': 'mysql_main',
-        'read_only': False
+        "database": "testdb",
+        "user": "testuser",
+        "password": "testpass",
+        "host": "localhost",
+        "port": 3306,
+        "connection_name": "mysql_main",
+        "read_only": False,
     }
 
     sql = MySQLHandler(context).render_sql()
@@ -175,25 +171,19 @@ def test_mysql_handler_no_tables():
 
 def test_integration_with_mysql_e2e(quackpipe_with_mysql_source):
     with quackpipe_with_mysql_source.session() as con:
-        results = con.execute(
-            "FROM mysql_source.company_employees"
-        ).fetchall()
+        results = con.execute("FROM mysql_source.company_employees").fetchall()
         assert len(results) == 5
 
         # check the view
-        results = con.execute(
-            "FROM mysql_source_company_employees"
-        ).fetchall()
+        results = con.execute("FROM mysql_source_company_employees").fetchall()
         assert len(results) == 5
 
-        results = con.execute(
-            "FROM mysql_source.company_employees WHERE department='Engineering'"
-        ).fetchall()
+        results = con.execute("FROM mysql_source.company_employees WHERE department='Engineering'").fetchall()
         assert len(results) == 2
         assert results[0][1] == "Alice"
         assert results[1][1] == "Diana"
 
-        results = con.execute('FROM mysql_source.vessels').fetchall()
+        results = con.execute("FROM mysql_source.vessels").fetchall()
         assert len(results) == 5
 
         # check the view
@@ -235,7 +225,9 @@ def mysql_case(request, mysql_container, quackpipe_config_files):
     else:
         raise ValueError(f"Unknown case {request.param}")
 
-    return quackpipe_config_files(source_config, env_vars, source_name="the_mysql", source_type="mysql", secret_name="my_db")
+    return quackpipe_config_files(
+        source_config, env_vars, source_name="the_mysql", source_type="mysql", secret_name="my_db"
+    )
 
 
 def test_mysql_configs(mysql_case):

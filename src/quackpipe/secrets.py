@@ -1,6 +1,7 @@
 """
 Handles secret management for quackpipe.
 """
+
 import logging
 import os
 
@@ -39,6 +40,7 @@ class EnvSecretProvider:
                 self.env_vars.update(clean_vars)
             else:
                 logger.warning("Warning: env_file '%s' not found. Skipping.", file_path)
+
     def get_raw_secret(self, name: str) -> dict[str, str]:
         """
         Retrieves secrets from the loaded environment variables by prefix.
@@ -111,7 +113,7 @@ def fetch_secret_bundle(name: str) -> dict[str, str]:
     for key, value in raw_secrets.items():
         if key.startswith(prefix):
             # Creates a clean key like 'host' from 'PROD_DB_HOST'
-            normalized_key = key[len(prefix):].lower()
+            normalized_key = key[len(prefix) :].lower()
             normalized_secrets[normalized_key] = value
 
     _bundle_cache[name] = normalized_secrets

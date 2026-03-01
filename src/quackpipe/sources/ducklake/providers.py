@@ -2,6 +2,7 @@
 This module defines Provider classes that act as adaptors between a standard
 Source Handler and the specific requirements of the DuckLakeHandler.
 """
+
 from abc import ABC, abstractmethod
 from typing import Any
 
@@ -12,8 +13,10 @@ from quackpipe.sources.sqlite import SQLiteHandler
 
 # --- Provider Interfaces ---
 
+
 class CatalogProvider(ABC):
     """An interface for classes that can provide catalog setup for a DuckLake."""
+
     # This defines the contract for type checkers without causing instantiation errors.
     handler: BaseSourceHandler
 
@@ -33,8 +36,10 @@ class CatalogProvider(ABC):
         """Returns the string used to reference this catalog in the ATTACH statement."""
         pass
 
+
 class StorageProvider(ABC):
     """An interface for classes that can provide storage setup for a DuckLake."""
+
     handler: BaseSourceHandler
 
     @property
@@ -48,7 +53,9 @@ class StorageProvider(ABC):
         """Renders only the prerequisite SQL needed for this storage backend."""
         pass
 
+
 # --- Provider Implementations ---
+
 
 class PostgresCatalogProvider(CatalogProvider):
     """A CatalogProvider that uses a PostgresHandler internally."""
@@ -70,8 +77,10 @@ class PostgresCatalogProvider(CatalogProvider):
     def get_ducklake_catalog_reference(self, duckdb_secret_name: str) -> str:
         return f"postgres:{duckdb_secret_name}"
 
+
 class SQLiteCatalogProvider(CatalogProvider):
     """A CatalogProvider that uses a SQLiteHandler internally."""
+
     def __init__(self, context: dict[str, Any]):
         self.handler = SQLiteHandler(context)
 
@@ -84,10 +93,11 @@ class SQLiteCatalogProvider(CatalogProvider):
         return ""
 
     def get_ducklake_catalog_reference(self, duckdb_secret_name: str) -> str:
-        db_path = self.handler.context.get('path')
+        db_path = self.handler.context.get("path")
         if not db_path:
             raise ValueError("SQLite catalog requires a 'path' in its configuration.")
         return f"sqlite:{db_path}"
+
 
 class S3StorageProvider(StorageProvider):
     """A StorageProvider that uses an S3Handler internally."""
@@ -103,6 +113,6 @@ class S3StorageProvider(StorageProvider):
 
     def render_storage_setup_sql(self, duckdb_secret_name: str) -> str:
         # For S3, the setup is to create a secret if one is named.
-        if self.handler.context.get('secret_name'):
+        if self.handler.context.get("secret_name"):
             return self.handler.render_create_secret_sql(duckdb_secret_name)
         return ""

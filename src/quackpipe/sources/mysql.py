@@ -1,4 +1,5 @@
 """Source Handler for MySQL databases."""
+
 from typing import Any
 
 from quackpipe.secrets import fetch_secret_bundle
@@ -11,9 +12,10 @@ class MySQLHandler(BaseSourceHandler):
     Handler for MySQL connections using the 'mysql' extension.
     This handler uses the recommended CREATE SECRET + ATTACH pattern.
     """
+
     def __init__(self, context: dict[str, Any]):
         super().__init__(context)
-        secrets = fetch_secret_bundle(self.context.get('secret_name'))
+        secrets = fetch_secret_bundle(self.context.get("secret_name"))
         self.context = {**self.context, **secrets}
 
     @property
@@ -34,7 +36,7 @@ class MySQLHandler(BaseSourceHandler):
         """Renders only the CREATE SECRET statement for MySQL."""
 
         secret_parts = [f"CREATE OR REPLACE SECRET {duckdb_secret_name} (", "  TYPE MYSQL"]
-        param_map = {'host': 'host', 'port': 'port', 'database': 'database', 'user': 'user', 'password': 'password'}
+        param_map = {"host": "host", "port": "port", "database": "database", "user": "user", "password": "password"}
 
         for duckdb_key, context_key in param_map.items():
             value = self.context.get(context_key)
@@ -48,11 +50,11 @@ class MySQLHandler(BaseSourceHandler):
 
     def _render_attach_sql(self, duckdb_secret_name: str) -> str:
         """Renders only the ATTACH and CREATE VIEW statements."""
-        connection_name = self.context['connection_name']
-        read_only_flag = ", READ_ONLY" if self.context.get('read_only', True) else ""
+        connection_name = self.context["connection_name"]
+        read_only_flag = ", READ_ONLY" if self.context.get("read_only", True) else ""
 
         # Handle native encryption (DuckDB 1.4+)
-        encryption_key = self.context.get('encryption_key')
+        encryption_key = self.context.get("encryption_key")
         encryption_flag = f", ENCRYPTION_KEY '{encryption_key}'" if encryption_key else ""
 
         attach_sql = (
@@ -61,8 +63,8 @@ class MySQLHandler(BaseSourceHandler):
         )
 
         view_sqls = []
-        if 'tables' in self.context and isinstance(self.context['tables'], list):
-            for table in self.context['tables']:
+        if "tables" in self.context and isinstance(self.context["tables"], list):
+            for table in self.context["tables"]:
                 view_name = f"{connection_name}_{table.replace('.', '_')}"
                 view_sqls.append(f"CREATE OR REPLACE VIEW {view_name} AS SELECT * FROM {connection_name}.{table};")
 

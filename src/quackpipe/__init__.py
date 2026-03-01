@@ -25,7 +25,7 @@ from .exceptions import ConfigError, QuackpipeError, SecretError
 from .secrets import configure_secret_provider
 
 # Set up the library's top-level logger
-_default_level = os.getenv('QUACKPIPE_LOG_LEVEL', 'WARNING').upper()
+_default_level = os.getenv("QUACKPIPE_LOG_LEVEL", "WARNING").upper()
 _root_logger = logging.getLogger(__name__)
 _root_logger.setLevel(getattr(logging, _default_level, logging.WARNING))
 _root_logger.addHandler(logging.NullHandler())
@@ -40,15 +40,12 @@ __all__ = [
     "get_source_params",
     # Builder API
     "QuackpipeBuilder",
-
     # Configuration Types
     "SourceConfig",
     "SourceType",
     "SourceParams",
-
     # Secret Management
     "configure_secret_provider",
-
     # Exceptions
     "QuackpipeError",
     "ConfigError",

@@ -1,6 +1,7 @@
 """
 Defines the typed configuration objects for quackpipe.
 """
+
 import collections.abc
 import os
 from dataclasses import dataclass, field
@@ -16,9 +17,12 @@ from quackpipe.utils import DotDict
 # Lazy import of registry to avoid circular dependency
 def get_registry():
     from quackpipe.sources import SOURCE_HANDLER_REGISTRY
+
     return SOURCE_HANDLER_REGISTRY
 
+
 SourceParams = DotDict
+
 
 def validate_config(config_data: dict) -> None:
     """
@@ -47,11 +51,7 @@ def deep_merge(base: dict, override: dict) -> dict:
     Returns the mutated base dict.
     """
     for key, val in override.items():
-        if (
-            key in base
-            and isinstance(base[key], dict)
-            and isinstance(val, collections.abc.Mapping)
-        ):
+        if key in base and isinstance(base[key], dict) and isinstance(val, collections.abc.Mapping):
             deep_merge(base[key], val)
         else:
             base[key] = val
@@ -61,12 +61,14 @@ def deep_merge(base: dict, override: dict) -> dict:
 @dataclass(frozen=True)
 class Plugin:
     """A structured definition for a DuckDB plugin that may require special installation."""
+
     name: str
     repository: str | None = None
 
 
 class SourceType(Enum):
     """Enumeration of supported source types."""
+
     POSTGRES = "postgres"
     MYSQL = "mysql"
     S3 = "s3"
@@ -82,6 +84,7 @@ class SourceConfig:
     """
     A structured configuration object for a single data source.
     """
+
     name: str
     type: SourceType
     config: SourceParams = field(default_factory=SourceParams)
@@ -121,7 +124,9 @@ def get_config_yaml(path: str | list[str] | None) -> dict | None:
             with open(p) as f:
                 current_config = yaml.safe_load(f) or {}
                 if not isinstance(current_config, dict):
-                    raise ParsingError(f"Configuration file '{p}' must be a YAML mapping (dictionary), got {type(current_config).__name__}.")
+                    raise ParsingError(
+                        f"Configuration file '{p}' must be a YAML mapping (dictionary), got {type(current_config).__name__}."
+                    )
                 deep_merge(merged_config, current_config)
         except FileNotFoundError as e:
             raise ParsingError(f"Configuration file not found at '{p}'.") from e
@@ -154,18 +159,18 @@ def parse_config_from_yaml(raw_config: dict, resolve_secrets: bool = False) -> l
         raise ConfigError(f"Configuration is invalid: {e.message}") from e
 
     source_configs = []
-    for name, details in raw_config.get('sources', {}).items():
+    for name, details in raw_config.get("sources", {}).items():
         details_copy = details.copy()
 
         try:
-            source_type_str = details_copy.pop('type')
+            source_type_str = details_copy.pop("type")
             source_type = SourceType(source_type_str)
         except (KeyError, ValueError) as e:
             raise ConfigError(f"Missing or invalid 'type' for source '{name}'.") from e
 
-        secret_name = details_copy.pop('secret_name', None)
-        before_statements = details_copy.pop('before_source_statements', [])
-        after_statements = details_copy.pop('after_source_statements', [])
+        secret_name = details_copy.pop("secret_name", None)
+        before_statements = details_copy.pop("before_source_statements", [])
+        after_statements = details_copy.pop("after_source_statements", [])
         source_specific_config = details_copy
 
         # Perform semantic validation if a handler exists for this type
@@ -174,22 +179,22 @@ def parse_config_from_yaml(raw_config: dict, resolve_secrets: bool = False) -> l
         if HandlerClass:
             HandlerClass.validate(source_specific_config, secret_name, resolve_secrets=resolve_secrets)
 
-        source_configs.append(SourceConfig(
-            name=name,
-            type=source_type,
-            secret_name=secret_name,
-            before_source_statements=before_statements,
-            after_source_statements=after_statements,
-            config=source_specific_config
-        ))
+        source_configs.append(
+            SourceConfig(
+                name=name,
+                type=source_type,
+                secret_name=secret_name,
+                before_source_statements=before_statements,
+                after_source_statements=after_statements,
+                config=source_specific_config,
+            )
+        )
 
     return source_configs
 
 
 def get_configs(
-        config_path: str | list[str] | None = None,
-        configs: list[SourceConfig] | None = None,
-        resolve_secrets: bool = False
+    config_path: str | list[str] | None = None, configs: list[SourceConfig] | None = None, resolve_secrets: bool = False
 ) -> list[SourceConfig]:
     """
     A helper function to load source configurations. The priority is:
@@ -224,6 +229,6 @@ def get_global_statements(config_path: str | list[str] | None = None) -> dict:
     """
     raw_config = get_config_yaml(config_path) or {}
     return {
-        'before_all_statements': raw_config.get('before_all_statements', []),
-        'after_all_statements': raw_config.get('after_all_statements', []),
+        "before_all_statements": raw_config.get("before_all_statements", []),
+        "after_all_statements": raw_config.get("after_all_statements", []),
     }

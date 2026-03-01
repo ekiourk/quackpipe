@@ -5,6 +5,7 @@ This file contains pytest tests for the PostgresHandler class in quackpipe.
 The tests are written as standalone functions, leveraging pytest features
 like parametrize and fixtures for setup.
 """
+
 import os
 
 import pytest
@@ -16,7 +17,7 @@ from quackpipe.sources.postgres import PostgresHandler
 
 @pytest.fixture(scope="function")
 def postgres_env_vars(monkeypatch) -> dict[str, str]:
-    secret_name = 'pg_creds'
+    secret_name = "pg_creds"
     # Use monkeypatch to set the environment variables for the secret bundle.
     monkeypatch.setenv(f"{secret_name.upper()}_DATABASE", "testdb")
     monkeypatch.setenv(f"{secret_name.upper()}_USER", "pguser")
@@ -31,12 +32,14 @@ def postgres_env_vars(monkeypatch) -> dict[str, str]:
 def test_postgres_handler_properties(postgres_env_vars):
     """Verify that the handler correctly reports its static properties."""
     # Arrange
-    handler = PostgresHandler({
-        "connection_name": "pg_test",
-        "secret_name": "pg_creds",
-        "port": 5433
-        # read_only defaults to True
-    })
+    handler = PostgresHandler(
+        {
+            "connection_name": "pg_test",
+            "secret_name": "pg_creds",
+            "port": 5433,
+            # read_only defaults to True
+        }
+    )
 
     # Assert
     assert handler.required_plugins == ["postgres"]
@@ -47,64 +50,55 @@ def test_postgres_handler_properties(postgres_env_vars):
     "test_id, context, expected_sql_parts, unexpected_sql_parts",
     [
         (
-                "basic_config_is_readonly",
-                {
-                    "connection_name": "pg_test",
-                    "secret_name": "pg_creds",
-                    "port": 5433
-                    # read_only defaults to True
-                },
-                [
-                    "CREATE OR REPLACE SECRET pg_test_secret",
-                    "ATTACH 'dbname=testdb' AS pg_test (TYPE POSTGRES, SECRET 'pg_test_secret', READ_ONLY);"
-                ],
-                []  # No unexpected parts
+            "basic_config_is_readonly",
+            {
+                "connection_name": "pg_test",
+                "secret_name": "pg_creds",
+                "port": 5433,
+                # read_only defaults to True
+            },
+            [
+                "CREATE OR REPLACE SECRET pg_test_secret",
+                "ATTACH 'dbname=testdb' AS pg_test (TYPE POSTGRES, SECRET 'pg_test_secret', READ_ONLY);",
+            ],
+            [],  # No unexpected parts
         ),
         (
-                "read_write_config",
-                {
-                    "connection_name": "pg_rw",
-                    "secret_name": "pg_creds",
-                    "port": 5432,
-                    "read_only": False  # Explicitly set to read-write
-                },
-                [
-                    "CREATE OR REPLACE SECRET pg_rw_secret",
-                    "ATTACH 'dbname=testdb' AS pg_rw (TYPE POSTGRES, SECRET 'pg_rw_secret');"
-                ],
-                ["READ_ONLY"]  # Should NOT contain the READ_ONLY flag
+            "read_write_config",
+            {
+                "connection_name": "pg_rw",
+                "secret_name": "pg_creds",
+                "port": 5432,
+                "read_only": False,  # Explicitly set to read-write
+            },
+            [
+                "CREATE OR REPLACE SECRET pg_rw_secret",
+                "ATTACH 'dbname=testdb' AS pg_rw (TYPE POSTGRES, SECRET 'pg_rw_secret');",
+            ],
+            ["READ_ONLY"],  # Should NOT contain the READ_ONLY flag
         ),
         (
-                "with_table_views",
-                {
-                    "connection_name": "pg_views",
-                    "secret_name": "pg_creds",
-                    "port": 5432,
-                    "tables": ["users", "products"]
-                },
-                [
-                    "CREATE OR REPLACE SECRET pg_views_secret",
-                    "ATTACH 'dbname=testdb' AS pg_views",
-                    "READ_ONLY",  # Default is read-only
-                    "CREATE OR REPLACE VIEW pg_views_users AS SELECT * FROM pg_views.users;",
-                    "CREATE OR REPLACE VIEW pg_views_products AS SELECT * FROM pg_views.products;"
-                ],
-                []
+            "with_table_views",
+            {"connection_name": "pg_views", "secret_name": "pg_creds", "port": 5432, "tables": ["users", "products"]},
+            [
+                "CREATE OR REPLACE SECRET pg_views_secret",
+                "ATTACH 'dbname=testdb' AS pg_views",
+                "READ_ONLY",  # Default is read-only
+                "CREATE OR REPLACE VIEW pg_views_users AS SELECT * FROM pg_views.users;",
+                "CREATE OR REPLACE VIEW pg_views_products AS SELECT * FROM pg_views.products;",
+            ],
+            [],
         ),
         (
-                "with_encryption",
-                {
-                    "connection_name": "pg_secure",
-                    "secret_name": "pg_creds",
-                    "encryption_key": "my_pg_key"
-                },
-                [
-                    "CREATE OR REPLACE SECRET pg_secure_secret",
-                    "ATTACH 'dbname=testdb' AS pg_secure (TYPE POSTGRES, SECRET 'pg_secure_secret', READ_ONLY, ENCRYPTION_KEY 'my_pg_key');"
-                ],
-                []
+            "with_encryption",
+            {"connection_name": "pg_secure", "secret_name": "pg_creds", "encryption_key": "my_pg_key"},
+            [
+                "CREATE OR REPLACE SECRET pg_secure_secret",
+                "ATTACH 'dbname=testdb' AS pg_secure (TYPE POSTGRES, SECRET 'pg_secure_secret', READ_ONLY, ENCRYPTION_KEY 'my_pg_key');",
+            ],
+            [],
         ),
-    ]
+    ],
 )
 def test_postgres_render_sql(postgres_env_vars, test_id, context, expected_sql_parts, unexpected_sql_parts):
     """
@@ -132,14 +126,14 @@ def test_postgres_handler_render_sql():
     """Test PostgresHandler SQL rendering."""
 
     context = {
-        'database': 'testdb',
-        'user': 'testuser',
-        'password': 'testpass',
-        'host': 'localhost',
-        'port': 5432,
-        'connection_name': 'pg_main',
-        'read_only': True,
-        'tables': ['users', 'orders']
+        "database": "testdb",
+        "user": "testuser",
+        "password": "testpass",
+        "host": "localhost",
+        "port": 5432,
+        "connection_name": "pg_main",
+        "read_only": True,
+        "tables": ["users", "orders"],
     }
     handler = PostgresHandler(context)
 
@@ -157,13 +151,13 @@ def test_postgres_handler_no_tables():
     """Test PostgresHandler without tables."""
 
     context = {
-        'database': 'testdb',
-        'user': 'testuser',
-        'password': 'testpass',
-        'host': 'localhost',
-        'port': 5432,
-        'connection_name': 'pg_main',
-        'read_only': False
+        "database": "testdb",
+        "user": "testuser",
+        "password": "testpass",
+        "host": "localhost",
+        "port": 5432,
+        "connection_name": "pg_main",
+        "read_only": False,
     }
 
     sql = PostgresHandler(context).render_sql()
@@ -176,19 +170,15 @@ def test_postgres_handler_no_tables():
 def test_integration_with_postgres_e2e(quackpipe_with_pg_source, postgres_container_with_data):
     with quackpipe_with_pg_source.session() as con:
         # the name of the source 'pg_source' should match the value of POSTGRES_SOURCE_NAME in the fixtures
-        results = con.execute(
-            "FROM pg_source.company.employees"
-        ).fetchall()
+        results = con.execute("FROM pg_source.company.employees").fetchall()
         assert len(results) == 5
 
-        results = con.execute(
-            "FROM pg_source.company.employees WHERE department='Engineering'"
-        ).fetchall()
+        results = con.execute("FROM pg_source.company.employees WHERE department='Engineering'").fetchall()
         assert len(results) == 2
         assert results[0][1] == "Alice"
         assert results[1][1] == "Diana"
 
-        results = con.execute('FROM pg_source.vessels').fetchall()
+        results = con.execute("FROM pg_source.vessels").fetchall()
         assert len(results) == 5
 
 
@@ -226,7 +216,9 @@ def pg_case(request, postgres_container, quackpipe_config_files):
     else:
         raise ValueError(f"Unknown case {request.param}")
 
-    return quackpipe_config_files(source_config, env_vars, source_name="my_postgres", source_type="postgres", secret_name="my_db")
+    return quackpipe_config_files(
+        source_config, env_vars, source_name="my_postgres", source_type="postgres", secret_name="my_db"
+    )
 
 
 def test_postgres_configs(pg_case):

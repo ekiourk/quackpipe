@@ -3,6 +3,7 @@ tests/test_azure_blob_handler.py
 
 This file contains pytest tests for the AzureBlobHandler class in quackpipe.
 """
+
 import pytest
 from testcontainers.azurite import AzuriteContainer
 
@@ -24,11 +25,7 @@ def test_render_sql_with_connection_string(monkeypatch):
     Tests the handler when using a connection string for authentication.
     """
     # Arrange
-    context = {
-        "connection_name": "azure_cs",
-        "secret_name": "azure_prod_cs",
-        "provider": "connection_string"
-    }
+    context = {"connection_name": "azure_cs", "secret_name": "azure_prod_cs", "provider": "connection_string"}
     monkeypatch.setenv("AZURE_PROD_CS_CONNECTION_STRING", "DefaultEndpointsProtocol=https...")
 
     configure_secret_provider()
@@ -42,7 +39,7 @@ def test_render_sql_with_connection_string(monkeypatch):
     expected_parts = [
         "CREATE OR REPLACE SECRET azure_cs_secret",
         "TYPE AZURE",
-        "CONNECTION_STRING 'DefaultEndpointsProtocol=https...'"
+        "CONNECTION_STRING 'DefaultEndpointsProtocol=https...'",
     ]
     normalized_sql = " ".join(generated_sql.split())
     for part in expected_parts:
@@ -58,7 +55,7 @@ def test_render_sql_with_service_principal(monkeypatch):
         "connection_name": "azure_sp",
         "secret_name": "azure_prod_sp",
         "provider": "service_principal",
-        "account_name": "myazurestorage"  # Can be in config or secret
+        "account_name": "myazurestorage",  # Can be in config or secret
     }
     monkeypatch.setenv("AZURE_PROD_SP_TENANT_ID", "tenant-id-123")
     monkeypatch.setenv("AZURE_PROD_SP_CLIENT_ID", "client-id-456")
@@ -79,7 +76,7 @@ def test_render_sql_with_service_principal(monkeypatch):
         "ACCOUNT_NAME 'myazurestorage'",
         "TENANT_ID 'tenant-id-123'",
         "CLIENT_ID 'client-id-456'",
-        "CLIENT_SECRET 'client-secret-789'"
+        "CLIENT_SECRET 'client-secret-789'",
     ]
     normalized_sql = " ".join(generated_sql.split())
     for part in expected_parts:
@@ -91,11 +88,7 @@ def test_render_sql_with_managed_identity():
     Tests the handler when using a managed identity (credential_chain).
     """
     # Arrange
-    context = {
-        "connection_name": "azure_mi",
-        "provider": "managed_identity",
-        "account_name": "myazurestorage"
-    }
+    context = {"connection_name": "azure_mi", "provider": "managed_identity", "account_name": "myazurestorage"}
     handler = AzureBlobHandler(context)
 
     # Act
@@ -106,7 +99,7 @@ def test_render_sql_with_managed_identity():
         "CREATE OR REPLACE SECRET azure_mi_secret",
         "TYPE AZURE",
         "PROVIDER 'managed_identity'",
-        "ACCOUNT_NAME 'myazurestorage'"
+        "ACCOUNT_NAME 'myazurestorage'",
     ]
     normalized_sql = " ".join(generated_sql.split())
     for part in expected_parts:
@@ -118,11 +111,7 @@ def test_render_sql_with_credential_chain():
     Tests the handler when using the full credential chain provider.
     """
     # Arrange
-    context = {
-        "connection_name": "azure_chain",
-        "provider": "credential_chain",
-        "account_name": "chainstorage"
-    }
+    context = {"connection_name": "azure_chain", "provider": "credential_chain", "account_name": "chainstorage"}
     handler = AzureBlobHandler(context)
 
     # Act
@@ -133,7 +122,7 @@ def test_render_sql_with_credential_chain():
         "CREATE OR REPLACE SECRET azure_chain_secret",
         "TYPE AZURE",
         "PROVIDER 'credential_chain'",
-        "ACCOUNT_NAME 'chainstorage'"
+        "ACCOUNT_NAME 'chainstorage'",
     ]
     normalized_sql = " ".join(generated_sql.split())
     for part in expected_parts:
@@ -152,7 +141,7 @@ def test_render_sql_with_proxy_and_scope():
         "scope": "azure://my-container/",
         "http_proxy": "http://proxy:3128",
         "proxy_user_name": "u",
-        "proxy_password": "p"
+        "proxy_password": "p",
     }
     handler = AzureBlobHandler(context)
 
@@ -164,7 +153,7 @@ def test_render_sql_with_proxy_and_scope():
         "SCOPE 'azure://my-container/'",
         "HTTP_PROXY 'http://proxy:3128'",
         "PROXY_USER_NAME 'u'",
-        "PROXY_PASSWORD 'p'"
+        "PROXY_PASSWORD 'p'",
     ]
     normalized_sql = " ".join(generated_sql.split())
     for part in expected_parts:
@@ -181,6 +170,7 @@ def test_render_sql_raises_error_for_invalid_provider():
 
 
 # ==================== END-TO-END INTEGRATION TEST ====================
+
 
 def test_e2e_read_from_azure(azurite_container_with_data: AzuriteContainer, quackpipe_with_azurite: QuackpipeBuilder):
     """

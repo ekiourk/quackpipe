@@ -1,4 +1,3 @@
-
 import os
 
 import pytest
@@ -9,16 +8,8 @@ from quackpipe.exceptions import ConfigError
 
 
 def test_deep_merge():
-    base = {
-        "a": 1,
-        "b": {"c": 2, "d": 3},
-        "list": [1, 2]
-    }
-    override = {
-        "b": {"c": 99},
-        "list": [3, 4],
-        "new": "value"
-    }
+    base = {"a": 1, "b": {"c": 2, "d": 3}, "list": [1, 2]}
+    override = {"b": {"c": 99}, "list": [3, 4], "new": "value"}
 
     merged = deep_merge(base, override)
 
@@ -28,20 +19,16 @@ def test_deep_merge():
     assert merged["list"] == [3, 4]  # Lists are replaced
     assert merged["new"] == "value"
 
+
 def test_load_multiple_configs(tmp_path):
     base_config = {
-        "sources": {
-            "source1": {"type": "postgres", "secret_name": "s1"}
-        },
-        "before_all_statements": ["SELECT 1"]
+        "sources": {"source1": {"type": "postgres", "secret_name": "s1"}},
+        "before_all_statements": ["SELECT 1"],
     }
 
     dev_config = {
-        "sources": {
-            "source1": {"secret_name": "s1_dev"},
-            "source2": {"type": "sqlite", "path": "test.db"}
-        },
-        "before_all_statements": ["SELECT 2"]
+        "sources": {"source1": {"secret_name": "s1_dev"}, "source2": {"type": "sqlite", "path": "test.db"}},
+        "before_all_statements": ["SELECT 2"],
     }
 
     f1 = tmp_path / "base.yml"
@@ -58,6 +45,7 @@ def test_load_multiple_configs(tmp_path):
     assert merged["sources"]["source1"]["secret_name"] == "s1_dev"  # Overridden
     assert merged["sources"]["source2"]["type"] == "sqlite"  # New
     assert merged["before_all_statements"] == ["SELECT 2"]  # Replaced
+
 
 def test_config_env_var(tmp_path, monkeypatch):
     base_config = {"foo": "bar"}
@@ -77,6 +65,7 @@ def test_config_env_var(tmp_path, monkeypatch):
     merged = get_config_yaml(None)
     assert merged["foo"] == "baz"
 
+
 def test_invalid_yaml_type_list(tmp_path):
     f = tmp_path / "invalid.yml"
     with open(f, "w") as file:
@@ -85,6 +74,7 @@ def test_invalid_yaml_type_list(tmp_path):
     with pytest.raises(ConfigError, match="must be a YAML mapping"):
         get_config_yaml(str(f))
 
+
 def test_invalid_yaml_type_scalar(tmp_path):
     f = tmp_path / "invalid.yml"
     with open(f, "w") as file:
@@ -92,6 +82,7 @@ def test_invalid_yaml_type_scalar(tmp_path):
 
     with pytest.raises(ConfigError, match="must be a YAML mapping"):
         get_config_yaml(str(f))
+
 
 def test_mix_existing_missing_files(tmp_path):
     f1 = tmp_path / "valid.yml"

@@ -1,6 +1,7 @@
 """
 General utility functions for the quackpipe library.
 """
+
 from collections import OrderedDict
 
 from duckdb import ConnectionException, DuckDBPyConnection
@@ -32,7 +33,7 @@ class DotDict(OrderedDict):
             raise AttributeError(f"'{type(self).__name__}' object has no attribute '{key}'") from None
 
     def __setattr__(self, key, value):
-        if key.startswith('_'):
+        if key.startswith("_"):
             # Allow OrderedDict internal attributes
             super(OrderedDict, self).__setattr__(key, value)
         else:

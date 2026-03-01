@@ -4,6 +4,7 @@ cli.py
 This module provides the main entry point for the quackpipe command-line interface.
 It discovers and registers commands from the 'commands' submodule.
 """
+
 import argparse
 
 # Import the registration functions from each command module
@@ -16,10 +17,7 @@ def main():
     parser = argparse.ArgumentParser(description="quackpipe: A DuckDB ETL Helper CLI.")
 
     parser.add_argument(
-        "-V", "--version",
-        action="version",
-        version=f"%(prog)s {__version__}",
-        help="Show the version and exit."
+        "-V", "--version", action="version", version=f"%(prog)s {__version__}", help="Show the version and exit."
     )
 
     subparsers = parser.add_subparsers(dest="command", required=True, help="Available commands")

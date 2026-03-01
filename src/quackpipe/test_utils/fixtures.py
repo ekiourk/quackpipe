@@ -44,19 +44,15 @@ def temp_dir():
 def sample_config_dict():
     """Sample configuration dictionary for testing."""
     return {
-        'sources': {
-            'pg_main': {
-                'type': 'postgres',
-                'secret_name': 'pg_prod',
-                'port': 5432,
-                'read_only': True,
-                'tables': ['users', 'orders']
+        "sources": {
+            "pg_main": {
+                "type": "postgres",
+                "secret_name": "pg_prod",
+                "port": 5432,
+                "read_only": True,
+                "tables": ["users", "orders"],
             },
-            'datalake': {
-                'type': 's3',
-                'secret_name': 'aws_datalake',
-                'region': 'us-east-1'
-            }
+            "datalake": {"type": "s3", "secret_name": "aws_datalake", "region": "us-east-1"},
         }
     }
 
@@ -64,8 +60,8 @@ def sample_config_dict():
 @pytest.fixture
 def sample_yaml_config(temp_dir, sample_config_dict):
     """Create a temporary YAML config file."""
-    config_path = os.path.join(temp_dir, 'test_config.yml')
-    with open(config_path, 'w') as f:
+    config_path = os.path.join(temp_dir, "test_config.yml")
+    with open(config_path, "w") as f:
         yaml.dump(sample_config_dict, f)
     return config_path
 
@@ -81,7 +77,7 @@ def mock_duckdb_connection():
 
     # Mock fetchdf for pandas integration
     mock_result = Mock()
-    mock_result.fetchdf.return_value = pd.DataFrame({'id': [1, 2], 'name': ['Alice', 'Bob']})
+    mock_result.fetchdf.return_value = pd.DataFrame({"id": [1, 2], "name": ["Alice", "Bob"]})
     mock_con.execute.return_value = mock_result
 
     return mock_con
@@ -91,12 +87,12 @@ def mock_duckdb_connection():
 def env_secrets():
     """Set up environment variables for testing."""
     env_vars = {
-        'PG_PROD_HOST': 'localhost',
-        'PG_PROD_USER': 'testuser',
-        'PG_PROD_PASSWORD': 'testpass',
-        'PG_PROD_DATABASE': 'testdb',
-        'AWS_DATALAKE_ACCESS_KEY_ID': 'test_key',
-        'AWS_DATALAKE_SECRET_ACCESS_KEY': 'test_secret'
+        "PG_PROD_HOST": "localhost",
+        "PG_PROD_USER": "testuser",
+        "PG_PROD_PASSWORD": "testpass",
+        "PG_PROD_DATABASE": "testdb",
+        "AWS_DATALAKE_ACCESS_KEY_ID": "test_key",
+        "AWS_DATALAKE_SECRET_ACCESS_KEY": "test_secret",
     }
 
     # Set environment variables
@@ -113,7 +109,7 @@ def env_secrets():
 @pytest.fixture
 def mock_session(mock_duckdb_connection):
     """A patch fixture for the quackpipe.etl_utils.session context manager."""
-    with patch('quackpipe.etl_utils.session') as mock_session_context:
+    with patch("quackpipe.etl_utils.session") as mock_session_context:
         # Make the context manager yield our mock connection
         mock_session_context.return_value.__enter__.return_value = mock_duckdb_connection
         yield mock_session_context
@@ -122,7 +118,7 @@ def mock_session(mock_duckdb_connection):
 @pytest.fixture
 def mock_get_configs():
     """A patch fixture for the quackpipe.etl_utils.get_configs function."""
-    with patch('quackpipe.etl_utils.get_configs') as mock:
+    with patch("quackpipe.etl_utils.get_configs") as mock:
         yield mock
 
 
@@ -135,10 +131,10 @@ def test_datasets():
     vessels = create_vessel_definitions()
 
     return {
-        'employees': pd.DataFrame(employee_data),
-        'monthly_reports': pd.DataFrame(monthly_data),
-        'vessels': pd.DataFrame(vessels),
-        'ais_data': generate_synthetic_ais_data(vessels)
+        "employees": pd.DataFrame(employee_data),
+        "monthly_reports": pd.DataFrame(monthly_data),
+        "vessels": pd.DataFrame(vessels),
+        "ais_data": generate_synthetic_ais_data(vessels),
     }
 
 
@@ -147,7 +143,10 @@ def quackpipe_config_files(tmp_path):
     """
     Fixture that returns a function to create config + env files for a source.
     """
-    def _make_files(source_config: dict, env_vars: dict, source_name: str, source_type: str = None, secret_name: str = None):
+
+    def _make_files(
+        source_config: dict, env_vars: dict, source_name: str, source_type: str = None, secret_name: str = None
+    ):
         # normalize config
         source_config = dict(source_config)  # copy so we don’t mutate test data
         if source_type:

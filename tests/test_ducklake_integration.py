@@ -3,6 +3,7 @@ This file contains end-to-end integration tests for the quackpipe library,
 ensuring that different components work together as expected with a real
 DuckDB connection.
 """
+
 import pandas as pd
 
 import quackpipe
@@ -17,15 +18,15 @@ def assert_ducklake_works(**session_kwargs):
         con.execute("CREATE SCHEMA local_lake.test_schema;")
 
         # Create a pandas DataFrame to insert into the lake
-        df_to_insert = pd.DataFrame({'id': [1, 2, 3], 'value': ['a', 'b', 'c']})
+        df_to_insert = pd.DataFrame({"id": [1, 2, 3], "value": ["a", "b", "c"]})
 
         # Register the DataFrame and create a table in the lake from it
-        con.register('temp_df', df_to_insert)
+        con.register("temp_df", df_to_insert)
         con.execute("CREATE TABLE local_lake.test_schema.my_table AS SELECT * FROM temp_df;")
 
         # Verify that the catalog contains the table metadata
         tables_in_catalog = con.execute("SELECT table_name FROM information_schema.tables;").fetchall()
-        assert ('my_table',) in tables_in_catalog
+        assert ("my_table",) in tables_in_catalog
 
     # Create again the connection to the duck lake and check if the data are still there
     with quackpipe.session(**session_kwargs) as con:
@@ -84,21 +85,24 @@ INSERT INTO local_lake.test_schema.sales_data VALUES
         ORDER BY table_id, partition_spec;
         """).df()
 
-        assert len(list(duplicate['files_in_partition'])) == 1
+        assert len(list(duplicate["files_in_partition"])) == 1
         # NOTE: This assertion relies on internal data file ID generation order.
         # If DuckLake's internal ID logic changes, these specific IDs {1, 4} may need update.
-        assert set(list(duplicate['files_in_partition'])[0]) == {1, 4}
+        assert set(list(duplicate["files_in_partition"])[0]) == {1, 4}
 
-        files_list_before = con.execute("SELECT * FROM ducklake_list_files('local_lake', 'sales_data', schema => 'test_schema');").df()
+        files_list_before = con.execute(
+            "SELECT * FROM ducklake_list_files('local_lake', 'sales_data', schema => 'test_schema');"
+        ).df()
         assert len(files_list_before) == 4
 
         # Perform the merge
         con.execute("CALL local_lake.merge_adjacent_files();").df()
 
         # Verify that the two files in the 'Laptop/UK' partition were merged into one
-        files_list_after = con.execute("SELECT * FROM ducklake_list_files('local_lake', 'sales_data', schema => 'test_schema');").df()
+        files_list_after = con.execute(
+            "SELECT * FROM ducklake_list_files('local_lake', 'sales_data', schema => 'test_schema');"
+        ).df()
         assert len(files_list_after) == 3
-
 
 
 def test_ducklake_with_sqlite_and_local_storage(local_ducklake_config):
@@ -111,7 +115,6 @@ def test_ducklake_with_sqlite_and_local_storage(local_ducklake_config):
 
 
 def test_ducklake_with_postgres_and_s3_storage(quackpipe_config_files, postgres_container, minio_container):
-
     source_config = {
         "catalog": {
             "type": "postgres",
@@ -119,7 +122,7 @@ def test_ducklake_with_postgres_and_s3_storage(quackpipe_config_files, postgres_
             "database": "test",
             "host": postgres_container.get_container_host_ip(),
             "port": str(postgres_container.get_exposed_port(5432)),
-            "read_only": False
+            "read_only": False,
         },
         "storage": {
             "type": "s3",
@@ -127,18 +130,20 @@ def test_ducklake_with_postgres_and_s3_storage(quackpipe_config_files, postgres_
             "path": "s3://test-bucket/",
             "endpoint": minio_container.get_config()["endpoint"],
             "use_ssl": False,
-            "url_style": "path"
-        }
+            "url_style": "path",
+        },
     }
 
     env_vars = {
         "LAKE_CATALOG_USER": "test",
         "LAKE_CATALOG_PASSWORD": "test",
         "STORAGE_ACCESS_KEY_ID": minio_container.access_key,
-        "STORAGE_SECRET_ACCESS_KEY": minio_container.secret_key
+        "STORAGE_SECRET_ACCESS_KEY": minio_container.secret_key,
     }
 
-    config_file, env_file = quackpipe_config_files(source_config, env_vars, source_name="local_lake", source_type="ducklake")
+    config_file, env_file = quackpipe_config_files(
+        source_config, env_vars, source_name="local_lake", source_type="ducklake"
+    )
 
     assert_ducklake_works(
         config_path=str(config_file),
@@ -169,17 +174,16 @@ def test_ducklake_with_postgres_and_local_storage(quackpipe_config_files, postgr
             "database": "test_with_local_storage",
             "host": postgres_container.get_container_host_ip(),
             "port": str(postgres_container.get_exposed_port(5432)),
-            "read_only": False
+            "read_only": False,
         },
-        "storage": {"type": "local", "path": str(storage_dir)}
+        "storage": {"type": "local", "path": str(storage_dir)},
     }
 
-    env_vars = {
-        "LAKE_CATALOG_USER": postgres_container.username,
-        "LAKE_CATALOG_PASSWORD": "test"
-    }
+    env_vars = {"LAKE_CATALOG_USER": postgres_container.username, "LAKE_CATALOG_PASSWORD": "test"}
 
-    config_file, env_file = quackpipe_config_files(source_config, env_vars, source_name="local_lake", source_type="ducklake")
+    config_file, env_file = quackpipe_config_files(
+        source_config, env_vars, source_name="local_lake", source_type="ducklake"
+    )
 
     assert_ducklake_works(
         config_path=str(config_file),
@@ -207,16 +211,18 @@ def test_ducklake_with_sqlite_and_s3_storage(quackpipe_config_files, postgres_co
             "path": "s3://test-bucket/",
             "endpoint": minio_container.get_config()["endpoint"],
             "use_ssl": False,
-            "url_style": "path"
-        }
+            "url_style": "path",
+        },
     }
 
     env_vars = {
         "STORAGE_ACCESS_KEY_ID": minio_container.access_key,
-        "STORAGE_SECRET_ACCESS_KEY": minio_container.secret_key
+        "STORAGE_SECRET_ACCESS_KEY": minio_container.secret_key,
     }
 
-    config_file, env_file = quackpipe_config_files(source_config, env_vars, source_name="local_lake", source_type="ducklake")
+    config_file, env_file = quackpipe_config_files(
+        source_config, env_vars, source_name="local_lake", source_type="ducklake"
+    )
 
     assert_ducklake_works(
         config_path=str(config_file),

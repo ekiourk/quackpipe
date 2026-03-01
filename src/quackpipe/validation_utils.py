@@ -1,13 +1,16 @@
 """
 Utility functions for configuration and secret validation.
 """
+
 from typing import Any
 
 from quackpipe.exceptions import ValidationError
 from quackpipe.secrets import fetch_secret_bundle
 
 
-def get_merged_params(config: dict[str, Any], secret_name: str | None = None, resolve_secrets: bool = False) -> dict[str, Any]:
+def get_merged_params(
+    config: dict[str, Any], secret_name: str | None = None, resolve_secrets: bool = False
+) -> dict[str, Any]:
     """
     Merges configuration with secrets if resolve_secrets is True.
     """
@@ -23,7 +26,7 @@ def validate_required_fields(
     required_fields: list[str],
     source_type: str,
     secret_name: str | None = None,
-    resolve_secrets: bool = False
+    resolve_secrets: bool = False,
 ):
     """
     Validates that the required fields are present in the parameters.

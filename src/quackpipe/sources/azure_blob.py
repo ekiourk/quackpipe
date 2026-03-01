@@ -1,4 +1,5 @@
 """Source Handler for Azure Blob Storage."""
+
 from typing import Any
 
 from quackpipe.exceptions import ValidationError
@@ -28,44 +29,46 @@ class AzureBlobHandler(BaseSourceHandler):
     def validate(cls, config: dict[str, Any], secret_name: str | None = None, resolve_secrets: bool = False):
         """Validates Azure Blob Storage configuration parameters."""
         params = get_merged_params(config, secret_name, resolve_secrets)
-        provider = params.get('provider', 'connection_string').lower()
+        provider = params.get("provider", "connection_string").lower()
 
-        if provider == 'connection_string':
-            validate_required_fields(params, ['connection_string'], "azure", secret_name, resolve_secrets)
-        elif provider in ['service_principal', 'managed_identity', 'credential_chain']:
-            if provider == 'service_principal':
-                required = ['account_name', 'tenant_id', 'client_id', 'client_secret']
+        if provider == "connection_string":
+            validate_required_fields(params, ["connection_string"], "azure", secret_name, resolve_secrets)
+        elif provider in ["service_principal", "managed_identity", "credential_chain"]:
+            if provider == "service_principal":
+                required = ["account_name", "tenant_id", "client_id", "client_secret"]
                 validate_required_fields(params, required, "azure", secret_name, resolve_secrets)
         else:
-            raise ValidationError(f"Unsupported Azure provider type: '{provider}'. Must be 'connection_string', 'service_principal', 'managed_identity', or 'credential_chain'.")
+            raise ValidationError(
+                f"Unsupported Azure provider type: '{provider}'. Must be 'connection_string', 'service_principal', 'managed_identity', or 'credential_chain'."
+            )
 
     def render_sql(self) -> str:
         """
         Renders the CREATE SECRET statement for Azure Blob Storage.
         """
-        secrets = fetch_secret_bundle(self.context.get('secret_name'))
+        secrets = fetch_secret_bundle(self.context.get("secret_name"))
         sql_context = {**self.context, **secrets}
 
-        connection_name = sql_context.get('connection_name')
+        connection_name = sql_context.get("connection_name")
         duckdb_secret_name = f"{connection_name}_secret"
 
         # The 'provider' determines the authentication method
-        provider = sql_context.get('provider', 'connection_string').lower()
+        provider = sql_context.get("provider", "connection_string").lower()
 
         secret_parts = [f"CREATE OR REPLACE SECRET {duckdb_secret_name} (", "  TYPE AZURE"]
 
-        if provider == 'connection_string':
+        if provider == "connection_string":
             # This is the simplest method, using a single connection string
-            connection_string = sql_context.get('connection_string')
+            connection_string = sql_context.get("connection_string")
             secret_parts.append(f",  CONNECTION_STRING '{connection_string}'")
 
-        elif provider == 'service_principal':
+        elif provider == "service_principal":
             # Using a Service Principal (app registration)
             param_map = {
-                'account_name': 'account_name',
-                'tenant_id': 'tenant_id',
-                'client_id': 'client_id',
-                'client_secret': 'client_secret'
+                "account_name": "account_name",
+                "tenant_id": "tenant_id",
+                "client_id": "client_id",
+                "client_secret": "client_secret",
             }
             secret_parts.append(",  PROVIDER 'service_principal'")
             for duckdb_key, context_key in param_map.items():
@@ -73,16 +76,16 @@ class AzureBlobHandler(BaseSourceHandler):
                 if value:
                     secret_parts.append(f",  {duckdb_key.upper()} '{value}'")
 
-        elif provider == 'managed_identity':
+        elif provider == "managed_identity":
             # Using a Managed Identity
             secret_parts.append(",  PROVIDER 'managed_identity'")
-            if 'account_name' in sql_context:
+            if "account_name" in sql_context:
                 secret_parts.append(f",  ACCOUNT_NAME '{sql_context['account_name']}'")
 
-        elif provider == 'credential_chain':
+        elif provider == "credential_chain":
             # Using the full credential chain (CLI, env vars, etc.)
             secret_parts.append(",  PROVIDER 'credential_chain'")
-            if 'account_name' in sql_context:
+            if "account_name" in sql_context:
                 secret_parts.append(f",  ACCOUNT_NAME '{sql_context['account_name']}'")
 
         else:
@@ -90,15 +93,15 @@ class AzureBlobHandler(BaseSourceHandler):
             raise ValidationError(f"Unsupported Azure provider type in render_sql: '{provider}'")
 
         # Handle optional common parameters (1.4 hardening)
-        if 'scope' in sql_context:
+        if "scope" in sql_context:
             secret_parts.append(f",  SCOPE '{sql_context['scope']}'")
 
         # Proxy support
-        if 'http_proxy' in sql_context:
+        if "http_proxy" in sql_context:
             secret_parts.append(f",  HTTP_PROXY '{sql_context['http_proxy']}'")
-            if 'proxy_user_name' in sql_context:
+            if "proxy_user_name" in sql_context:
                 secret_parts.append(f",  PROXY_USER_NAME '{sql_context['proxy_user_name']}'")
-            if 'proxy_password' in sql_context:
+            if "proxy_password" in sql_context:
                 secret_parts.append(f",  PROXY_PASSWORD '{sql_context['proxy_password']}'")
 
         secret_parts.append(");")

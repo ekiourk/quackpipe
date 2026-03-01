@@ -5,6 +5,7 @@ This file contains pytest tests for the S3Handler class in quackpipe.
 The tests are written as standalone functions, leveraging pytest features
 like parametrize and fixtures for setup.
 """
+
 import pytest
 
 import quackpipe
@@ -15,11 +16,13 @@ from quackpipe.sources.s3 import S3Handler
 def test_s3_handler_properties():
     """Verify that the handler correctly reports its static properties."""
     # Arrange
-    handler = S3Handler({
-        "connection_name": "aws_explicit",
-        "secret_name": "aws_creds",  # The logical name for the secret bundle
-        "region": "us-east-1"
-    })
+    handler = S3Handler(
+        {
+            "connection_name": "aws_explicit",
+            "secret_name": "aws_creds",  # The logical name for the secret bundle
+            "region": "us-east-1",
+        }
+    )
 
     # Assert
     assert handler.required_plugins == ["httpfs"]
@@ -30,69 +33,66 @@ def test_s3_handler_properties():
     "test_id, context, secret_bundle, expected_sql_parts",
     [
         (
-                "full_aws_config",
-                {
-                    "connection_name": "aws_explicit",
-                    "secret_name": "aws_creds",  # The logical name for the secret bundle
-                    "region": "us-east-1"
-                },
-                {
-                    # These keys will be part of the env var name
-                    "access_key_id": "AWS_KEY",
-                    "secret_access_key": "AWS_SECRET",
-                    "session_token": "AWS_TOKEN"
-                },
-                [
-                    "CREATE OR REPLACE SECRET aws_explicit_secret (",
-                    "TYPE S3",
-                    "KEY_ID 'AWS_KEY'",
-                    "SECRET 'AWS_SECRET'",
-                    "REGION 'us-east-1'",
-                    "SESSION_TOKEN 'AWS_TOKEN'",
-                    ");"
-                ]
+            "full_aws_config",
+            {
+                "connection_name": "aws_explicit",
+                "secret_name": "aws_creds",  # The logical name for the secret bundle
+                "region": "us-east-1",
+            },
+            {
+                # These keys will be part of the env var name
+                "access_key_id": "AWS_KEY",
+                "secret_access_key": "AWS_SECRET",
+                "session_token": "AWS_TOKEN",
+            },
+            [
+                "CREATE OR REPLACE SECRET aws_explicit_secret (",
+                "TYPE S3",
+                "KEY_ID 'AWS_KEY'",
+                "SECRET 'AWS_SECRET'",
+                "REGION 'us-east-1'",
+                "SESSION_TOKEN 'AWS_TOKEN'",
+                ");",
+            ],
         ),
         (
-                "minio_config_with_bool",
-                {
-                    "connection_name": "minio_test",
-                    "secret_name": "minio_creds",
-                    "endpoint": "localhost:9000",
-                    "use_ssl": False,
-                    "url_style": "path"
-                },
-                {
-                    "access_key_id": "MINIO_KEY",
-                    "secret_access_key": "MINIO_SECRET"
-                },
-                [
-                    "CREATE OR REPLACE SECRET minio_test_secret (",
-                    "KEY_ID 'MINIO_KEY'",
-                    "SECRET 'MINIO_SECRET'",
-                    "ENDPOINT 'localhost:9000'",
-                    "URL_STYLE 'path'",
-                    "USE_SSL False",
-                    ");"
-                ]
+            "minio_config_with_bool",
+            {
+                "connection_name": "minio_test",
+                "secret_name": "minio_creds",
+                "endpoint": "localhost:9000",
+                "use_ssl": False,
+                "url_style": "path",
+            },
+            {"access_key_id": "MINIO_KEY", "secret_access_key": "MINIO_SECRET"},
+            [
+                "CREATE OR REPLACE SECRET minio_test_secret (",
+                "KEY_ID 'MINIO_KEY'",
+                "SECRET 'MINIO_SECRET'",
+                "ENDPOINT 'localhost:9000'",
+                "URL_STYLE 'path'",
+                "USE_SSL False",
+                ");",
+            ],
         ),
         (
-                "aws_with_hardening",
-                {
-                    "connection_name": "aws_scoped",
-                    "secret_name": "aws_creds",
-                    "scope": "s3://my-bucket/",
-                    "use_credential_chain": True
-                },
-                {}, # No keys needed if using credential chain
-                [
-                    "CREATE OR REPLACE SECRET aws_scoped_secret (",
-                    "TYPE S3",
-                    "PROVIDER CREDENTIAL_CHAIN",
-                    "SCOPE 's3://my-bucket/'",
-                    ");"
-                ]
+            "aws_with_hardening",
+            {
+                "connection_name": "aws_scoped",
+                "secret_name": "aws_creds",
+                "scope": "s3://my-bucket/",
+                "use_credential_chain": True,
+            },
+            {},  # No keys needed if using credential chain
+            [
+                "CREATE OR REPLACE SECRET aws_scoped_secret (",
+                "TYPE S3",
+                "PROVIDER CREDENTIAL_CHAIN",
+                "SCOPE 's3://my-bucket/'",
+                ");",
+            ],
         ),
-    ]
+    ],
 )
 def test_render_sql_with_secret_creation(monkeypatch, test_id, context, secret_bundle, expected_sql_parts):
     """
@@ -127,33 +127,27 @@ def test_render_sql_with_secret_creation(monkeypatch, test_id, context, secret_b
     "test_id, context, expected_sql",
     [
         (
-                "iam_role_with_region_and_endpoint",
-                {
-                    "connection_name": "iam_test",
-                    "region": "us-west-2",
-                    "endpoint": "s3.us-west-2.amazonaws.com",
-                    "use_ssl": True
-                    # No 'secret_name' provided
-                },
-                "SET s3_region = 'us-west-2';\nSET s3_endpoint = 's3.us-west-2.amazonaws.com';\nSET s3_use_ssl = True;"
+            "iam_role_with_region_and_endpoint",
+            {
+                "connection_name": "iam_test",
+                "region": "us-west-2",
+                "endpoint": "s3.us-west-2.amazonaws.com",
+                "use_ssl": True,
+                # No 'secret_name' provided
+            },
+            "SET s3_region = 'us-west-2';\nSET s3_endpoint = 's3.us-west-2.amazonaws.com';\nSET s3_use_ssl = True;",
         ),
         (
-                "region_only",
-                {
-                    "connection_name": "iam_test_minimal",
-                    "region": "eu-central-1"
-                },
-                "SET s3_region = 'eu-central-1';"
+            "region_only",
+            {"connection_name": "iam_test_minimal", "region": "eu-central-1"},
+            "SET s3_region = 'eu-central-1';",
         ),
         (
-                "no_relevant_keys",
-                {
-                    "connection_name": "iam_test_empty",
-                    "some_other_key": "value"
-                },
-                ""  # Expect an empty string if no relevant keys are present
+            "no_relevant_keys",
+            {"connection_name": "iam_test_empty", "some_other_key": "value"},
+            "",  # Expect an empty string if no relevant keys are present
         ),
-    ]
+    ],
 )
 def test_render_sql_with_set_commands(test_id, context, expected_sql):
     """
@@ -166,11 +160,9 @@ def test_render_sql_with_set_commands(test_id, context, expected_sql):
 
 
 def test_integration_with_minio_e2e(minio_container_with_data, quackpipe_with_minio):
-    bucket_name = 'test-bucket'  # this is the name of the bucket that is set on TEST_BUCKET_NAME
+    bucket_name = "test-bucket"  # this is the name of the bucket that is set on TEST_BUCKET_NAME
     with quackpipe_with_minio.session() as con:
-        results = con.execute(
-            f"FROM read_parquet('s3://{bucket_name}/data/employees.parquet')"
-        ).fetchall()
+        results = con.execute(f"FROM read_parquet('s3://{bucket_name}/data/employees.parquet')").fetchall()
         assert len(results) == 5
 
         results = con.execute(
@@ -203,11 +195,11 @@ def s3_case(request, minio_container_with_data, quackpipe_config_files):
             "path": "s3://test-bucket/",
             "endpoint": minio_container_with_data.get_config()["endpoint"],
             "use_ssl": False,
-            "url_style": "path"
+            "url_style": "path",
         }
         env_vars = {
             "STORAGE_ACCESS_KEY_ID": minio_container_with_data.access_key,
-            "STORAGE_SECRET_ACCESS_KEY": minio_container_with_data.secret_key
+            "STORAGE_SECRET_ACCESS_KEY": minio_container_with_data.secret_key,
         }
     elif request.param == "all_config":
         source_config = {
@@ -216,13 +208,15 @@ def s3_case(request, minio_container_with_data, quackpipe_config_files):
             "path": "s3://test-bucket/",
             "endpoint": minio_container_with_data.get_config()["endpoint"],
             "use_ssl": False,
-            "url_style": "path"
+            "url_style": "path",
         }
         env_vars = {}
     else:
         raise ValueError(f"Unknown case {request.param}")
 
-    return quackpipe_config_files(source_config, env_vars, source_name="s3_store", source_type="s3", secret_name="storage")
+    return quackpipe_config_files(
+        source_config, env_vars, source_name="s3_store", source_type="s3", secret_name="storage"
+    )
 
 
 def test_s3_configs(s3_case):
@@ -233,7 +227,5 @@ def test_s3_configs(s3_case):
         env_file=str(env_file),
         sources=["s3_store"],
     ) as con:
-        results = con.execute(
-            "FROM read_parquet('s3://test-bucket/data/employees.parquet')"
-        ).fetchall()
+        results = con.execute("FROM read_parquet('s3://test-bucket/data/employees.parquet')").fetchall()
         assert len(results) == 5

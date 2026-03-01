@@ -1,6 +1,7 @@
 """
 The Builder API for programmatically constructing a quackpipe session.
 """
+
 from __future__ import annotations
 
 from typing import Any, Self
@@ -17,7 +18,9 @@ class QuackpipeBuilder:
     def __init__(self):
         self._sources: list[SourceConfig] = []
 
-    def add_source(self, name: str, type: SourceType | str, config: dict[str, Any] = None, secret_name: str = None) -> Self:
+    def add_source(
+        self, name: str, type: SourceType | str, config: dict[str, Any] = None, secret_name: str = None
+    ) -> Self:
         """
         Adds a data source to the configuration by specifying its components.
 
@@ -46,12 +49,7 @@ class QuackpipeBuilder:
             # as the environment might not be set yet.
             HandlerClass.validate(config, secret_name, resolve_secrets=False)
 
-        source = SourceConfig(
-            name=name,
-            type=type,
-            config=config,
-            secret_name=secret_name
-        )
+        source = SourceConfig(name=name, type=type, config=config, secret_name=secret_name)
         self._sources.append(source)
         return self
 

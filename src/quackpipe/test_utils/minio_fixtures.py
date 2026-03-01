@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 TEST_BUCKET_NAME = "test-bucket"
 
+
 @pytest.fixture(scope="module")
 def minio_container():
     """Starts a MinIO container."""
@@ -38,8 +39,8 @@ def quackpipe_with_minio(minio_container):
             "access_key_id": minio_container.access_key,
             "secret_access_key": minio_container.secret_key,
             "use_ssl": False,
-            "url_style": "path"
-        }
+            "url_style": "path",
+        },
     )
     return builder
 
@@ -78,14 +79,14 @@ def minio_container_with_data(minio_container):
     # Upload employee CSV file
     csv_buffer = io.StringIO()
     df.to_csv(csv_buffer, index=False)
-    csv_data = csv_buffer.getvalue().encode('utf-8')
+    csv_data = csv_buffer.getvalue().encode("utf-8")
 
     client.put_object(
         bucket_name=TEST_BUCKET_NAME,
         object_name="data/employees.csv",
         data=io.BytesIO(csv_data),
         length=len(csv_data),
-        content_type="text/csv"
+        content_type="text/csv",
     )
 
     # Upload employee Parquet file
@@ -98,36 +99,36 @@ def minio_container_with_data(minio_container):
         object_name="data/employees.parquet",
         data=io.BytesIO(parquet_data),
         length=len(parquet_data),
-        content_type="application/octet-stream"
+        content_type="application/octet-stream",
     )
 
     # Upload monthly CSV
     monthly_csv_buffer = io.StringIO()
     monthly_df.to_csv(monthly_csv_buffer, index=False)
-    monthly_csv_data = monthly_csv_buffer.getvalue().encode('utf-8')
+    monthly_csv_data = monthly_csv_buffer.getvalue().encode("utf-8")
 
     client.put_object(
         bucket_name=TEST_BUCKET_NAME,
         object_name="data/monthly_reports.csv",
         data=io.BytesIO(monthly_csv_data),
         length=len(monthly_csv_data),
-        content_type="text/csv"
+        content_type="text/csv",
     )
 
     # Create partitioned data
-    for dept in ['Engineering', 'Marketing', 'Sales']:
-        dept_data = df[df['department'] == dept].copy()
+    for dept in ["Engineering", "Marketing", "Sales"]:
+        dept_data = df[df["department"] == dept].copy()
         if not dept_data.empty:
             dept_csv_buffer = io.StringIO()
             dept_data.to_csv(dept_csv_buffer, index=False)
-            dept_csv_data = dept_csv_buffer.getvalue().encode('utf-8')
+            dept_csv_data = dept_csv_buffer.getvalue().encode("utf-8")
 
             client.put_object(
                 bucket_name=TEST_BUCKET_NAME,
                 object_name=f"partitioned/department={dept}/employees.csv",
                 data=io.BytesIO(dept_csv_data),
                 length=len(dept_csv_data),
-                content_type="text/csv"
+                content_type="text/csv",
             )
 
     # Generate synthetic AIS data
@@ -137,14 +138,14 @@ def minio_container_with_data(minio_container):
     # Upload synthetic CSV
     synthetic_csv_buffer = io.StringIO()
     synthetic_ais_df.to_csv(synthetic_csv_buffer, index=False)
-    synthetic_csv_data = synthetic_csv_buffer.getvalue().encode('utf-8')
+    synthetic_csv_data = synthetic_csv_buffer.getvalue().encode("utf-8")
 
     client.put_object(
         bucket_name=TEST_BUCKET_NAME,
         object_name="external/ais_data_synthetic.csv",
         data=io.BytesIO(synthetic_csv_data),
         length=len(synthetic_csv_data),
-        content_type="text/csv"
+        content_type="text/csv",
     )
 
     # Upload synthetic Parquet
@@ -157,7 +158,7 @@ def minio_container_with_data(minio_container):
         object_name="external/ais_data_synthetic.parquet",
         data=io.BytesIO(synthetic_parquet_data),
         length=len(synthetic_parquet_data),
-        content_type="application/octet-stream"
+        content_type="application/octet-stream",
     )
 
     # Create and upload AIS summary
@@ -167,9 +168,9 @@ def minio_container_with_data(minio_container):
     client.put_object(
         bucket_name=TEST_BUCKET_NAME,
         object_name="external/ais_data_summary.json",
-        data=io.BytesIO(summary_json.encode('utf-8')),
-        length=len(summary_json.encode('utf-8')),
-        content_type="application/json"
+        data=io.BytesIO(summary_json.encode("utf-8")),
+        length=len(summary_json.encode("utf-8")),
+        content_type="application/json",
     )
 
     logger.info(f"Successfully created synthetic AIS data with {len(synthetic_ais_df)} records")

@@ -1,4 +1,5 @@
 """Source Handler for S3-compatible object storage."""
+
 from typing import Any
 
 from quackpipe.secrets import fetch_secret_bundle
@@ -10,6 +11,7 @@ class S3Handler(BaseSourceHandler):
     Handler for S3 connections. Supports explicit credential creation via secrets
     or automatic detection (IAM/env vars) via SET commands.
     """
+
     def __init__(self, context: dict[str, Any]):
         super().__init__(context)
 
@@ -29,20 +31,24 @@ class S3Handler(BaseSourceHandler):
 
     def render_create_secret_sql(self, duckdb_secret_name: str) -> str:
         """Builds a CREATE SECRET statement for S3."""
-        secrets = fetch_secret_bundle(self.context.get('secret_name'))
+        secrets = fetch_secret_bundle(self.context.get("secret_name"))
         sql_context = {**self.context, **secrets}
 
         param_map = {
-            'key_id': 'access_key_id', 'secret': 'secret_access_key',
-            'region': 'region', 'session_token': 'session_token',
-            'endpoint': 'endpoint', 'url_style': 'url_style', 'use_ssl': 'use_ssl',
-            'scope': 'scope'
+            "key_id": "access_key_id",
+            "secret": "secret_access_key",
+            "region": "region",
+            "session_token": "session_token",
+            "endpoint": "endpoint",
+            "url_style": "url_style",
+            "use_ssl": "use_ssl",
+            "scope": "scope",
         }
 
         parts = [f"CREATE OR REPLACE SECRET {duckdb_secret_name} (", "  TYPE S3"]
 
         # Handle the PROVIDER if credential chain is requested
-        if sql_context.get('use_credential_chain', False):
+        if sql_context.get("use_credential_chain", False):
             parts.append(",  PROVIDER CREDENTIAL_CHAIN")
 
         for duckdb_key, context_key in param_map.items():
@@ -59,9 +65,12 @@ class S3Handler(BaseSourceHandler):
     def _render_set_commands_sql(self) -> str:
         """Builds a series of SET commands for S3 configuration."""
         param_map = {
-            'access_key_id': 's3_access_key_id', 'secret_access_key': 's3_secret_access_key',
-            'region': 's3_region', 'endpoint': 's3_endpoint',
-            'url_style': 's3_url_style', 'use_ssl': 's3_use_ssl'
+            "access_key_id": "s3_access_key_id",
+            "secret_access_key": "s3_secret_access_key",
+            "region": "s3_region",
+            "endpoint": "s3_endpoint",
+            "url_style": "s3_url_style",
+            "use_ssl": "s3_use_ssl",
         }
 
         commands = []
@@ -79,7 +88,7 @@ class S3Handler(BaseSourceHandler):
         """
         Renders SQL to configure S3 based on the stored context.
         """
-        secret_name = self.context.get('secret_name')
+        secret_name = self.context.get("secret_name")
 
         if secret_name:
             duckdb_secret_name = f"{self.context['connection_name']}_secret"

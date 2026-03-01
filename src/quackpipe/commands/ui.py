@@ -3,6 +3,7 @@ src/quackpipe/commands/ui.py
 
 This module contains the implementation for the 'ui' CLI command.
 """
+
 from argparse import _SubParsersAction
 
 from .. import ConfigError
@@ -57,25 +58,33 @@ def handler(args):
 
 def register_command(subparsers: _SubParsersAction):
     """Registers the command and its arguments to the main CLI parser."""
-    parser_ui = subparsers.add_parser(
-        "ui",
-        help="Launch an interactive DuckDB UI with pre-configured sources."
-    )
-    parser_ui.add_argument("-c", "--config", default=get_default_config_path(), nargs='+',
-                            help="Path(s) to the quackpipe config.yml file(s). Defaults to 'config.yml' in the current "
-                                 "directory if it exists or else it will check the "
-                                 "QUACKPIPE_CONFIG_PATH environment variable.")
-    parser_ui.add_argument("--env-file", default=[".env"], nargs='+',
-                           help="Path(s) to the environment file(s) to load secrets from. (Default: .env)")
-    parser_ui.add_argument("-p", "--port", type=int, default=4213,
-                           help="Port to run the DuckDB UI on. (Default: 4213)")
+    parser_ui = subparsers.add_parser("ui", help="Launch an interactive DuckDB UI with pre-configured sources.")
     parser_ui.add_argument(
-        "-v", "--verbose",
+        "-c",
+        "--config",
+        default=get_default_config_path(),
+        nargs="+",
+        help="Path(s) to the quackpipe config.yml file(s). Defaults to 'config.yml' in the current "
+        "directory if it exists or else it will check the "
+        "QUACKPIPE_CONFIG_PATH environment variable.",
+    )
+    parser_ui.add_argument(
+        "--env-file",
+        default=[".env"],
+        nargs="+",
+        help="Path(s) to the environment file(s) to load secrets from. (Default: .env)",
+    )
+    parser_ui.add_argument("-p", "--port", type=int, default=4213, help="Port to run the DuckDB UI on. (Default: 4213)")
+    parser_ui.add_argument(
+        "-v",
+        "--verbose",
         action="count",
         default=0,
-        help="Increase output verbosity. Use -v for INFO and -vv for DEBUG."
+        help="Increase output verbosity. Use -v for INFO and -vv for DEBUG.",
     )
-    parser_ui.add_argument("sources", nargs='*',
-                           help="Optional: A space-separated list of specific sources to load. "
-                                "If omitted, all sources are loaded.")
+    parser_ui.add_argument(
+        "sources",
+        nargs="*",
+        help="Optional: A space-separated list of specific sources to load. If omitted, all sources are loaded.",
+    )
     parser_ui.set_defaults(func=handler)

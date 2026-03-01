@@ -3,6 +3,7 @@ tests/test_ducklake_handler.py
 
 This file contains pytest tests for the DuckLakeHandler class in quackpipe.
 """
+
 import pytest
 
 from quackpipe import QuackpipeBuilder, configure_secret_provider
@@ -14,21 +15,13 @@ from quackpipe.sources.ducklake import DuckLakeHandler
     "test_id, context, expected_plugins",
     [
         (
-                "postgres_s3",
-                {"catalog": {"type": "postgres"}, "storage": {"type": "s3"}},
-                {"ducklake", "postgres", "httpfs"}
+            "postgres_s3",
+            {"catalog": {"type": "postgres"}, "storage": {"type": "s3"}},
+            {"ducklake", "postgres", "httpfs"},
         ),
-        (
-                "sqlite_local",
-                {"catalog": {"type": "sqlite"}, "storage": {"type": "local"}},
-                {"ducklake", "sqlite"}
-        ),
-        (
-                "postgres_local",
-                {"catalog": {"type": "postgres"}, "storage": {"type": "local"}},
-                {"ducklake", "postgres"}
-        ),
-    ]
+        ("sqlite_local", {"catalog": {"type": "sqlite"}, "storage": {"type": "local"}}, {"ducklake", "sqlite"}),
+        ("postgres_local", {"catalog": {"type": "postgres"}, "storage": {"type": "local"}}, {"ducklake", "postgres"}),
+    ],
 )
 def test_ducklake_handler_dynamic_plugins(test_id, context, expected_plugins):
     """
@@ -53,7 +46,7 @@ def test_render_sql_with_sqlite_and_local_storage():
     context = {
         "connection_name": "local_lake",
         "catalog": {"type": "sqlite", "path": "/tmp/catalog.db"},
-        "storage": {"type": "local", "path": "/tmp/data/"}
+        "storage": {"type": "local", "path": "/tmp/data/"},
     }
     handler = DuckLakeHandler(context)
 
@@ -68,7 +61,7 @@ def test_render_sql_with_sqlite_and_local_storage():
         "TYPE DUCKLAKE",
         "METADATA_PATH '/tmp/catalog.db'",
         "DATA_PATH '/tmp/data/'",
-        "ATTACH 'ducklake:local_lake_secret' AS local_lake;"
+        "ATTACH 'ducklake:local_lake_secret' AS local_lake;",
     ]
 
     normalized_sql = " ".join(generated_sql.split())
@@ -89,18 +82,15 @@ def test_render_sql_with_postgres_and_minio(monkeypatch):
     # Arrange
     context = {
         "connection_name": "minio_lake",
-        "catalog": {
-            "type": "postgres",
-            "secret_name": "pg_creds_for_lake"
-        },
+        "catalog": {"type": "postgres", "secret_name": "pg_creds_for_lake"},
         "storage": {
             "type": "s3",
             "secret_name": "minio_creds_for_lake",
             "path": "s3://my-minio-bucket/data/",
             "endpoint": "localhost:9000",
             "url_style": "path",
-            "use_ssl": False
-        }
+            "use_ssl": False,
+        },
     }
 
     # Mock secrets for both components
@@ -127,7 +117,7 @@ def test_render_sql_with_postgres_and_minio(monkeypatch):
         # 3. The main DUCKLAKE secret that references the catalog secret
         "CREATE OR REPLACE SECRET minio_lake_secret ( TYPE DUCKLAKE, DATA_PATH 's3://my-minio-bucket/data/' , METADATA_PARAMETERS MAP {'TYPE': 'postgres', 'SECRET': 'minio_lake_catalog_secret'} , METADATA_PATH '' );",
         # 4. The final ATTACH statement that references the main DUCKLAKE secret
-        "ATTACH 'ducklake:minio_lake_secret' AS minio_lake;"
+        "ATTACH 'ducklake:minio_lake_secret' AS minio_lake;",
     ]
 
     # Act
@@ -148,12 +138,8 @@ def test_render_sql_with_encrypted_sqlite_catalog():
     # Arrange
     context = {
         "connection_name": "secure_lake",
-        "catalog": {
-            "type": "sqlite",
-            "path": "/tmp/secure.db",
-            "encryption_key": "lake_key_123"
-        },
-        "storage": {"type": "local", "path": "/tmp/data/"}
+        "catalog": {"type": "sqlite", "path": "/tmp/secure.db", "encryption_key": "lake_key_123"},
+        "storage": {"type": "local", "path": "/tmp/data/"},
     }
     handler = DuckLakeHandler(context)
 
@@ -167,10 +153,22 @@ def test_render_sql_with_encrypted_sqlite_catalog():
 @pytest.mark.parametrize(
     "test_id, invalid_context, expected_message",
     [
-        ("missing_catalog", {"connection_name": "test", "storage": {"type": "local", "path": "/tmp"}}, "requires a 'catalog' section"),
-        ("missing_storage", {"connection_name": "test", "catalog": {"type": "sqlite", "path": "/tmp/db"}}, "requires a 'storage' section"),
-        ("missing_path", {"connection_name": "test", "catalog": {"type": "sqlite", "path": "/tmp/db"}, "storage": {"type": "local"}}, "Ducklake storage source requires 'path'"),
-    ]
+        (
+            "missing_catalog",
+            {"connection_name": "test", "storage": {"type": "local", "path": "/tmp"}},
+            "requires a 'catalog' section",
+        ),
+        (
+            "missing_storage",
+            {"connection_name": "test", "catalog": {"type": "sqlite", "path": "/tmp/db"}},
+            "requires a 'storage' section",
+        ),
+        (
+            "missing_path",
+            {"connection_name": "test", "catalog": {"type": "sqlite", "path": "/tmp/db"}, "storage": {"type": "local"}},
+            "Ducklake storage source requires 'path'",
+        ),
+    ],
 )
 def test_validation_raises_error_for_invalid_config(test_id, invalid_context, expected_message):
     """
@@ -182,5 +180,5 @@ def test_validation_raises_error_for_invalid_config(test_id, invalid_context, ex
         builder.add_source(
             name=invalid_context.get("connection_name"),
             type="ducklake",
-            config={k: v for k, v in invalid_context.items() if k != "connection_name"}
+            config={k: v for k, v in invalid_context.items() if k != "connection_name"},
         )

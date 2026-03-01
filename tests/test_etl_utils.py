@@ -3,6 +3,7 @@ tests/test_etl_utils.py
 
 This file contains pytest tests for the standalone functions in etl_utils.py.
 """
+
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
@@ -14,12 +15,13 @@ from quackpipe.exceptions import AccessDeniedError, ValidationError
 
 # ==================== FIXTURES ====================
 
+
 @pytest.fixture
 def mock_duckdb_connection():
     """Provides a mock DuckDB connection object."""
     mock_con = MagicMock()
 
-    sample_df = pd.DataFrame({'id': [1, 2], 'name': ['A', 'B']})
+    sample_df = pd.DataFrame({"id": [1, 2], "name": ["A", "B"]})
     mock_execute_result = MagicMock()
     mock_execute_result.fetchdf.return_value = sample_df
     mock_con.execute.return_value = mock_execute_result
@@ -30,7 +32,7 @@ def mock_duckdb_connection():
 @pytest.fixture
 def mock_session(mock_duckdb_connection):
     """A patch fixture for the quackpipe.etl_utils.session context manager."""
-    with patch('quackpipe.etl_utils.session') as mock_session_context:
+    with patch("quackpipe.etl_utils.session") as mock_session_context:
         mock_session_context.return_value.__enter__.return_value = mock_duckdb_connection
         yield mock_session_context
 
@@ -38,11 +40,12 @@ def mock_session(mock_duckdb_connection):
 @pytest.fixture
 def mock_get_configs():
     """A patch fixture for the quackpipe.etl_utils.get_configs function."""
-    with patch('quackpipe.etl_utils.get_configs') as mock:
+    with patch("quackpipe.etl_utils.get_configs") as mock:
         yield mock
 
 
 # ==================== UNIT TESTS ====================
+
 
 def test_to_df(mock_duckdb_connection):
     """Test the to_df utility function."""
@@ -56,7 +59,7 @@ def test_to_df(mock_duckdb_connection):
 
 def test_create_table_from_df(mock_duckdb_connection):
     """Test the create_table_from_df utility function."""
-    df = pd.DataFrame({'col1': [1, 2], 'col2': ['a', 'b']})
+    df = pd.DataFrame({"col1": [1, 2], "col2": ["a", "b"]})
     table_name = "new_table"
     create_table_from_df(mock_duckdb_connection, df, table_name)
 
@@ -78,7 +81,7 @@ def test_move_data_to_s3(mock_session, mock_get_configs, mock_duckdb_connection,
         destination_name="s3_dest",
         table_name="output_table",
         configs=s3_configs,
-        format=format_type
+        format=format_type,
     )
 
     # Assert
@@ -87,37 +90,34 @@ def test_move_data_to_s3(mock_session, mock_get_configs, mock_duckdb_connection,
     mock_session.assert_called_once_with(configs=s3_configs, env_file=None)
 
 
-@pytest.mark.parametrize("mode, expected_sql_pattern", [
-    ("replace", "CREATE TABLE pg_dest.output_table AS ({});"),
-    ("append", "INSERT INTO pg_dest.output_table ({});")
-])
-def test_move_data_to_writeable_postgres(mock_session, mock_get_configs, mock_duckdb_connection, mode,
-                                         expected_sql_pattern):
+@pytest.mark.parametrize(
+    "mode, expected_sql_pattern",
+    [("replace", "CREATE TABLE pg_dest.output_table AS ({});"), ("append", "INSERT INTO pg_dest.output_table ({});")],
+)
+def test_move_data_to_writeable_postgres(
+    mock_session, mock_get_configs, mock_duckdb_connection, mode, expected_sql_pattern
+):
     """Test moving data to a writeable Postgres destination."""
     # Arrange
     source_query = "SELECT id, name FROM source"
-    pg_configs = [SourceConfig(
-        name="pg_dest",
-        type=SourceType.POSTGRES,
-        config={"read_only": False, "host": "localhost", "database": "db"}
-    )]
+    pg_configs = [
+        SourceConfig(
+            name="pg_dest", type=SourceType.POSTGRES, config={"read_only": False, "host": "localhost", "database": "db"}
+        )
+    ]
     mock_get_configs.return_value = pg_configs
 
     # Mock the DROP TABLE call for replace mode
-    if mode == 'replace':
+    if mode == "replace":
         mock_duckdb_connection.execute.side_effect = [None, None]  # First call is DROP, second is CREATE
 
     # Act
     move_data(
-        source_query=source_query,
-        destination_name="pg_dest",
-        table_name="output_table",
-        configs=pg_configs,
-        mode=mode
+        source_query=source_query, destination_name="pg_dest", table_name="output_table", configs=pg_configs, mode=mode
     )
 
     # Assert
-    if mode == 'replace':
+    if mode == "replace":
         mock_duckdb_connection.execute.assert_any_call("DROP TABLE IF EXISTS pg_dest.output_table;")
 
     final_sql = expected_sql_pattern.format(source_query)
@@ -128,11 +128,11 @@ def test_move_data_merge_mode_postgres(mock_session, mock_get_configs, mock_duck
     """Test moving data to a Postgres destination using merge mode."""
     # Arrange
     source_query = "SELECT id, name FROM source"
-    pg_configs = [SourceConfig(
-        name="pg_dest",
-        type=SourceType.POSTGRES,
-        config={"read_only": False, "host": "localhost", "database": "db"}
-    )]
+    pg_configs = [
+        SourceConfig(
+            name="pg_dest", type=SourceType.POSTGRES, config={"read_only": False, "host": "localhost", "database": "db"}
+        )
+    ]
     mock_get_configs.return_value = pg_configs
 
     # Act
@@ -142,7 +142,7 @@ def test_move_data_merge_mode_postgres(mock_session, mock_get_configs, mock_duck
         table_name="output_table",
         configs=pg_configs,
         mode="merge",
-        primary_key="id"
+        primary_key="id",
     )
 
     # Assert
@@ -160,11 +160,11 @@ def test_move_data_merge_mode_postgres(mock_session, mock_get_configs, mock_duck
 def test_move_data_merge_mode_missing_pk_raises_error(mock_session, mock_get_configs):
     """Test that merge mode raises an error if primary_key is missing."""
     # Arrange
-    pg_configs = [SourceConfig(
-        name="pg_dest",
-        type=SourceType.POSTGRES,
-        config={"read_only": False, "host": "localhost", "database": "db"}
-    )]
+    pg_configs = [
+        SourceConfig(
+            name="pg_dest", type=SourceType.POSTGRES, config={"read_only": False, "host": "localhost", "database": "db"}
+        )
+    ]
     mock_get_configs.return_value = pg_configs
 
     # Act & Assert
@@ -174,29 +174,25 @@ def test_move_data_merge_mode_missing_pk_raises_error(mock_session, mock_get_con
             destination_name="pg_dest",
             table_name="output_table",
             configs=pg_configs,
-            mode="merge"
+            mode="merge",
         )
 
 
 def test_move_data_to_readonly_postgres_raises_error(mock_session, mock_get_configs):
     """Test that moving data to a read-only destination raises an AccessDeniedError."""
     # Arrange
-    pg_configs = [SourceConfig(
-        name="pg_dest",
-        type=SourceType.POSTGRES,
-        config={"read_only": True, "host": "localhost", "database": "db"}
-    )]
+    pg_configs = [
+        SourceConfig(
+            name="pg_dest", type=SourceType.POSTGRES, config={"read_only": True, "host": "localhost", "database": "db"}
+        )
+    ]
     mock_get_configs.return_value = pg_configs
 
     # Act & Assert
-    with pytest.raises(AccessDeniedError,
-                       match="Cannot write to destination 'pg_dest' because it is configured as read-only."):
-        move_data(
-            source_query="SELECT 1",
-            destination_name="pg_dest",
-            table_name="output_table",
-            configs=pg_configs
-        )
+    with pytest.raises(
+        AccessDeniedError, match="Cannot write to destination 'pg_dest' because it is configured as read-only."
+    ):
+        move_data(source_query="SELECT 1", destination_name="pg_dest", table_name="output_table", configs=pg_configs)
 
 
 def test_move_data_destination_not_found_raises_error(mock_get_configs):
@@ -206,18 +202,14 @@ def test_move_data_destination_not_found_raises_error(mock_get_configs):
 
     # Act & Assert
     with pytest.raises(ValueError, match="Destination 'non_existent_dest' not found in the provided configuration."):
-        move_data(
-            source_query="SELECT 1",
-            destination_name="non_existent_dest",
-            table_name="output",
-            configs=[]
-        )
+        move_data(source_query="SELECT 1", destination_name="non_existent_dest", table_name="output", configs=[])
 
 
 # ==================== INTEGRATION TEST ====================
 
-@patch('quackpipe.etl_utils.session')
-@patch('quackpipe.etl_utils.get_configs')
+
+@patch("quackpipe.etl_utils.session")
+@patch("quackpipe.etl_utils.get_configs")
 def test_full_workflow_with_move_data(mock_get_configs, mock_session, mock_duckdb_connection):
     """
     Test a high-level workflow using the self-contained move_data utility.
@@ -225,7 +217,7 @@ def test_full_workflow_with_move_data(mock_get_configs, mock_session, mock_duckd
     # Arrange: Setup mock configurations for both a source and a destination
     all_configs = [
         SourceConfig(name="pg_main", type=SourceType.POSTGRES, config={"host": "h", "database": "d"}),
-        SourceConfig(name="s3_lake", type=SourceType.S3, config={"path": "s3://my-lake/"})
+        SourceConfig(name="s3_lake", type=SourceType.S3, config={"path": "s3://my-lake/"}),
     ]
     mock_get_configs.return_value = all_configs
 
@@ -238,7 +230,7 @@ def test_full_workflow_with_move_data(mock_get_configs, mock_session, mock_duckd
         destination_name="s3_lake",
         table_name="users_backup",
         configs=all_configs,
-        format="parquet"
+        format="parquet",
     )
 
     # Assert

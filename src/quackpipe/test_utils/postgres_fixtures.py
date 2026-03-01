@@ -52,7 +52,7 @@ def postgres_container_with_data(postgres_container, quackpipe_with_pg_source) -
     monthly_df = pd.DataFrame(monthly_data)
     vessels_df = pd.DataFrame(vessels)
     synthetic_ais_df = generate_synthetic_ais_data(vessels)
-    synthetic_ais_df['BaseDateTime'] = pd.to_datetime(synthetic_ais_df['BaseDateTime'])
+    synthetic_ais_df["BaseDateTime"] = pd.to_datetime(synthetic_ais_df["BaseDateTime"])
     synthetic_ais_df.columns = synthetic_ais_df.columns.str.lower()
 
     with quackpipe_with_pg_source.session() as con:
@@ -78,7 +78,7 @@ def postgres_container_with_data(postgres_container, quackpipe_with_pg_source) -
             FROM ais_data a
             LEFT JOIN vessels v ON a.mmsi = v.mmsi;
         """
-        con.execute(f"CALL postgres_execute('{POSTGRES_SOURCE_NAME}', '{create_view_sql.replace('\'', '''''')}')")
+        con.execute(f"CALL postgres_execute('{POSTGRES_SOURCE_NAME}', '{create_view_sql.replace("'", '''''')}')")
 
     logger.info("PostgreSQL container populated via Quackpipe with:")
     logger.info(f"  - {len(employees_df)} employee records")
@@ -99,13 +99,13 @@ def quackpipe_with_pg_source(postgres_container) -> QuackpipeBuilder:
         name=POSTGRES_SOURCE_NAME,
         type=SourceType.POSTGRES,
         config={
-            'database': 'test',
-            'user': 'test',
-            'password': 'test',
-            'host': postgres_container.get_container_host_ip(),
-            'port': postgres_container.get_exposed_port(5432),
-            'connection_name': 'pg_main',
-            'read_only': False
-        }
+            "database": "test",
+            "user": "test",
+            "password": "test",
+            "host": postgres_container.get_container_host_ip(),
+            "port": postgres_container.get_exposed_port(5432),
+            "connection_name": "pg_main",
+            "read_only": False,
+        },
     )
     return builder

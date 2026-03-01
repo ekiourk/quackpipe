@@ -19,10 +19,7 @@ def test_fetch_secret_bundle_from_os_environ(monkeypatch):
     secrets = fetch_secret_bundle("prod_db")
 
     # Assert
-    assert secrets == {
-        'host': 'db.example.com',
-        'user': 'prod_user'
-    }
+    assert secrets == {"host": "db.example.com", "user": "prod_user"}
 
 
 def test_configure_and_fetch_from_env_file(tmp_path):
@@ -30,10 +27,7 @@ def test_configure_and_fetch_from_env_file(tmp_path):
     Tests loading secrets from a specified .env file.
     """
     # Arrange: Create a temporary .env file
-    env_content = (
-        "MINIO_STORAGE_ACCESS_KEY_ID=minio_key\n"
-        "MINIO_STORAGE_SECRET_ACCESS_KEY=minio_secret\n"
-    )
+    env_content = "MINIO_STORAGE_ACCESS_KEY_ID=minio_key\nMINIO_STORAGE_SECRET_ACCESS_KEY=minio_secret\n"
     p = tmp_path / "test.env"
     p.write_text(env_content)
 
@@ -42,10 +36,7 @@ def test_configure_and_fetch_from_env_file(tmp_path):
     secrets = fetch_secret_bundle("minio_storage")
 
     # Assert
-    assert secrets == {
-        'access_key_id': 'minio_key',
-        'secret_access_key': 'minio_secret'
-    }
+    assert secrets == {"access_key_id": "minio_key", "secret_access_key": "minio_secret"}
 
 
 def test_env_file_overrides_os_environ(monkeypatch, tmp_path):
@@ -58,10 +49,7 @@ def test_env_file_overrides_os_environ(monkeypatch, tmp_path):
     monkeypatch.setenv("PG_CATALOG_USER", "system_user")
 
     # Create a .env file with an overriding value and a new value
-    env_content = (
-        "PG_CATALOG_HOST=file.host.com\n"
-        "PG_CATALOG_PASSWORD=file_password\n"
-    )
+    env_content = "PG_CATALOG_HOST=file.host.com\nPG_CATALOG_PASSWORD=file_password\n"
     p = tmp_path / "test.env"
     p.write_text(env_content)
 
@@ -71,9 +59,9 @@ def test_env_file_overrides_os_environ(monkeypatch, tmp_path):
 
     # Assert
     assert secrets == {
-        'host': 'file.host.com',  # Value from file should win
-        'user': 'system_user',  # Value from system should persist
-        'password': 'file_password'  # New value from file should be present
+        "host": "file.host.com",  # Value from file should win
+        "user": "system_user",  # Value from system should persist
+        "password": "file_password",  # New value from file should be present
     }
 
 

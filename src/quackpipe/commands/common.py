@@ -3,6 +3,7 @@ src/quackpipe/commands/common.py
 
 This module contains common utilities shared across CLI command modules.
 """
+
 import logging
 import os
 import sys
@@ -44,7 +45,7 @@ def setup_cli_logging(verbose_level: int = 0):
     handler = logging.StreamHandler(sys.stdout)
 
     # Create a formatter and add it to the handler
-    formatter = logging.Formatter('%(asctime)s - %(message)s')
+    formatter = logging.Formatter("%(asctime)s - %(message)s")
     handler.setFormatter(formatter)
 
     # Add the handler to the logger. This ensures messages will be output.

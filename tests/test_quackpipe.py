@@ -36,11 +36,12 @@ from quackpipe.exceptions import (
 from quackpipe.secrets import fetch_secret_bundle
 from quackpipe.utils import is_connection_open
 
-sys.path.insert(0, 'src')
+sys.path.insert(0, "src")
 
 import quackpipe
 
 # ==================== GENERAL TESTS ====================
+
 
 def test_version_exposed():
     """Test that the library version is exposed and not 'unknown'."""
@@ -50,6 +51,7 @@ def test_version_exposed():
 
 
 # ==================== CONFIG TESTS ====================
+
 
 def test_source_type_enum():
     """Test SourceType enum values."""
@@ -63,10 +65,7 @@ def test_source_type_enum():
 def test_source_config_creation():
     """Test SourceConfig dataclass creation."""
     config = SourceConfig(
-        name="test_source",
-        type=SourceType.POSTGRES,
-        config={"port": 5432},
-        secret_name="test_secret"
+        name="test_source", type=SourceType.POSTGRES, config={"port": 5432}, secret_name="test_secret"
     )
 
     assert config.name == "test_source"
@@ -85,6 +84,7 @@ def test_source_config_defaults():
 
 # ==================== BUILDER API TESTS ====================
 
+
 def test_builder_creation():
     """Test QuackpipeBuilder initialization."""
     builder = QuackpipeBuilder()
@@ -96,10 +96,7 @@ def test_builder_add_source():
     builder = QuackpipeBuilder()
 
     result = builder.add_source(
-        name="test_pg",
-        type=SourceType.POSTGRES,
-        config={"port": 5432},
-        secret_name="pg_secret"
+        name="test_pg", type=SourceType.POSTGRES, config={"port": 5432}, secret_name="pg_secret"
     )
 
     # Should return self for chaining
@@ -119,10 +116,7 @@ def test_builder_add_source_config():
     builder = QuackpipeBuilder()
 
     source_config = SourceConfig(
-        name="test_pg",
-        type=SourceType.POSTGRES,
-        config={"port": 5432},
-        secret_name="pg_secret"
+        name="test_pg", type=SourceType.POSTGRES, config={"port": 5432}, secret_name="pg_secret"
     )
 
     result = builder.add_source_config(source_config)
@@ -143,9 +137,9 @@ def test_builder_chaining():
     """Test builder method chaining."""
     builder = QuackpipeBuilder()
 
-    result = (builder
-              .add_source("pg1", SourceType.POSTGRES, secret_name="pg_secret")
-              .add_source_config(SourceConfig("s3_1", SourceType.S3, secret_name="s3_secret")))
+    result = builder.add_source("pg1", SourceType.POSTGRES, secret_name="pg_secret").add_source_config(
+        SourceConfig("s3_1", SourceType.S3, secret_name="s3_secret")
+    )
 
     assert result is builder
     assert len(builder._sources) == 2
@@ -168,7 +162,7 @@ def test_builder_session_empty():
         builder.session()
 
 
-@patch('quackpipe.builder.core_session')
+@patch("quackpipe.builder.core_session")
 def test_builder_session_success(mock_session):
     """Test successful builder session creation."""
     builder = QuackpipeBuilder()
@@ -201,16 +195,16 @@ def test_parse_config_from_yaml(sample_yaml_config):
 
     assert len(configs) == 2
 
-    pg_config = next(c for c in configs if c.name == 'pg_main')
+    pg_config = next(c for c in configs if c.name == "pg_main")
     assert pg_config.type == SourceType.POSTGRES
-    assert pg_config.secret_name == 'pg_prod'
-    assert pg_config.config['port'] == 5432
-    assert pg_config.config['tables'] == ['users', 'orders']
+    assert pg_config.secret_name == "pg_prod"
+    assert pg_config.config["port"] == 5432
+    assert pg_config.config["tables"] == ["users", "orders"]
 
-    s3_config = next(c for c in configs if c.name == 'datalake')
+    s3_config = next(c for c in configs if c.name == "datalake")
     assert s3_config.type == SourceType.S3
-    assert s3_config.secret_name == 'aws_datalake'
-    assert s3_config.config['region'] == 'us-east-1'
+    assert s3_config.secret_name == "aws_datalake"
+    assert s3_config.config["region"] == "us-east-1"
 
 
 def test_parse_config_from_yaml_not_found():
@@ -221,34 +215,24 @@ def test_parse_config_from_yaml_not_found():
 
 def test_parse_config_invalid_type(temp_dir):
     """Test parsing YAML with invalid source type."""
-    invalid_config = {
-        'sources': {
-            'bad_source': {
-                'type': 'invalid_type',
-                'secret_name': 'test'
-            }
-        }
-    }
+    invalid_config = {"sources": {"bad_source": {"type": "invalid_type", "secret_name": "test"}}}
 
-    config_path = os.path.join(temp_dir, 'invalid.yml')
-    with open(config_path, 'w') as f:
+    config_path = os.path.join(temp_dir, "invalid.yml")
+    with open(config_path, "w") as f:
         yaml.dump(invalid_config, f)
 
     with pytest.raises(ConfigError, match="Configuration is invalid"):
         parse_config_from_yaml(get_config_yaml(config_path))
 
 
-@patch('duckdb.connect')
+@patch("duckdb.connect")
 def test_prepare_connection(mock_connect, mock_duckdb_connection, env_secrets):
     """Test connection preparation."""
     mock_connect.return_value = mock_duckdb_connection
 
     configs = [
         SourceConfig(
-            name="test_pg",
-            type=SourceType.POSTGRES,
-            config={"port": 5432, "tables": ["users"]},
-            secret_name="pg_prod"
+            name="test_pg", type=SourceType.POSTGRES, config={"port": 5432, "tables": ["users"]}, secret_name="pg_prod"
         )
     ]
 
@@ -272,7 +256,7 @@ def test_prepare_connection_empty():
     mock_con.install_extension.assert_not_called()
 
 
-@patch('quackpipe.core._prepare_connection')
+@patch("quackpipe.core._prepare_connection")
 def test_session_with_config_path(mock_prepare, sample_yaml_config, env_secrets):
     """Test session creation with config path."""
 
@@ -284,7 +268,7 @@ def test_session_with_config_path(mock_prepare, sample_yaml_config, env_secrets)
     assert not is_connection_open(con)
 
 
-@patch('quackpipe.core._prepare_connection')
+@patch("quackpipe.core._prepare_connection")
 def test_session_with_env_var(mock_prepare, sample_yaml_config, env_secrets):
     """Test session creation with environment variable."""
     monkeypatch = pytest.MonkeyPatch()
@@ -298,7 +282,7 @@ def test_session_with_env_var(mock_prepare, sample_yaml_config, env_secrets):
     assert not is_connection_open(con)
 
 
-@patch('duckdb.connect')
+@patch("duckdb.connect")
 def test_session_with_configs(mock_connect, mock_duckdb_connection, monkeypatch, env_secrets):
     """Test session creation with direct configs."""
     mock_connect.return_value = mock_duckdb_connection
@@ -333,7 +317,10 @@ def test_session_with_configs(mock_connect, mock_duckdb_connection, monkeypatch,
 def test_session_no_config(monkeypatch):
     """Test session creation without config."""
     monkeypatch.delenv("QUACKPIPE_CONFIG_PATH", raising=False)
-    with pytest.raises(ConfigError, match="Must provide either a 'config_path', a 'configs' list, or set the 'QUACKPIPE_CONFIG_PATH' environment variable."):
+    with pytest.raises(
+        ConfigError,
+        match="Must provide either a 'config_path', a 'configs' list, or set the 'QUACKPIPE_CONFIG_PATH' environment variable.",
+    ):
         with session():
             pass
 
@@ -344,7 +331,7 @@ def test_session_with_invalid_source_filter(sample_yaml_config, env_secrets):
         session(config_path=sample_yaml_config, sources=["invalid_source_name"])
 
 
-@patch('quackpipe.core._prepare_connection')
+@patch("quackpipe.core._prepare_connection")
 def test_session_prioritizes_configs_over_env_var(mock_prepare, sample_yaml_config, monkeypatch):
     """Test that direct configs are prioritized over the environment variable."""
     # Set the env var to a valid config
@@ -365,8 +352,8 @@ def test_session_prioritizes_configs_over_env_var(mock_prepare, sample_yaml_conf
     assert prepared_configs[0].name == "direct_config"
 
 
-@patch('duckdb.connect')
-@patch('quackpipe.core._prepare_connection')
+@patch("duckdb.connect")
+@patch("quackpipe.core._prepare_connection")
 def test_session_with_sources_filter(mock_prepare, mock_connect, mock_duckdb_connection, env_secrets):
     """Test session with sources filter."""
     mock_connect.return_value = mock_duckdb_connection
@@ -374,7 +361,7 @@ def test_session_with_sources_filter(mock_prepare, mock_connect, mock_duckdb_con
     configs = [
         SourceConfig(name="pg1", type=SourceType.POSTGRES, config={"host": "h", "database": "d"}),
         SourceConfig(name="pg2", type=SourceType.POSTGRES, config={"host": "h", "database": "d"}),
-        SourceConfig(name="s3_1", type=SourceType.S3)
+        SourceConfig(name="s3_1", type=SourceType.S3),
     ]
 
     session(configs=configs, sources=["pg1", "s3_1"])
@@ -386,8 +373,8 @@ def test_session_with_sources_filter(mock_prepare, mock_connect, mock_duckdb_con
     assert {c.name for c in prepared_configs} == {"pg1", "s3_1"}
 
 
-@patch('duckdb.connect')
-@patch('quackpipe.core._prepare_connection')
+@patch("duckdb.connect")
+@patch("quackpipe.core._prepare_connection")
 def test_session_as_function(mock_prepare, mock_connect, mock_duckdb_connection, env_secrets):
     """Test session creation as a direct function call."""
     mock_connect.return_value = mock_duckdb_connection
@@ -406,7 +393,9 @@ def test_session_as_function(mock_prepare, mock_connect, mock_duckdb_connection,
     con.close()
     mock_duckdb_connection.close.assert_called_once()
 
+
 # ==================== ERROR HANDLING TESTS ====================
+
 
 def test_config_error_inheritance():
     """Test ConfigError exception inheritance."""
@@ -479,7 +468,7 @@ def test_source_connection_error_is_not_builtin():
     assert not issubclass(SourceConnectionError, builtins.ConnectionError)
 
 
-@patch('duckdb.connect')
+@patch("duckdb.connect")
 def test_extension_error_raised_on_install_failure(mock_connect):
     """Test that a duckdb.IOException during extension install is wrapped as ExtensionError."""
     mock_con = Mock(spec=DuckDBPyConnection)
@@ -502,15 +491,27 @@ def test_extension_error_raised_on_install_failure(mock_connect):
 
 # ==================== PARAMETRIZED TESTS ====================
 
-@pytest.mark.parametrize("config_data,expected_count", [
-    ({'sources': {}}, 0),
-    ({'sources': {'pg1': {'type': 'postgres', "secret_name": "..."}}}, 1),
-    ({'sources': {'pg1': {'type': 'postgres', "secret_name": "..."}, 's3_1': {'type': 's3', "secret_name": "..."}}}, 2),
-])
+
+@pytest.mark.parametrize(
+    "config_data,expected_count",
+    [
+        ({"sources": {}}, 0),
+        ({"sources": {"pg1": {"type": "postgres", "secret_name": "..."}}}, 1),
+        (
+            {
+                "sources": {
+                    "pg1": {"type": "postgres", "secret_name": "..."},
+                    "s3_1": {"type": "s3", "secret_name": "..."},
+                }
+            },
+            2,
+        ),
+    ],
+)
 def test_config_parsing_counts(temp_dir, config_data, expected_count):
     """Test configuration parsing with different source counts."""
-    config_path = os.path.join(temp_dir, 'test.yml')
-    with open(config_path, 'w') as f:
+    config_path = os.path.join(temp_dir, "test.yml")
+    with open(config_path, "w") as f:
         yaml.dump(config_data, f)
 
     configs = parse_config_from_yaml(get_config_yaml(config_path))
@@ -519,19 +520,17 @@ def test_config_parsing_counts(temp_dir, config_data, expected_count):
 
 # ==================== PERFORMANCE/EDGE CASE TESTS ====================
 
+
 def test_large_config_handling(temp_dir):
     """Test handling of configuration with many sources."""
-    large_config = {'sources': {}}
+    large_config = {"sources": {}}
 
     # Create 50 sources
     for i in range(50):
-        large_config['sources'][f'source_{i}'] = {
-            'type': 'postgres',
-            'secret_name': f'secret_{i}'
-        }
+        large_config["sources"][f"source_{i}"] = {"type": "postgres", "secret_name": f"secret_{i}"}
 
-    config_path = os.path.join(temp_dir, 'large.yml')
-    with open(config_path, 'w') as f:
+    config_path = os.path.join(temp_dir, "large.yml")
+    with open(config_path, "w") as f:
         yaml.dump(large_config, f)
 
     configs = parse_config_from_yaml(get_config_yaml(config_path))
@@ -541,7 +540,7 @@ def test_large_config_handling(temp_dir):
 def test_empty_secret_bundle_handling():
     """Test handling of empty secret bundles."""
     # Test with None
-    result = fetch_secret_bundle('')
+    result = fetch_secret_bundle("")
     assert result == {}
 
 
@@ -553,9 +552,9 @@ def test_builder_with_none_config():
     assert builder._sources[0].config == {}
 
 
-@patch('quackpipe.sources.sqlite.SQLiteHandler.render_sql', return_value="-- SOURCE-SPECIFIC SQL")
-@patch('quackpipe.core.get_global_statements')
-@patch('quackpipe.core.get_configs')
+@patch("quackpipe.sources.sqlite.SQLiteHandler.render_sql", return_value="-- SOURCE-SPECIFIC SQL")
+@patch("quackpipe.core.get_global_statements")
+@patch("quackpipe.core.get_configs")
 def test_full_statement_execution_order(mock_get_configs, mock_get_global_statements, mock_render_sql):
     """Verify the execution order of all statement types."""
     # Mock the config to return specific statements
@@ -565,12 +564,12 @@ def test_full_statement_execution_order(mock_get_configs, mock_get_global_statem
             type=SourceType.SQLITE,
             config={"path": ":memory:"},
             before_source_statements=["-- BEFORE-SOURCE"],
-            after_source_statements=["-- AFTER-SOURCE"]
+            after_source_statements=["-- AFTER-SOURCE"],
         )
     ]
     mock_get_global_statements.return_value = {
-        'before_all_statements': ["-- BEFORE-ALL"],
-        'after_all_statements': ["-- AFTER-ALL"]
+        "before_all_statements": ["-- BEFORE-ALL"],
+        "after_all_statements": ["-- AFTER-ALL"],
     }
 
     # Mock the connection to trace executed SQL
@@ -581,18 +580,12 @@ def test_full_statement_execution_order(mock_get_configs, mock_get_global_statem
     mock_con.__enter__ = Mock(return_value=mock_con)
     mock_con.__exit__ = Mock(return_value=None)
 
-    with patch('duckdb.connect', return_value=mock_con):
+    with patch("duckdb.connect", return_value=mock_con):
         with session(config_path="dummy.yml"):
             pass
 
     # Define the expected order of SQL execution
-    expected_order = [
-        "-- BEFORE-ALL",
-        "-- BEFORE-SOURCE",
-        "-- SOURCE-SPECIFIC SQL",
-        "-- AFTER-SOURCE",
-        "-- AFTER-ALL"
-    ]
+    expected_order = ["-- BEFORE-ALL", "-- BEFORE-SOURCE", "-- SOURCE-SPECIFIC SQL", "-- AFTER-SOURCE", "-- AFTER-ALL"]
 
     # Assert that the SQL was executed in the correct order
     assert executed_sql == expected_order, "The SQL statements were not executed in the correct order."

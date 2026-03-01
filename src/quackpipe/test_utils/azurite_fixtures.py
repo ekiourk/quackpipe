@@ -22,13 +22,13 @@ def azurite_container() -> Generator[AzuriteContainer, None, None]:
 @pytest.fixture(scope="module")
 def quackpipe_with_azurite(azurite_container) -> QuackpipeBuilder:
     builder = QuackpipeBuilder().add_source(
-            name="my_azure_storage",
-            type=SourceType.AZURE,
-            config={
-                "provider": "connection_string",
-                "connection_string": azurite_container.get_connection_string(),
-            }
-        )
+        name="my_azure_storage",
+        type=SourceType.AZURE,
+        config={
+            "provider": "connection_string",
+            "connection_string": azurite_container.get_connection_string(),
+        },
+    )
     return builder
 
 
@@ -59,10 +59,7 @@ def azurite_container_with_data(azurite_container, azurite_test_container_client
     parquet_data = parquet_buffer.getvalue()
 
     azurite_test_container_client.upload_blob(
-        name="employees.parquet",
-        data=io.BytesIO(parquet_data),
-        length=len(parquet_data),
-        overwrite=True
+        name="employees.parquet", data=io.BytesIO(parquet_data), length=len(parquet_data), overwrite=True
     )
     print(f"Uploaded employees.parquet to Azurite container '{azurite_test_container_client.container_name}'.")
 

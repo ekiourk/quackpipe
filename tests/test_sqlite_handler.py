@@ -3,6 +3,7 @@ tests/test_sqlite_handler.py
 
 This file contains pytest tests for the SQLiteHandler class in quackpipe.
 """
+
 import pytest
 
 from quackpipe import QuackpipeBuilder, configure_secret_provider
@@ -24,46 +25,38 @@ def test_sqlite_handler_properties():
     "test_id, context, expected_sql, unexpected_sql_parts",
     [
         (
-                "read_only_default",
-                {
-                    "connection_name": "analytics_db",
-                    "path": "/data/analytics.db"
-                    # read_only defaults to True
-                },
-                "ATTACH '/data/analytics.db' AS analytics_db (TYPE SQLITE, READ_ONLY);",
-                []  # No unexpected parts
+            "read_only_default",
+            {
+                "connection_name": "analytics_db",
+                "path": "/data/analytics.db",
+                # read_only defaults to True
+            },
+            "ATTACH '/data/analytics.db' AS analytics_db (TYPE SQLITE, READ_ONLY);",
+            [],  # No unexpected parts
         ),
         (
-                "read_write_explicit",
-                {
-                    "connection_name": "main_db",
-                    "path": "main.sqlite",
-                    "read_only": False  # Explicitly set to read-write
-                },
-                "ATTACH 'main.sqlite' AS main_db (TYPE SQLITE);",
-                ["READ_ONLY"]  # Should NOT contain the READ_ONLY flag
+            "read_write_explicit",
+            {
+                "connection_name": "main_db",
+                "path": "main.sqlite",
+                "read_only": False,  # Explicitly set to read-write
+            },
+            "ATTACH 'main.sqlite' AS main_db (TYPE SQLITE);",
+            ["READ_ONLY"],  # Should NOT contain the READ_ONLY flag
         ),
         (
-                "read_only_explicit",
-                {
-                    "connection_name": "archive",
-                    "path": "archive.db",
-                    "read_only": True
-                },
-                "ATTACH 'archive.db' AS archive (TYPE SQLITE, READ_ONLY);",
-                []
+            "read_only_explicit",
+            {"connection_name": "archive", "path": "archive.db", "read_only": True},
+            "ATTACH 'archive.db' AS archive (TYPE SQLITE, READ_ONLY);",
+            [],
         ),
         (
-                "with_encryption",
-                {
-                    "connection_name": "secure_db",
-                    "path": "secure.db",
-                    "encryption_key": "secret_key_123"
-                },
-                "ATTACH 'secure.db' AS secure_db (TYPE SQLITE, READ_ONLY, ENCRYPTION_KEY 'secret_key_123');",
-                []
+            "with_encryption",
+            {"connection_name": "secure_db", "path": "secure.db", "encryption_key": "secret_key_123"},
+            "ATTACH 'secure.db' AS secure_db (TYPE SQLITE, READ_ONLY, ENCRYPTION_KEY 'secret_key_123');",
+            [],
         ),
-    ]
+    ],
 )
 def test_sqlite_render_sql(test_id, context, expected_sql, unexpected_sql_parts):
     """
@@ -96,11 +89,7 @@ def test_sqlite_render_sql_with_secrets(monkeypatch):
     monkeypatch.setenv("MY_SQLITE_SECRET_ENCRYPTION_KEY", "secret_from_env")
     configure_secret_provider(env_file=None)
 
-    context = {
-        "connection_name": "secure_sqlite",
-        "path": "secure.db",
-        "secret_name": secret_name
-    }
+    context = {"connection_name": "secure_sqlite", "path": "secure.db", "secret_name": secret_name}
     handler = SQLiteHandler(context)
 
     # Act

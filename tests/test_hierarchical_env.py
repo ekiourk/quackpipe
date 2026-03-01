@@ -21,6 +21,7 @@ def test_multiple_env_files(tmp_path):
     # Check that f1 values persist if not overridden
     assert provider.env_vars.get("SHARED_VAR") == "shared_base"
 
+
 def test_single_env_file_compat(tmp_path):
     f1 = tmp_path / ".env"
     with open(f1, "w") as f:
@@ -29,12 +30,15 @@ def test_single_env_file_compat(tmp_path):
     provider = EnvSecretProvider(env_file=str(f1))
     assert provider.env_vars.get("FOO") == "bar"
 
+
 def test_missing_env_file_warning(caplog):
     import logging
+
     with caplog.at_level(logging.WARNING):
         EnvSecretProvider(env_file=["non_existent_file"])
 
     assert "Warning: env_file 'non_existent_file' not found" in caplog.text
+
 
 def test_env_loading_no_side_effects(tmp_path):
     f = tmp_path / ".env.test"
@@ -51,6 +55,7 @@ def test_env_loading_no_side_effects(tmp_path):
 
     # Check it does NOT exist in os.environ
     assert "SIDE_EFFECT_VAR" not in os.environ
+
 
 def test_env_loading_overrides_system(tmp_path, monkeypatch):
     """

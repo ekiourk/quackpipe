@@ -1,6 +1,7 @@
 """
 Tests for the core quackpipe functions.
 """
+
 import textwrap
 
 import pytest
@@ -31,7 +32,13 @@ def test_config(tmp_path):
 
     merged_config = get_source_params("test_source", config_path=str(config_path), env_file=str(env_path))
 
-    assert merged_config.HOST == merged_config.host == merged_config['host'] == merged_config['HOST'] == merged_config['Host']
+    assert (
+        merged_config.HOST
+        == merged_config.host
+        == merged_config["host"]
+        == merged_config["HOST"]
+        == merged_config["Host"]
+    )
 
     assert merged_config == {
         "host": "localhost",

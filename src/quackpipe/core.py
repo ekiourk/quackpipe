@@ -1,6 +1,7 @@
 """
 The core logic of quackpipe.
 """
+
 import logging
 from functools import wraps
 
@@ -54,7 +55,7 @@ def _prepare_connection(con: duckdb.DuckDBPyConnection, configs: list[SourceConf
         try:
             if isinstance(plugin_def, Plugin):
                 # It's a structured Plugin object with extra parameters
-                install_params = {'repository': plugin_def.repository}
+                install_params = {"repository": plugin_def.repository}
                 # Filter out None values to avoid passing `repository=None`
                 clean_params = {k: v for k, v in install_params.items() if v is not None}
                 con.install_extension(plugin_name, **clean_params)
@@ -102,10 +103,10 @@ def _prepare_connection(con: duckdb.DuckDBPyConnection, configs: list[SourceConf
 
 
 def session(
-        config_path: str | list[str] | None = None,
-        configs: list[SourceConfig] | None = None,
-        sources: list[str] | None = None,
-        env_file: str | list[str] | None = None,
+    config_path: str | list[str] | None = None,
+    configs: list[SourceConfig] | None = None,
+    sources: list[str] | None = None,
+    env_file: str | list[str] | None = None,
 ) -> duckdb.DuckDBPyConnection:
     """
     Creates and returns a pre-configured DuckDB connection.
@@ -137,7 +138,9 @@ def session(
         all_names = {c.name for c in all_configs}
         missing = [s for s in sources if s not in all_names]
         if missing:
-            raise ValidationError(f"The following requested sources were not found in the configuration: {', '.join(missing)}")
+            raise ValidationError(
+                f"The following requested sources were not found in the configuration: {', '.join(missing)}"
+            )
 
         active_configs = [c for c in all_configs if c.name in sources]
 
@@ -147,18 +150,18 @@ def session(
         if HandlerClass:
             HandlerClass.validate(cfg.config, cfg.secret_name, resolve_secrets=True)
 
-    con = duckdb.connect(database=':memory:')
+    con = duckdb.connect(database=":memory:")
 
     global_statements = get_global_statements(config_path) if config_path else {}
 
     # Execute before_all_statements
-    for stmt in global_statements.get('before_all_statements', []):
+    for stmt in global_statements.get("before_all_statements", []):
         con.execute(stmt)
 
     _prepare_connection(con, active_configs)
 
     # Execute after_all_statements
-    for stmt in global_statements.get('after_all_statements', []):
+    for stmt in global_statements.get("after_all_statements", []):
         con.execute(stmt)
 
     return con

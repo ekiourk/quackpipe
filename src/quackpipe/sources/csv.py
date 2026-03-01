@@ -1,4 +1,5 @@
 """Source Handler for CSV files."""
+
 from typing import Any
 
 from quackpipe.sources.base import BaseSourceHandler
@@ -19,7 +20,7 @@ class CSVHandler(BaseSourceHandler):
 
     @property
     def required_plugins(self) -> list[str]:
-        return [] # CSV is built-in to DuckDB
+        return []  # CSV is built-in to DuckDB
 
     @classmethod
     def validate(cls, config: dict[str, Any], secret_name: str | None = None, resolve_secrets: bool = False):
@@ -31,7 +32,7 @@ class CSVHandler(BaseSourceHandler):
         """
         Renders a VIEW for the CSV file.
         """
-        connection_name = self.context.get('connection_name')
-        path = self.context.get('path')
+        connection_name = self.context.get("connection_name")
+        path = self.context.get("path")
 
         return f"CREATE OR REPLACE VIEW {connection_name} AS SELECT * FROM read_csv_auto('{path}');"
