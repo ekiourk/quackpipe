@@ -96,7 +96,7 @@ def test_builder_add_source():
     builder = QuackpipeBuilder()
 
     result = builder.add_source(
-        name="test_pg", type=SourceType.POSTGRES, config={"port": 5432}, secret_name="pg_secret"
+        name="test_pg", source_type=SourceType.POSTGRES, config={"port": 5432}, secret_name="pg_secret"
     )
 
     # Should return self for chaining
@@ -137,7 +137,7 @@ def test_builder_chaining():
     """Test builder method chaining."""
     builder = QuackpipeBuilder()
 
-    result = builder.add_source("pg1", SourceType.POSTGRES, secret_name="pg_secret").add_source_config(
+    result = builder.add_source("pg1", source_type=SourceType.POSTGRES, secret_name="pg_secret").add_source_config(
         SourceConfig("s3_1", SourceType.S3, secret_name="s3_secret")
     )
 
@@ -166,7 +166,7 @@ def test_builder_session_empty():
 def test_builder_session_success(mock_session):
     """Test successful builder session creation."""
     builder = QuackpipeBuilder()
-    builder.add_source("test", SourceType.POSTGRES, secret_name="dummy")
+    builder.add_source("test", source_type=SourceType.POSTGRES, secret_name="dummy")
 
     builder.session()
 
@@ -179,13 +179,13 @@ def test_postgres_validation():
 
     # Fails without host/database OR secret_name
     with pytest.raises(ValidationError, match="requires 'host', 'database'"):
-        builder.add_source("pg", SourceType.POSTGRES, config={})
+        builder.add_source("pg", source_type=SourceType.POSTGRES, config={})
 
     # Passes with secret_name
-    builder.add_source("pg_ok", SourceType.POSTGRES, secret_name="my_secret")
+    builder.add_source("pg_ok", source_type=SourceType.POSTGRES, secret_name="my_secret")
 
     # Passes with host/database
-    builder.add_source("pg_ok2", SourceType.POSTGRES, config={"host": "localhost", "database": "db"})
+    builder.add_source("pg_ok2", source_type=SourceType.POSTGRES, config={"host": "localhost", "database": "db"})
 
 
 # ==================== CORE FUNCTIONALITY TESTS ====================
@@ -547,7 +547,7 @@ def test_empty_secret_bundle_handling():
 def test_builder_with_none_config():
     """Test builder with None config parameter."""
     builder = QuackpipeBuilder()
-    builder.add_source("test", SourceType.POSTGRES, config=None, secret_name="dummy")
+    builder.add_source("test", source_type=SourceType.POSTGRES, config=None, secret_name="dummy")
 
     assert builder._sources[0].config == {}
 

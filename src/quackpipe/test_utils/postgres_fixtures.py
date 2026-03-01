@@ -99,7 +99,7 @@ def quackpipe_with_pg_source(postgres_container: PostgresContainer) -> Quackpipe
     """
     builder = QuackpipeBuilder().add_source(
         name=POSTGRES_SOURCE_NAME,
-        type=SourceType.POSTGRES,
+        source_type=SourceType.POSTGRES,
         config={
             "database": "test",
             "user": "test",

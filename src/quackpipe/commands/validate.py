@@ -6,6 +6,12 @@ This module contains the implementation for the 'validate' CLI command.
 
 import argparse
 from argparse import _SubParsersAction
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    SubParsersAction = _SubParsersAction[argparse.ArgumentParser]
+else:
+    SubParsersAction = _SubParsersAction
 
 from jsonschema.exceptions import ValidationError
 
@@ -59,7 +65,7 @@ def handler(args: argparse.Namespace) -> None:
         print(f"An unexpected error occurred: {e}")
 
 
-def register_command(subparsers: _SubParsersAction) -> None:
+def register_command(subparsers: SubParsersAction) -> None:
     """Registers the command and its arguments to the main CLI parser."""
     parser_validate = subparsers.add_parser(
         "validate", help="Validate a quackpipe configuration file (or merged files) against the schema."

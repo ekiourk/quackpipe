@@ -2,8 +2,9 @@
 
 from typing import Any
 
-from quackpipe.sources.base import BaseSourceHandler
 from quackpipe.validation_utils import get_merged_params, validate_required_fields
+
+from .base import BaseSourceHandler
 
 
 class CSVHandler(BaseSourceHandler):

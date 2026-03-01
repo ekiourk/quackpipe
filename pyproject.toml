@@ -89,8 +89,6 @@ python_version = "3.12"
 strict = true
 ignore_missing_imports = true
 warn_unused_configs = true
-disallow_subclassing_any = false
-disallow_any_generics = false
 
 [project.scripts]
 quackpipe = "quackpipe.cli:main"

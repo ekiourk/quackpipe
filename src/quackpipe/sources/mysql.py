@@ -3,8 +3,9 @@
 from typing import Any
 
 from quackpipe.secrets import fetch_secret_bundle
-from quackpipe.sources.base import BaseSourceHandler
 from quackpipe.validation_utils import get_merged_params, validate_required_fields
+
+from .base import BaseSourceHandler
 
 
 class MySQLHandler(BaseSourceHandler):

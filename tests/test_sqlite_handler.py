@@ -106,4 +106,4 @@ def test_sqlite_render_sql_raises_error_if_path_is_missing():
     """
     builder = QuackpipeBuilder()
     with pytest.raises(ValidationError, match="Sqlite source requires 'path' in its configuration."):
-        builder.add_source(name="bad_config", type="sqlite", config={})
+        builder.add_source(name="bad_config", source_type="sqlite", config={})

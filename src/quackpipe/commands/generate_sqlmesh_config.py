@@ -6,7 +6,12 @@ This module contains the implementation for the 'generate-sqlmesh-config' CLI co
 
 import argparse
 from argparse import _SubParsersAction
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    SubParsersAction = _SubParsersAction[argparse.ArgumentParser]
+else:
+    SubParsersAction = _SubParsersAction
 
 import yaml
 
@@ -79,7 +84,7 @@ def handler(args: argparse.Namespace) -> None:
         print(f"❌ Failed to write output file: {e}")
 
 
-def register_command(subparsers: _SubParsersAction) -> None:
+def register_command(subparsers: SubParsersAction) -> None:
     """Registers the command and its arguments to the main CLI parser."""
     parser_gen = subparsers.add_parser(
         "generate-sqlmesh-config", help="Generate a SQLMesh config file from a quackpipe config."

@@ -6,6 +6,12 @@ This module contains the implementation for the 'ui' CLI command.
 
 import argparse
 from argparse import _SubParsersAction
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    SubParsersAction = _SubParsersAction[argparse.ArgumentParser]
+else:
+    SubParsersAction = _SubParsersAction
 
 from .. import ConfigError
 from ..core import session
@@ -57,7 +63,7 @@ def handler(args: argparse.Namespace) -> None:
         log.info("Shutting down.")
 
 
-def register_command(subparsers: _SubParsersAction) -> None:
+def register_command(subparsers: SubParsersAction) -> None:
     """Registers the command and its arguments to the main CLI parser."""
     parser_ui = subparsers.add_parser("ui", help="Launch an interactive DuckDB UI with pre-configured sources.")
     parser_ui.add_argument(

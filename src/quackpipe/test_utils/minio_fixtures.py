@@ -33,7 +33,7 @@ def minio_container() -> Generator[MinioContainer, None, None]:
 def quackpipe_with_minio(minio_container: MinioContainer) -> QuackpipeBuilder:
     builder = QuackpipeBuilder().add_source(
         name=TEST_BUCKET_NAME,
-        type=SourceType.S3,
+        source_type=SourceType.S3,
         config={
             "path": f"s3://{TEST_BUCKET_NAME}/",
             "endpoint": minio_container.get_config()["endpoint"],

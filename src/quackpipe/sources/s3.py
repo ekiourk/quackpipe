@@ -3,7 +3,8 @@
 from typing import Any
 
 from quackpipe.secrets import fetch_secret_bundle
-from quackpipe.sources.base import BaseSourceHandler
+
+from .base import BaseSourceHandler
 
 
 class S3Handler(BaseSourceHandler):

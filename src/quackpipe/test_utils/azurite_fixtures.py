@@ -23,7 +23,7 @@ def azurite_container() -> Generator[AzuriteContainer, None, None]:
 def quackpipe_with_azurite(azurite_container: AzuriteContainer) -> QuackpipeBuilder:
     builder = QuackpipeBuilder().add_source(
         name="my_azure_storage",
-        type=SourceType.AZURE,
+        source_type=SourceType.AZURE,
         config={
             "provider": "connection_string",
             "connection_string": azurite_container.get_connection_string(),

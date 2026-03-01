@@ -23,7 +23,7 @@ class QuackpipeBuilder:
     def add_source(
         self,
         name: str,
-        type: SourceType | str,
+        source_type: SourceType | str,
         config: dict[str, Any] | None = None,
         secret_name: str | None = None,
     ) -> Self:
@@ -35,35 +35,33 @@ class QuackpipeBuilder:
 
         Args:
             name: The name for the data source (e.g., 'pg_main').
-            type: The type of the source, using the SourceType enum or its string value.
+            source_type: The type of the source, using the SourceType enum or its string value.
             config: A dictionary of non-secret parameters.
             secret_name: The logical name of the secret bundle.
 
         Returns:
             The builder instance for chaining.
         """
-        source_type: SourceType | str
-        if isinstance(type, str):
+        final_type: SourceType | str
+        if isinstance(source_type, str):
             try:
-                source_type = SourceType(type)
+                final_type = SourceType(source_type)
             except ValueError:
                 # Keep as string to allow for custom/future source types
-                source_type = type
+                final_type = source_type
         else:
-            source_type = type
+            final_type = source_type
 
         clean_config = config or {}
         # Perform semantic validation if a handler exists for this type
-        if isinstance(source_type, SourceType):
-            HandlerClass: Any = SOURCE_HANDLER_REGISTRY.get(source_type)
+        if isinstance(final_type, SourceType):
+            HandlerClass: Any = SOURCE_HANDLER_REGISTRY.get(final_type)
             if HandlerClass:
                 # We don't resolve secrets at 'add_source' time by default,
                 # as the environment might not be set yet.
                 HandlerClass.validate(clean_config, secret_name, resolve_secrets=False)
 
-        source = SourceConfig(
-            name=name, type=source_type, config=SourceParams(clean_config), secret_name=secret_name
-        )
+        source = SourceConfig(name=name, type=final_type, config=SourceParams(clean_config), secret_name=secret_name)
         self._sources.append(source)
         return self
 

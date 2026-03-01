@@ -13,7 +13,8 @@ import yaml
 from jsonschema import validate
 
 from quackpipe.exceptions import ConfigError, ParsingError
-from quackpipe.utils import DotDict
+
+from .utils import DotDict
 
 
 class SourceParams(DotDict):

@@ -68,11 +68,11 @@ class PostgresCatalogProvider(CatalogProvider):
 
     @property
     def required_plugins(self) -> list[str]:
-        return list(self.handler.required_plugins)
+        return self.handler.required_plugins  # type: ignore[no-any-return]
 
     def render_catalog_setup_sql(self, duckdb_secret_name: str) -> str:
         # Delegate the call to the handler's internal method.
-        return str(self.handler.render_create_secret_sql(duckdb_secret_name))
+        return self.handler.render_create_secret_sql(duckdb_secret_name)  # type: ignore[no-any-return]
 
     def get_ducklake_catalog_reference(self, duckdb_secret_name: str) -> str:
         return f"postgres:{duckdb_secret_name}"
@@ -88,7 +88,7 @@ class SQLiteCatalogProvider(CatalogProvider):
 
     @property
     def required_plugins(self) -> list[str]:
-        return list(self.handler.required_plugins)
+        return self.handler.required_plugins  # type: ignore[no-any-return]
 
     def render_catalog_setup_sql(self, duckdb_secret_name: str) -> str:
         # SQLite needs no secret, so it returns an empty string.
@@ -111,10 +111,10 @@ class S3StorageProvider(StorageProvider):
 
     @property
     def required_plugins(self) -> list[str]:
-        return list(self.handler.required_plugins)
+        return self.handler.required_plugins  # type: ignore[no-any-return]
 
     def render_storage_setup_sql(self, duckdb_secret_name: str) -> str:
         # For S3, the setup is to create a secret if one is named.
         if self.handler.context.get("secret_name"):
-            return str(self.handler.render_create_secret_sql(duckdb_secret_name))
+            return self.handler.render_create_secret_sql(duckdb_secret_name)  # type: ignore[no-any-return]
         return ""

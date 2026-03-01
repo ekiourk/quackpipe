@@ -100,7 +100,7 @@ def mysql_container_with_data(mysql_container: MySqlContainer, mysql_engine: Any
 def quackpipe_with_mysql_source(mysql_container_with_data: MySqlContainer) -> QuackpipeBuilder:
     builder = QuackpipeBuilder().add_source(
         name="mysql_source",
-        type=SourceType.MYSQL,
+        source_type=SourceType.MYSQL,
         config={
             "database": "test",
             "user": "test",

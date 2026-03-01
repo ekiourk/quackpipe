@@ -6,6 +6,12 @@ This module contains the implementation for the 'preview-config' CLI command.
 
 import argparse
 from argparse import _SubParsersAction
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    SubParsersAction = _SubParsersAction[argparse.ArgumentParser]
+else:
+    SubParsersAction = _SubParsersAction
 
 import yaml
 
@@ -30,7 +36,7 @@ def handler(args: argparse.Namespace) -> None:
         print(f"An unexpected error occurred: {e}")
 
 
-def register_command(subparsers: _SubParsersAction) -> None:
+def register_command(subparsers: SubParsersAction) -> None:
     """Registers the command and its arguments to the main CLI parser."""
     parser = subparsers.add_parser("preview-config", help="Preview the final merged configuration from multiple files.")
     parser.add_argument(

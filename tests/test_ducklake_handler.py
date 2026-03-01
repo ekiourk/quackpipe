@@ -179,6 +179,6 @@ def test_validation_raises_error_for_invalid_config(test_id, invalid_context, ex
     with pytest.raises(ValidationError, match=expected_message):
         builder.add_source(
             name=invalid_context.get("connection_name"),
-            type="ducklake",
+            source_type="ducklake",
             config={k: v for k, v in invalid_context.items() if k != "connection_name"},
         )
