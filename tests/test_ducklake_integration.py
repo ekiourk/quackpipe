@@ -38,9 +38,6 @@ def assert_ducklake_works(**session_kwargs):
 
 def assert_merge_adjacent_files_works(**session_kwargs):
     with quackpipe.session(**session_kwargs) as con:
-        # con.execute("FORCE INSTALL ducklake FROM core_nightly;")
-        # con.execute("UNINSTALL ducklake;")
-        # con.execute("INSTALL ducklake;")
         con.execute("""
 CREATE SCHEMA local_lake.test_schema;
 
@@ -63,7 +60,6 @@ INSERT INTO local_lake.test_schema.sales_data VALUES
         -- Verify the data
         SELECT * FROM local_lake.test_schema.sales_data;
         """).df()
-
 
         duplicate = con.execute("""
         WITH partition_pivot AS (
@@ -89,13 +85,19 @@ INSERT INTO local_lake.test_schema.sales_data VALUES
         """).df()
 
         assert len(list(duplicate['files_in_partition'])) == 1
+        # NOTE: This assertion relies on internal data file ID generation order.
+        # If DuckLake's internal ID logic changes, these specific IDs {1, 4} may need update.
         assert set(list(duplicate['files_in_partition'])[0]) == {1, 4}
 
-        # extensions = con.execute("SELECT extension_name, installed, install_path, extension_version FROM duckdb_extensions();").df()
-        files_list = con.execute("SELECT * FROM ducklake_list_files('local_lake', 'sales_data', schema => 'test_schema') ORDER BY data_file;").df()
-        assert len(files_list) == 4
-        #result_maintenance = con.execute("CHECKPOINT;").df()
+        files_list_before = con.execute("SELECT * FROM ducklake_list_files('local_lake', 'sales_data', schema => 'test_schema');").df()
+        assert len(files_list_before) == 4
+
+        # Perform the merge
         con.execute("CALL local_lake.merge_adjacent_files();").df()
+
+        # Verify that the two files in the 'Laptop/UK' partition were merged into one
+        files_list_after = con.execute("SELECT * FROM ducklake_list_files('local_lake', 'sales_data', schema => 'test_schema');").df()
+        assert len(files_list_after) == 3
 
 
 
