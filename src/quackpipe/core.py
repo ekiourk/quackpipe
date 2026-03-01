@@ -8,9 +8,9 @@ import duckdb
 
 from quackpipe.config import Plugin, SourceConfig, SourceParams, get_configs, get_global_statements
 from quackpipe.exceptions import (
-    ConfigError,
     ExecutionError,
     ExtensionError,
+    ValidationError,
 )
 from quackpipe.secrets import configure_secret_provider, fetch_secret_bundle
 
@@ -133,6 +133,12 @@ def session(
 
     active_configs = all_configs
     if sources:
+        # Validate that all requested sources actually exist in the config
+        all_names = {c.name for c in all_configs}
+        missing = [s for s in sources if s not in all_names]
+        if missing:
+            raise ValidationError(f"The following requested sources were not found in the configuration: {', '.join(missing)}")
+
         active_configs = [c for c in all_configs if c.name in sources]
 
     # Perform pre-flight validation (checking that both config and environment variables are present)
@@ -196,7 +202,7 @@ def get_source_params(
     source_config = next((c for c in all_configs if c.name == source_name), None)
 
     if not source_config:
-        raise ConfigError(f"Source '{source_name}' not found in configuration.")
+        raise ValidationError(f"Source '{source_name}' not found in configuration.")
 
     secrets = fetch_secret_bundle(source_config.secret_name)
     return SourceParams({**source_config.config, **secrets})

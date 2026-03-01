@@ -8,10 +8,12 @@ This test file covers:
 - Error handling
 """
 
+import builtins
 import os
 import sys
 from unittest.mock import Mock, patch
 
+import duckdb
 import pytest
 import yaml
 from duckdb import DuckDBPyConnection
@@ -20,10 +22,15 @@ from quackpipe.builder import QuackpipeBuilder
 from quackpipe.config import SourceConfig, SourceType, get_config_yaml, parse_config_from_yaml
 from quackpipe.core import _prepare_connection, session
 from quackpipe.exceptions import (
+    AccessDeniedError,
     ConfigError,
     ExecutionError,
+    ExtensionError,
+    ParsingError,
+    ProviderError,
     QuackpipeError,
     SecretError,
+    SourceConnectionError,
     ValidationError,
 )
 from quackpipe.secrets import fetch_secret_bundle
@@ -208,7 +215,7 @@ def test_parse_config_from_yaml(sample_yaml_config):
 
 def test_parse_config_from_yaml_not_found():
     """Test parsing non-existent YAML file."""
-    with pytest.raises(ConfigError, match="Configuration file not found"):
+    with pytest.raises(ParsingError, match="Configuration file not found"):
         parse_config_from_yaml(get_config_yaml("nonexistent.yml"))
 
 
@@ -331,6 +338,12 @@ def test_session_no_config(monkeypatch):
             pass
 
 
+def test_session_with_invalid_source_filter(sample_yaml_config, env_secrets):
+    """Test that session() raises ValidationError for non-existent source in filter."""
+    with pytest.raises(ValidationError, match="requested sources were not found"):
+        session(config_path=sample_yaml_config, sources=["invalid_source_name"])
+
+
 @patch('quackpipe.core._prepare_connection')
 def test_session_prioritizes_configs_over_env_var(mock_prepare, sample_yaml_config, monkeypatch):
     """Test that direct configs are prioritized over the environment variable."""
@@ -411,6 +424,80 @@ def test_secret_error_inheritance():
     assert isinstance(error, QuackpipeError)
     assert isinstance(error, Exception)
     assert str(error) == "Test secret error"
+
+
+def test_default_message_fallback():
+    """Test that omitting a message falls back to the class default_message."""
+    error = ConfigError()
+
+    assert error.message == ConfigError.default_message
+    assert str(error) == ConfigError.default_message
+    assert error.args[0] == ConfigError.default_message
+
+
+def test_custom_message_overrides_default():
+    """Test that a custom message takes priority over default_message."""
+    error = ConfigError("something went wrong")
+
+    assert error.message == "something went wrong"
+    assert str(error) == "something went wrong"
+    assert error.args[0] == "something went wrong"
+
+
+def test_empty_string_message_is_preserved():
+    """Test that an empty string is NOT replaced by the default_message.
+
+    This guards the 'is not None' implementation choice over a plain 'or'.
+    """
+    error = ConfigError("")
+
+    assert error.message == ""
+    assert str(error) == ""
+    assert error.args[0] == ""
+
+
+def test_provider_error_hierarchy():
+    """Test that all ProviderError subclasses propagate the full hierarchy."""
+    for cls in (SecretError, SourceConnectionError, ExtensionError):
+        err = cls()
+        assert isinstance(err, ProviderError), f"{cls.__name__} should be a ProviderError"
+        assert isinstance(err, QuackpipeError), f"{cls.__name__} should be a QuackpipeError"
+        assert isinstance(err, Exception)
+
+
+def test_execution_error_hierarchy():
+    """Test that ExecutionError and its subclass propagate the full hierarchy."""
+    for cls in (ExecutionError, AccessDeniedError):
+        err = cls()
+        assert isinstance(err, QuackpipeError), f"{cls.__name__} should be a QuackpipeError"
+        assert isinstance(err, Exception)
+
+
+def test_source_connection_error_is_not_builtin():
+    """Guard against SourceConnectionError accidentally matching builtins.ConnectionError."""
+    assert SourceConnectionError is not builtins.ConnectionError
+    assert not issubclass(SourceConnectionError, builtins.ConnectionError)
+
+
+@patch('duckdb.connect')
+def test_extension_error_raised_on_install_failure(mock_connect):
+    """Test that a duckdb.IOException during extension install is wrapped as ExtensionError."""
+    mock_con = Mock(spec=DuckDBPyConnection)
+    mock_con.install_extension.side_effect = duckdb.IOException("simulated network failure")
+    mock_con.__enter__ = Mock(return_value=mock_con)
+    mock_con.__exit__ = Mock(return_value=None)
+    mock_connect.return_value = mock_con
+
+    configs = [
+        SourceConfig(
+            name="pg",
+            type=SourceType.POSTGRES,
+            config={"host": "localhost", "database": "db"},
+        )
+    ]
+
+    with pytest.raises(ExtensionError, match="Failed to install or load extension 'postgres'"):
+        session(configs=configs)
 
 
 # ==================== PARAMETRIZED TESTS ====================
