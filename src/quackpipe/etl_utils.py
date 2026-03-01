@@ -10,6 +10,7 @@ from .config import SourceConfig, SourceType, get_configs
 
 # Import the session context manager from core and config loader from utils
 from .core import session
+from .exceptions import AccessDeniedError, ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +76,7 @@ def move_data(
     # Helper function to generate MERGE SQL
     def _generate_merge_sql(target_table: str, source_q: str, pk: str | list[str]) -> str:
         if not pk:
-            raise ValueError("Primary key(s) must be provided for 'merge' mode.")
+            raise ValidationError("Primary key(s) must be provided for 'merge' mode.")
 
         pk_list = [pk] if isinstance(pk, str) else pk
         on_clause = " AND ".join([f"target.{k} = source.{k}" for k in pk_list])
@@ -92,7 +93,7 @@ def move_data(
     with session(configs=all_configs, env_file=env_file) as con:
         if dest_config.type == SourceType.S3:
             if mode == 'merge':
-                raise ValueError("Mode 'merge' is not supported for S3 file destinations.")
+                raise ValidationError("Mode 'merge' is not supported for S3 file destinations.")
             base_path = dest_config.config.get('path', f"s3://{destination_name}/")
             if not base_path.endswith('/'):
                 base_path += '/'
@@ -110,14 +111,14 @@ def move_data(
             elif mode == 'merge':
                 sql = _generate_merge_sql(full_table_name, source_query, primary_key)
             else:
-                raise ValueError(f"Invalid mode '{mode}'. Use 'replace', 'append' or 'merge'.")
+                raise ValidationError(f"Invalid mode '{mode}'. Use 'replace', 'append' or 'merge'.")
             con.execute(sql)
             logger.info("Data successfully moved to table %s", full_table_name)
 
         elif dest_config.type in [SourceType.POSTGRES, SourceType.SQLITE]:
             is_read_only = dest_config.config.get('read_only', True)
             if is_read_only:
-                raise PermissionError(
+                raise AccessDeniedError(
                     f"Cannot write to destination '{destination_name}' because it is configured as read-only. "
                     "To enable writing, set 'read_only: false' in your configuration for this source."
                 )
@@ -131,7 +132,7 @@ def move_data(
             elif mode == 'merge':
                 sql = _generate_merge_sql(full_table_name, source_query, primary_key)
             else:
-                raise ValueError(f"Invalid mode '{mode}'. Use 'replace', 'append' or 'merge'.")
+                raise ValidationError(f"Invalid mode '{mode}'. Use 'replace', 'append' or 'merge'.")
             con.execute(sql)
             logger.info("Data successfully moved to table %s", full_table_name)
 
@@ -143,7 +144,7 @@ def move_data(
             elif mode == 'merge':
                 sql = _generate_merge_sql(table_name, source_query, primary_key)
             else:
-                raise ValueError(f"Invalid mode '{mode}'. Use 'replace', 'append' or 'merge'.")
+                raise ValidationError(f"Invalid mode '{mode}'. Use 'replace', 'append' or 'merge'.")
             con.execute(sql)
             logger.info("Data successfully moved to in-memory table '%s'", table_name)
 

@@ -7,6 +7,7 @@ from typing import Any, Self
 
 from .config import SourceConfig, SourceType
 from .core import session as core_session  # Avoid circular import
+from .exceptions import ExecutionError
 from .sources import SOURCE_HANDLER_REGISTRY
 
 
@@ -105,7 +106,7 @@ class QuackpipeBuilder:
             A context manager yielding a configured DuckDB connection.
         """
         if not self._sources:
-            raise ValueError("Cannot build a session with no sources defined.")
+            raise ExecutionError("Cannot build a session with no sources defined.")
 
         # Pass the built configs and any extra arguments (like `sources`)
         # to the core session manager.

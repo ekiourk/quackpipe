@@ -9,7 +9,7 @@ from enum import Enum
 import yaml
 from jsonschema import validate
 
-from quackpipe.exceptions import ConfigError
+from quackpipe.exceptions import ConfigError, ParsingError
 from quackpipe.utils import DotDict
 
 
@@ -121,10 +121,12 @@ def get_config_yaml(path: str | list[str] | None) -> dict | None:
             with open(p) as f:
                 current_config = yaml.safe_load(f) or {}
                 if not isinstance(current_config, dict):
-                    raise ConfigError(f"Configuration file '{p}' must be a YAML mapping (dictionary), got {type(current_config).__name__}.")
+                    raise ParsingError(f"Configuration file '{p}' must be a YAML mapping (dictionary), got {type(current_config).__name__}.")
                 deep_merge(merged_config, current_config)
         except FileNotFoundError as e:
-            raise ConfigError(f"Configuration file not found at '{p}'.") from e
+            raise ParsingError(f"Configuration file not found at '{p}'.") from e
+        except yaml.YAMLError as e:
+            raise ParsingError(f"Error parsing YAML file '{p}': {e}") from e
 
     return merged_config
 

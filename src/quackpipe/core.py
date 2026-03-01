@@ -7,7 +7,11 @@ from functools import wraps
 import duckdb
 
 from quackpipe.config import Plugin, SourceConfig, SourceParams, get_configs, get_global_statements
-from quackpipe.exceptions import ConfigError
+from quackpipe.exceptions import (
+    ExecutionError,
+    ExtensionError,
+    ValidationError,
+)
 from quackpipe.secrets import configure_secret_provider, fetch_secret_bundle
 
 # Import the registry of handlers
@@ -46,20 +50,22 @@ def _prepare_connection(con: duckdb.DuckDBPyConnection, configs: list[SourceConf
 
     # 3. Install and load all extensions
     for plugin_def in required_plugins:
-        if isinstance(plugin_def, Plugin):
-            # It's a structured Plugin object with extra parameters
-            plugin_name = plugin_def.name
-            install_params = {'repository': plugin_def.repository}
-            # Filter out None values to avoid passing `repository=None`
-            clean_params = {k: v for k, v in install_params.items() if v is not None}
-            con.install_extension(plugin_name, **clean_params)
-        else:
-            # It's a simple string (the name of the plugin)
-            plugin_name = plugin_def
-            con.install_extension(plugin_name)
+        plugin_name = plugin_def.name if isinstance(plugin_def, Plugin) else plugin_def
+        try:
+            if isinstance(plugin_def, Plugin):
+                # It's a structured Plugin object with extra parameters
+                install_params = {'repository': plugin_def.repository}
+                # Filter out None values to avoid passing `repository=None`
+                clean_params = {k: v for k, v in install_params.items() if v is not None}
+                con.install_extension(plugin_name, **clean_params)
+            else:
+                # It's a simple string (the name of the plugin)
+                con.install_extension(plugin_name)
 
-        # Loading the extension only requires the name
-        con.load_extension(plugin_name)
+            # Loading the extension only requires the name
+            con.load_extension(plugin_name)
+        except (duckdb.IOException, duckdb.HTTPException) as e:
+            raise ExtensionError(f"Failed to install or load extension '{plugin_name}': {e}") from e
 
     # 4. Render and execute the setup SQL for each handler
     for handler in instantiated_handlers:
@@ -69,19 +75,21 @@ def _prepare_connection(con: duckdb.DuckDBPyConnection, configs: list[SourceConf
                 logger.debug("Executing custom SQL for %s:\n%s", handler.source_type, custom_sql)
                 try:
                     con.execute(custom_sql)
-                except (duckdb.ParserException, duckdb.IOException):
-                    logger.exception("Error executing custom SQL for %s", handler.source_type)
-                    raise
+                except (duckdb.ParserException, duckdb.IOException) as e:
+                    raise ExecutionError(f"Error executing custom 'before' SQL for {handler.source_type}: {e}") from e
 
         # Execute the handler's main setup SQL
-        setup_sql = handler.render_sql()
+        try:
+            setup_sql = handler.render_sql()
+        except Exception as e:
+            raise ExecutionError(f"Error rendering setup SQL for {handler.source_type}: {e}") from e
+
         if setup_sql:
             logger.debug("Executing setup SQL for %s:\n%s", handler.source_type, setup_sql)
             try:
                 con.execute(setup_sql)
-            except (duckdb.ParserException, duckdb.IOException):
-                logger.exception("Error executing setup SQL for %s", handler.source_type)
-                raise
+            except (duckdb.ParserException, duckdb.IOException, duckdb.HTTPException) as e:
+                raise ExecutionError(f"Error executing setup SQL for {handler.source_type}: {e}") from e
 
         # Execute any additional custom SQL commands
         if handler.after_source_statements:
@@ -89,9 +97,8 @@ def _prepare_connection(con: duckdb.DuckDBPyConnection, configs: list[SourceConf
                 logger.debug("Executing custom SQL for %s:\n%s", handler.source_type, custom_sql)
                 try:
                     con.execute(custom_sql)
-                except (duckdb.ParserException, duckdb.IOException):
-                    logger.exception("Error executing custom SQL for %s", handler.source_type)
-                    raise
+                except (duckdb.ParserException, duckdb.IOException) as e:
+                    raise ExecutionError(f"Error executing custom 'after' SQL for {handler.source_type}: {e}") from e
 
 
 def session(
@@ -126,6 +133,12 @@ def session(
 
     active_configs = all_configs
     if sources:
+        # Validate that all requested sources actually exist in the config
+        all_names = {c.name for c in all_configs}
+        missing = [s for s in sources if s not in all_names]
+        if missing:
+            raise ValidationError(f"The following requested sources were not found in the configuration: {', '.join(missing)}")
+
         active_configs = [c for c in all_configs if c.name in sources]
 
     # Perform pre-flight validation (checking that both config and environment variables are present)
@@ -189,7 +202,7 @@ def get_source_params(
     source_config = next((c for c in all_configs if c.name == source_name), None)
 
     if not source_config:
-        raise ConfigError(f"Source '{source_name}' not found in configuration.")
+        raise ValidationError(f"Source '{source_name}' not found in configuration.")
 
     secrets = fetch_secret_bundle(source_config.secret_name)
     return SourceParams({**source_config.config, **secrets})
