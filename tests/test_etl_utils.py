@@ -175,6 +175,7 @@ def test_move_data_merge_mode_missing_pk_raises_error(mock_session, mock_get_con
             table_name="output_table",
             configs=pg_configs,
             mode="merge",
+            primary_key=None,
         )
 
 

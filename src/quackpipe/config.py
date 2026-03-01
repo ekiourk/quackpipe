@@ -7,7 +7,10 @@ import os
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from .sources.base import BaseSourceHandler
 
 import yaml
 from jsonschema import validate
@@ -239,7 +242,7 @@ def get_global_statements(config_path: str | list[str] | None = None) -> dict[st
 
 
 # Lazy import of registry to avoid circular dependency
-def get_registry() -> dict[SourceType, Any]:
+def get_registry() -> dict[SourceType, type["BaseSourceHandler"]]:
     from quackpipe.sources import SOURCE_HANDLER_REGISTRY
 
-    return cast(dict[SourceType, Any], SOURCE_HANDLER_REGISTRY)
+    return cast(dict[SourceType, type["BaseSourceHandler"]], SOURCE_HANDLER_REGISTRY)

@@ -109,8 +109,13 @@ class QuackpipeBuilder:
 
     def session(self, **kwargs: Any) -> duckdb.DuckDBPyConnection:
         """
-        Builds and enters the session context manager. Can accept the same arguments
-        as the core session function, like `sources=['source_a']`.
+        Builds and returns a pre-configured DuckDB connection.
+
+        The returned connection object acts as a context manager and can be used
+        in a `with` statement to ensure it is automatically closed.
+
+        Args:
+            **kwargs: Extra arguments passed to the core session manager (e.g., `sources`).
 
         Returns:
             A configured DuckDB connection.

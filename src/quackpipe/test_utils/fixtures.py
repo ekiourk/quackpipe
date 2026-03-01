@@ -2,6 +2,7 @@ import logging
 import os
 import tempfile
 from collections.abc import Callable, Generator
+from pathlib import Path
 from typing import Any
 from unittest.mock import Mock, patch
 
@@ -141,7 +142,7 @@ def test_datasets() -> dict[str, pd.DataFrame]:
 
 
 @pytest.fixture
-def quackpipe_config_files(tmp_path: Any) -> Callable[..., tuple[Any, Any]]:
+def quackpipe_config_files(tmp_path: Path) -> Callable[..., tuple[Path, Path]]:
     """
     Fixture that returns a function to create config + env files for a source.
     """
@@ -152,7 +153,7 @@ def quackpipe_config_files(tmp_path: Any) -> Callable[..., tuple[Any, Any]]:
         source_name: str,
         source_type: str | None = None,
         secret_name: str | None = None,
-    ) -> tuple[Any, Any]:
+    ) -> tuple[Path, Path]:
         # normalize config
         source_config = dict(source_config)  # copy so we don’t mutate test data
         if source_type:
