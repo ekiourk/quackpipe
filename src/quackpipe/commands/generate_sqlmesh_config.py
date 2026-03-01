@@ -4,7 +4,9 @@ src/quackpipe/commands/generate_sqlmesh_config.py
 This module contains the implementation for the 'generate-sqlmesh-config' CLI command.
 """
 
+import argparse
 from argparse import _SubParsersAction
+from typing import Any
 
 import yaml
 
@@ -44,7 +46,7 @@ def _replace_secrets_with_placeholders(sql_string: str, configs: list[SourceConf
     return final_sql
 
 
-def _build_sqlmesh_dict(init_sql_block: str, gateway_name: str, state_db: str) -> dict:
+def _build_sqlmesh_dict(init_sql_block: str, gateway_name: str, state_db: str) -> dict[str, Any]:
     """Constructs the Python dictionary for the SQLMesh config YAML."""
     return {
         "gateways": {
@@ -57,7 +59,7 @@ def _build_sqlmesh_dict(init_sql_block: str, gateway_name: str, state_db: str) -
     }
 
 
-def handler(args):
+def handler(args: argparse.Namespace) -> None:
     """The main handler function for the generate-sqlmesh-config command."""
     log = setup_cli_logging(args.verbose)
     env_files = normalize_arg_to_list(args.env_file)
@@ -77,7 +79,7 @@ def handler(args):
         print(f"❌ Failed to write output file: {e}")
 
 
-def register_command(subparsers: _SubParsersAction):
+def register_command(subparsers: _SubParsersAction) -> None:
     """Registers the command and its arguments to the main CLI parser."""
     parser_gen = subparsers.add_parser(
         "generate-sqlmesh-config", help="Generate a SQLMesh config file from a quackpipe config."

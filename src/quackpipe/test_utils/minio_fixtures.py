@@ -1,5 +1,6 @@
 import io
 import logging
+from collections.abc import Generator
 
 import pandas as pd
 import pytest
@@ -20,7 +21,7 @@ TEST_BUCKET_NAME = "test-bucket"
 
 
 @pytest.fixture(scope="module")
-def minio_container():
+def minio_container() -> Generator[MinioContainer, None, None]:
     """Starts a MinIO container."""
     with MinioContainer("minio/minio:RELEASE.2025-06-13T11-33-47Z") as minio:
         # It's good practice to create the bucket ahead of time.
@@ -29,7 +30,7 @@ def minio_container():
 
 
 @pytest.fixture(scope="module")
-def quackpipe_with_minio(minio_container):
+def quackpipe_with_minio(minio_container: MinioContainer) -> QuackpipeBuilder:
     builder = QuackpipeBuilder().add_source(
         name=TEST_BUCKET_NAME,
         type=SourceType.S3,
@@ -46,7 +47,7 @@ def quackpipe_with_minio(minio_container):
 
 
 @pytest.fixture(scope="module")
-def minio_container_with_data(minio_container):
+def minio_container_with_data(minio_container: MinioContainer) -> MinioContainer:
     """
     Starts a MinIO container with sample data for testing.
     Creates a bucket with example CSV and Parquet files.

@@ -4,8 +4,10 @@ Defines the typed configuration objects for quackpipe.
 
 import collections.abc
 import os
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any, cast
 
 import yaml
 from jsonschema import validate
@@ -14,17 +16,13 @@ from quackpipe.exceptions import ConfigError, ParsingError
 from quackpipe.utils import DotDict
 
 
-# Lazy import of registry to avoid circular dependency
-def get_registry():
-    from quackpipe.sources import SOURCE_HANDLER_REGISTRY
+class SourceParams(DotDict):
+    """A type alias for a DotDict containing source configuration parameters."""
 
-    return SOURCE_HANDLER_REGISTRY
-
-
-SourceParams = DotDict
+    pass
 
 
-def validate_config(config_data: dict) -> None:
+def validate_config(config_data: dict[str, Any]) -> None:
     """
     Validates the given configuration data against the schema.
 
@@ -40,7 +38,7 @@ def validate_config(config_data: dict) -> None:
     validate(instance=config_data, schema=schema)
 
 
-def deep_merge(base: dict, override: dict) -> dict:
+def deep_merge(base: dict[Any, Any], override: Mapping[Any, Any]) -> dict[Any, Any]:
     """
     Recursively merges the 'override' dict into the 'base' dict IN-PLACE.
 
@@ -93,7 +91,7 @@ class SourceConfig:
     after_source_statements: list[str] = field(default_factory=list)
 
 
-def get_config_yaml(path: str | list[str] | None) -> dict | None:
+def get_config_yaml(path: str | list[str] | None) -> dict[str, Any] | None:
     """
     Loads and returns the parsed YAML configuration.
 
@@ -118,7 +116,7 @@ def get_config_yaml(path: str | list[str] | None) -> dict | None:
     if not config_paths:
         return None
 
-    merged_config = {}
+    merged_config: dict[str, Any] = {}
     for p in config_paths:
         try:
             with open(p) as f:
@@ -136,7 +134,7 @@ def get_config_yaml(path: str | list[str] | None) -> dict | None:
     return merged_config
 
 
-def parse_config_from_yaml(raw_config: dict, resolve_secrets: bool = False) -> list[SourceConfig]:
+def parse_config_from_yaml(raw_config: dict[str, Any], resolve_secrets: bool = False) -> list[SourceConfig]:
     """
     Parses a dictionary (from YAML) into a list of SourceConfig objects.
 
@@ -175,7 +173,7 @@ def parse_config_from_yaml(raw_config: dict, resolve_secrets: bool = False) -> l
 
         # Perform semantic validation if a handler exists for this type
         registry = get_registry()
-        HandlerClass = registry.get(source_type)
+        HandlerClass: Any = registry.get(source_type)
         if HandlerClass:
             HandlerClass.validate(source_specific_config, secret_name, resolve_secrets=resolve_secrets)
 
@@ -186,7 +184,7 @@ def parse_config_from_yaml(raw_config: dict, resolve_secrets: bool = False) -> l
                 secret_name=secret_name,
                 before_source_statements=before_statements,
                 after_source_statements=after_statements,
-                config=source_specific_config,
+                config=SourceParams(source_specific_config),
             )
         )
 
@@ -220,7 +218,7 @@ def get_configs(
     )
 
 
-def get_global_statements(config_path: str | list[str] | None = None) -> dict:
+def get_global_statements(config_path: str | list[str] | None = None) -> dict[str, Any]:
     """
     Extracts global statements from the configuration file(s).
 
@@ -232,3 +230,10 @@ def get_global_statements(config_path: str | list[str] | None = None) -> dict:
         "before_all_statements": raw_config.get("before_all_statements", []),
         "after_all_statements": raw_config.get("after_all_statements", []),
     }
+
+
+# Lazy import of registry to avoid circular dependency
+def get_registry() -> dict[SourceType, Any]:
+    from quackpipe.sources import SOURCE_HANDLER_REGISTRY
+
+    return cast(dict[SourceType, Any], SOURCE_HANDLER_REGISTRY)

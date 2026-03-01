@@ -6,7 +6,9 @@ from __future__ import annotations
 
 from typing import Any, Self
 
-from .config import SourceConfig, SourceType
+import duckdb
+
+from .config import SourceConfig, SourceParams, SourceType
 from .core import session as core_session  # Avoid circular import
 from .exceptions import ExecutionError
 from .sources import SOURCE_HANDLER_REGISTRY
@@ -15,11 +17,15 @@ from .sources import SOURCE_HANDLER_REGISTRY
 class QuackpipeBuilder:
     """A fluent builder for creating a quackpipe session without a YAML file."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._sources: list[SourceConfig] = []
 
     def add_source(
-        self, name: str, type: SourceType | str, config: dict[str, Any] = None, secret_name: str = None
+        self,
+        name: str,
+        type: SourceType | str,
+        config: dict[str, Any] | None = None,
+        secret_name: str | None = None,
     ) -> Self:
         """
         Adds a data source to the configuration by specifying its components.
@@ -33,23 +39,26 @@ class QuackpipeBuilder:
         Returns:
             The builder instance for chaining.
         """
+        source_type: SourceType
         if isinstance(type, str):
             try:
-                type = SourceType(type)
+                source_type = SourceType(type)
             except ValueError:
-                # If it's not a valid enum value, we keep it as a string
-                # so that SourceConfig or others can handle it (or fail later)
-                pass
+                # If it's not a valid enum value, we raise early or let it fail later.
+                # For strict typing, we should probably ensure it's a SourceType.
+                raise ExecutionError(f"Invalid source type: '{type}'") from None
+        else:
+            source_type = type
 
-        config = config or {}
+        clean_config = config or {}
         # Perform semantic validation if a handler exists for this type
-        HandlerClass = SOURCE_HANDLER_REGISTRY.get(type)
+        HandlerClass: Any = SOURCE_HANDLER_REGISTRY.get(source_type)
         if HandlerClass:
             # We don't resolve secrets at 'add_source' time by default,
             # as the environment might not be set yet.
-            HandlerClass.validate(config, secret_name, resolve_secrets=False)
+            HandlerClass.validate(clean_config, secret_name, resolve_secrets=False)
 
-        source = SourceConfig(name=name, type=type, config=config, secret_name=secret_name)
+        source = SourceConfig(name=name, type=source_type, config=SourceParams(clean_config), secret_name=secret_name)
         self._sources.append(source)
         return self
 
@@ -95,13 +104,13 @@ class QuackpipeBuilder:
         """
         return self._sources
 
-    def session(self, **kwargs):
+    def session(self, **kwargs: Any) -> duckdb.DuckDBPyConnection:
         """
         Builds and enters the session context manager. Can accept the same arguments
         as the core session function, like `sources=['source_a']`.
 
         Returns:
-            A context manager yielding a configured DuckDB connection.
+            A configured DuckDB connection.
         """
         if not self._sources:
             raise ExecutionError("Cannot build a session with no sources defined.")

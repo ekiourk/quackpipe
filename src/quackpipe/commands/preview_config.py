@@ -4,6 +4,7 @@ src/quackpipe/commands/preview_config.py
 This module contains the implementation for the 'preview-config' CLI command.
 """
 
+import argparse
 from argparse import _SubParsersAction
 
 import yaml
@@ -13,7 +14,7 @@ from ..exceptions import ConfigError
 from .common import get_default_config_path, normalize_arg_to_list
 
 
-def handler(args):
+def handler(args: argparse.Namespace) -> None:
     """The main handler function for the preview-config command."""
     config_paths = normalize_arg_to_list(args.config)
     try:
@@ -29,7 +30,7 @@ def handler(args):
         print(f"An unexpected error occurred: {e}")
 
 
-def register_command(subparsers: _SubParsersAction):
+def register_command(subparsers: _SubParsersAction) -> None:
     """Registers the command and its arguments to the main CLI parser."""
     parser = subparsers.add_parser("preview-config", help="Preview the final merged configuration from multiple files.")
     parser.add_argument(

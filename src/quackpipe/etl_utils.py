@@ -21,7 +21,7 @@ def to_df(con: duckdb.DuckDBPyConnection, query: str) -> pd.DataFrame:
     return con.execute(query).fetchdf()
 
 
-def create_table_from_df(con: duckdb.DuckDBPyConnection, df: pd.DataFrame, table_name: str):
+def create_table_from_df(con: duckdb.DuckDBPyConnection, df: pd.DataFrame, table_name: str) -> None:
     """Creates a new table in DuckDB from a pandas DataFrame, replacing if it exists."""
     con.execute(f"CREATE OR REPLACE TABLE {table_name} AS SELECT * FROM df")
 
@@ -36,7 +36,7 @@ def move_data(
     mode: str = "replace",
     format: str = "parquet",
     primary_key: str | list[str] | None = None,
-):
+) -> None:
     """
     A self-contained utility to move data from a source query to a destination.
     This function creates and manages its own quackpipe session.
@@ -112,6 +112,8 @@ def move_data(
             elif mode == "append":
                 sql = f"INSERT INTO {full_table_name} ({source_query});"
             elif mode == "merge":
+                if primary_key is None:
+                    raise ValidationError("Primary key(s) must be provided for 'merge' mode.")
                 sql = _generate_merge_sql(full_table_name, source_query, primary_key)
             else:
                 raise ValidationError(f"Invalid mode '{mode}'. Use 'replace', 'append' or 'merge'.")
@@ -133,6 +135,8 @@ def move_data(
             elif mode == "append":
                 sql = f"INSERT INTO {full_table_name} ({source_query});"
             elif mode == "merge":
+                if primary_key is None:
+                    raise ValidationError("Primary key(s) must be provided for 'merge' mode.")
                 sql = _generate_merge_sql(full_table_name, source_query, primary_key)
             else:
                 raise ValidationError(f"Invalid mode '{mode}'. Use 'replace', 'append' or 'merge'.")
@@ -145,6 +149,8 @@ def move_data(
             elif mode == "append":
                 sql = f"INSERT INTO {table_name} ({source_query});"
             elif mode == "merge":
+                if primary_key is None:
+                    raise ValidationError("Primary key(s) must be provided for 'merge' mode.")
                 sql = _generate_merge_sql(table_name, source_query, primary_key)
             else:
                 raise ValidationError(f"Invalid mode '{mode}'. Use 'replace', 'append' or 'merge'.")

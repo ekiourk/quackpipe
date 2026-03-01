@@ -13,13 +13,15 @@ class MySQLHandler(BaseSourceHandler):
     This handler uses the recommended CREATE SECRET + ATTACH pattern.
     """
 
-    def __init__(self, context: dict[str, Any]):
+    context: dict[str, Any]
+
+    def __init__(self, context: dict[str, Any]) -> None:
         super().__init__(context)
         secrets = fetch_secret_bundle(self.context.get("secret_name"))
         self.context = {**self.context, **secrets}
 
     @property
-    def source_type(self):
+    def source_type(self) -> str:
         return "mysql"
 
     @property
@@ -27,7 +29,7 @@ class MySQLHandler(BaseSourceHandler):
         return ["mysql"]
 
     @classmethod
-    def validate(cls, config: dict[str, Any], secret_name: str | None = None, resolve_secrets: bool = False):
+    def validate(cls, config: dict[str, Any], secret_name: str | None = None, resolve_secrets: bool = False) -> None:
         """Validates MySQL configuration parameters."""
         params = get_merged_params(config, secret_name, resolve_secrets)
         validate_required_fields(params, ["host", "database"], "mysql", secret_name, resolve_secrets)

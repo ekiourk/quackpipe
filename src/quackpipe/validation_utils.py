@@ -27,7 +27,7 @@ def validate_required_fields(
     source_type: str,
     secret_name: str | None = None,
     resolve_secrets: bool = False,
-):
+) -> None:
     """
     Validates that the required fields are present in the parameters.
 

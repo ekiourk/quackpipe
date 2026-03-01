@@ -14,7 +14,7 @@ class AzureBlobHandler(BaseSourceHandler):
     This handler uses the CREATE SECRET pattern for authentication.
     """
 
-    def __init__(self, context: dict[str, Any]):
+    def __init__(self, context: dict[str, Any]) -> None:
         super().__init__(context)
 
     @property
@@ -26,7 +26,7 @@ class AzureBlobHandler(BaseSourceHandler):
         return ["azure", "httpfs"]
 
     @classmethod
-    def validate(cls, config: dict[str, Any], secret_name: str | None = None, resolve_secrets: bool = False):
+    def validate(cls, config: dict[str, Any], secret_name: str | None = None, resolve_secrets: bool = False) -> None:
         """Validates Azure Blob Storage configuration parameters."""
         params = get_merged_params(config, secret_name, resolve_secrets)
         provider = params.get("provider", "connection_string").lower()

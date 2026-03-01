@@ -11,7 +11,7 @@ import sys
 DEFAULT_CONFIG_NAME = "config.yml"
 
 
-def get_default_config_path():
+def get_default_config_path() -> str | None:
     """
     Returns 'config.yml' if it exists in the current directory, otherwise None.
     This allows for a dynamic default value in the CLI.
@@ -21,7 +21,7 @@ def get_default_config_path():
     return None
 
 
-def setup_cli_logging(verbose_level: int = 0):
+def setup_cli_logging(verbose_level: int = 0) -> logging.Logger:
     """
     Configures the root logger for quackpipe to ensure CLI output is visible.
 

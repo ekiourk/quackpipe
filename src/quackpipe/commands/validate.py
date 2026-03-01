@@ -4,6 +4,7 @@ src/quackpipe/commands/validate.py
 This module contains the implementation for the 'validate' CLI command.
 """
 
+import argparse
 from argparse import _SubParsersAction
 
 from jsonschema.exceptions import ValidationError
@@ -14,7 +15,7 @@ from ..secrets import configure_secret_provider
 from .common import get_default_config_path, normalize_arg_to_list, setup_cli_logging
 
 
-def handler(args):
+def handler(args: argparse.Namespace) -> None:
     """The main handler function for the validate command."""
     log = setup_cli_logging(args.verbose)
     config_paths = normalize_arg_to_list(args.config)
@@ -58,7 +59,7 @@ def handler(args):
         print(f"An unexpected error occurred: {e}")
 
 
-def register_command(subparsers: _SubParsersAction):
+def register_command(subparsers: _SubParsersAction) -> None:
     """Registers the command and its arguments to the main CLI parser."""
     parser_validate = subparsers.add_parser(
         "validate", help="Validate a quackpipe configuration file (or merged files) against the schema."

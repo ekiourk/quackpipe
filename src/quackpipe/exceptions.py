@@ -2,13 +2,15 @@
 Exception classes for quackpipe.
 """
 
+from typing import Any
+
 
 class QuackpipeError(Exception):
     """Base exception for quackpipe."""
 
     default_message = "An internal error occurred in Quackpipe."
 
-    def __init__(self, message: str | None = None, *args):
+    def __init__(self, message: str | None = None, *args: Any) -> None:
         effective_message = message if message is not None else self.default_message
         super().__init__(effective_message, *args)
         self.message = effective_message

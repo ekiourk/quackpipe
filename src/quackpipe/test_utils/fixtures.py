@@ -1,6 +1,8 @@
 import logging
 import os
 import tempfile
+from collections.abc import Callable, Generator
+from typing import Any
 from unittest.mock import Mock, patch
 
 import pandas as pd
@@ -19,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(autouse=True)
-def reset_secret_provider_fixture():
+def reset_secret_provider_fixture() -> Generator[None, None, None]:
     """
     This fixture automatically runs before each test in this file. It resets
     the global secret provider, ensuring a clean state and preventing tests
@@ -34,14 +36,14 @@ def reset_secret_provider_fixture():
 
 
 @pytest.fixture
-def temp_dir():
+def temp_dir() -> Generator[str, None, None]:
     """Create a temporary directory for test files."""
     with tempfile.TemporaryDirectory() as tmp_dir:
         yield tmp_dir
 
 
 @pytest.fixture
-def sample_config_dict():
+def sample_config_dict() -> dict[str, Any]:
     """Sample configuration dictionary for testing."""
     return {
         "sources": {
@@ -58,7 +60,7 @@ def sample_config_dict():
 
 
 @pytest.fixture
-def sample_yaml_config(temp_dir, sample_config_dict):
+def sample_yaml_config(temp_dir: str, sample_config_dict: dict[str, Any]) -> str:
     """Create a temporary YAML config file."""
     config_path = os.path.join(temp_dir, "test_config.yml")
     with open(config_path, "w") as f:
@@ -67,7 +69,7 @@ def sample_yaml_config(temp_dir, sample_config_dict):
 
 
 @pytest.fixture
-def mock_duckdb_connection():
+def mock_duckdb_connection() -> Mock:
     """Mock DuckDB connection for testing."""
     mock_con = Mock()
     mock_con.execute = Mock()
@@ -84,7 +86,7 @@ def mock_duckdb_connection():
 
 
 @pytest.fixture
-def env_secrets():
+def env_secrets() -> Generator[dict[str, str], None, None]:
     """Set up environment variables for testing."""
     env_vars = {
         "PG_PROD_HOST": "localhost",
@@ -107,7 +109,7 @@ def env_secrets():
 
 
 @pytest.fixture
-def mock_session(mock_duckdb_connection):
+def mock_session(mock_duckdb_connection: Mock) -> Generator[Mock, None, None]:
     """A patch fixture for the quackpipe.etl_utils.session context manager."""
     with patch("quackpipe.etl_utils.session") as mock_session_context:
         # Make the context manager yield our mock connection
@@ -116,7 +118,7 @@ def mock_session(mock_duckdb_connection):
 
 
 @pytest.fixture
-def mock_get_configs():
+def mock_get_configs() -> Generator[Mock, None, None]:
     """A patch fixture for the quackpipe.etl_utils.get_configs function."""
     with patch("quackpipe.etl_utils.get_configs") as mock:
         yield mock
@@ -124,7 +126,7 @@ def mock_get_configs():
 
 # Helper fixture to get all test data as DataFrames (useful for tests)
 @pytest.fixture(scope="module")
-def test_datasets():
+def test_datasets() -> dict[str, pd.DataFrame]:
     """Returns all test datasets as DataFrames for easy access in tests."""
     employee_data = create_employee_data()
     monthly_data = create_monthly_data()
@@ -139,14 +141,18 @@ def test_datasets():
 
 
 @pytest.fixture
-def quackpipe_config_files(tmp_path):
+def quackpipe_config_files(tmp_path: Any) -> Callable[..., tuple[Any, Any]]:
     """
     Fixture that returns a function to create config + env files for a source.
     """
 
     def _make_files(
-        source_config: dict, env_vars: dict, source_name: str, source_type: str = None, secret_name: str = None
-    ):
+        source_config: dict[str, Any],
+        env_vars: dict[str, str] | None,
+        source_name: str,
+        source_type: str | None = None,
+        secret_name: str | None = None,
+    ) -> tuple[Any, Any]:
         # normalize config
         source_config = dict(source_config)  # copy so we don’t mutate test data
         if source_type:

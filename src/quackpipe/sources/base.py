@@ -12,14 +12,16 @@ class BaseSourceHandler(ABC):
     It is initialized with a context dictionary containing all its configuration.
     """
 
-    def __init__(self, context: dict[str, Any]):
+    context: dict[str, Any]
+
+    def __init__(self, context: dict[str, Any]) -> None:
         """
         Initializes the handler with its specific configuration context.
 
         Args:
             context: A dictionary containing the combined config and secrets.
         """
-        self.context = context
+        self.context: dict[str, Any] = context
         self.before_source_statements = context.get("before_source_statements", [])
         self.after_source_statements = context.get("after_source_statements", [])
 
@@ -37,7 +39,7 @@ class BaseSourceHandler(ABC):
 
     @classmethod
     @abstractmethod
-    def validate(cls, config: dict[str, Any], secret_name: str | None = None, resolve_secrets: bool = False):
+    def validate(cls, config: dict[str, Any], secret_name: str | None = None, resolve_secrets: bool = False) -> None:
         """
         Validates the source-specific configuration.
         Must be implemented by subclasses.

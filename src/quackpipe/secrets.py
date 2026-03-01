@@ -16,7 +16,7 @@ class EnvSecretProvider:
     during initialization, it loads them in order.
     """
 
-    def __init__(self, env_file: str | list[str] | None = None):
+    def __init__(self, env_file: str | list[str] | None = None) -> None:
         # Start with a copy of the system environment
         self.env_vars = os.environ.copy()
 
@@ -71,7 +71,7 @@ def _get_provider() -> EnvSecretProvider:
     return _provider
 
 
-def configure_secret_provider(env_file: str | list[str] | None = None):
+def configure_secret_provider(env_file: str | list[str] | None = None) -> None:
     """
     Initializes or re-initializes the secret provider, optionally loading
     environment file(s).
@@ -107,7 +107,7 @@ def fetch_secret_bundle(name: str) -> dict[str, str]:
         return _bundle_cache[name]
 
     raw_secrets = fetch_raw_secret_bundle(name)
-    normalized_secrets = {}
+    normalized_secrets: dict[str, str] = {}
     prefix = f"{name.upper()}_"
 
     for key, value in raw_secrets.items():

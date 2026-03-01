@@ -20,7 +20,7 @@ def azurite_container() -> Generator[AzuriteContainer, None, None]:
 
 
 @pytest.fixture(scope="module")
-def quackpipe_with_azurite(azurite_container) -> QuackpipeBuilder:
+def quackpipe_with_azurite(azurite_container: AzuriteContainer) -> QuackpipeBuilder:
     builder = QuackpipeBuilder().add_source(
         name="my_azure_storage",
         type=SourceType.AZURE,
@@ -33,7 +33,7 @@ def quackpipe_with_azurite(azurite_container) -> QuackpipeBuilder:
 
 
 @pytest.fixture(scope="module")
-def azurite_test_container_client(azurite_container) -> ContainerClient:
+def azurite_test_container_client(azurite_container: AzuriteContainer) -> ContainerClient:
     """Gets an Azurite container and creates and returns a blob container client."""
     blob_service_client = BlobServiceClient.from_connection_string(azurite_container.get_connection_string())
 
@@ -44,7 +44,9 @@ def azurite_test_container_client(azurite_container) -> ContainerClient:
 
 
 @pytest.fixture(scope="module")
-def azurite_container_with_data(azurite_container, azurite_test_container_client) -> AzuriteContainer:
+def azurite_container_with_data(
+    azurite_container: AzuriteContainer, azurite_test_container_client: ContainerClient
+) -> AzuriteContainer:
     """
     Starts an Azurite container and populates it with sample data.
     Returns the Docker container object

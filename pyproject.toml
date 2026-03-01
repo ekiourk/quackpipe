@@ -18,7 +18,9 @@ dev = [
     "pytest",
     "pytest-cov",
     "quackpipe[fixtures]",
-    "ipdb"
+    "ipdb",
+    "types-pyyaml",
+    "types-jsonschema"
 ]
 fixtures = [
     "testcontainers[postgres,minio,mysql,azurite]==4.12.0",
@@ -27,7 +29,8 @@ fixtures = [
     "httpx"
 ]
 lint = [
-    "ruff"
+    "ruff",
+    "mypy"
 ]
 logging = [
     "structlog>=23.0.0",
@@ -80,6 +83,14 @@ quote-style = "double"
 
 # Indent with spaces
 indent-style = "space"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+ignore_missing_imports = true
+warn_unused_configs = true
+disallow_subclassing_any = false
+disallow_any_generics = false
 
 [project.scripts]
 quackpipe = "quackpipe.cli:main"

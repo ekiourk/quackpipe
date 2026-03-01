@@ -12,7 +12,7 @@ from . import __version__
 from .commands import generate_sqlmesh_config, preview_config, ui, validate
 
 
-def main():
+def main() -> None:
     """Main function to parse arguments and dispatch commands."""
     parser = argparse.ArgumentParser(description="quackpipe: A DuckDB ETL Helper CLI.")
 
