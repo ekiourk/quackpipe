@@ -84,7 +84,7 @@ class SourceConfig:
     """
 
     name: str
-    type: SourceType
+    type: SourceType | str
     config: SourceParams = field(default_factory=SourceParams)
     secret_name: str | None = None
     before_source_statements: list[str] = field(default_factory=list)
@@ -162,9 +162,13 @@ def parse_config_from_yaml(raw_config: dict[str, Any], resolve_secrets: bool = F
 
         try:
             source_type_str = details_copy.pop("type")
-            source_type = SourceType(source_type_str)
-        except (KeyError, ValueError) as e:
-            raise ConfigError(f"Missing or invalid 'type' for source '{name}'.") from e
+            try:
+                source_type: SourceType | str = SourceType(source_type_str)
+            except ValueError:
+                # Allow custom types as strings
+                source_type = source_type_str
+        except KeyError as e:
+            raise ConfigError(f"Missing 'type' for source '{name}'.") from e
 
         secret_name = details_copy.pop("secret_name", None)
         before_statements = details_copy.pop("before_source_statements", [])
@@ -172,10 +176,11 @@ def parse_config_from_yaml(raw_config: dict[str, Any], resolve_secrets: bool = F
         source_specific_config = details_copy
 
         # Perform semantic validation if a handler exists for this type
-        registry = get_registry()
-        HandlerClass: Any = registry.get(source_type)
-        if HandlerClass:
-            HandlerClass.validate(source_specific_config, secret_name, resolve_secrets=resolve_secrets)
+        if isinstance(source_type, SourceType):
+            registry = get_registry()
+            HandlerClass: Any = registry.get(source_type)
+            if HandlerClass:
+                HandlerClass.validate(source_specific_config, secret_name, resolve_secrets=resolve_secrets)
 
         source_configs.append(
             SourceConfig(

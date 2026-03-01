@@ -30,6 +30,9 @@ class QuackpipeBuilder:
         """
         Adds a data source to the configuration by specifying its components.
 
+        Unknown source types (strings not in the SourceType enum) are allowed
+        to support custom DuckDB extensions, but will skip semantic validation.
+
         Args:
             name: The name for the data source (e.g., 'pg_main').
             type: The type of the source, using the SourceType enum or its string value.
@@ -39,26 +42,28 @@ class QuackpipeBuilder:
         Returns:
             The builder instance for chaining.
         """
-        source_type: SourceType
+        source_type: SourceType | str
         if isinstance(type, str):
             try:
                 source_type = SourceType(type)
             except ValueError:
-                # If it's not a valid enum value, we raise early or let it fail later.
-                # For strict typing, we should probably ensure it's a SourceType.
-                raise ExecutionError(f"Invalid source type: '{type}'") from None
+                # Keep as string to allow for custom/future source types
+                source_type = type
         else:
             source_type = type
 
         clean_config = config or {}
         # Perform semantic validation if a handler exists for this type
-        HandlerClass: Any = SOURCE_HANDLER_REGISTRY.get(source_type)
-        if HandlerClass:
-            # We don't resolve secrets at 'add_source' time by default,
-            # as the environment might not be set yet.
-            HandlerClass.validate(clean_config, secret_name, resolve_secrets=False)
+        if isinstance(source_type, SourceType):
+            HandlerClass: Any = SOURCE_HANDLER_REGISTRY.get(source_type)
+            if HandlerClass:
+                # We don't resolve secrets at 'add_source' time by default,
+                # as the environment might not be set yet.
+                HandlerClass.validate(clean_config, secret_name, resolve_secrets=False)
 
-        source = SourceConfig(name=name, type=source_type, config=SourceParams(clean_config), secret_name=secret_name)
+        source = SourceConfig(
+            name=name, type=source_type, config=SourceParams(clean_config), secret_name=secret_name
+        )
         self._sources.append(source)
         return self
 
