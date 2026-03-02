@@ -4,6 +4,7 @@ Handles secret management for quackpipe.
 
 import logging
 import os
+from pathlib import Path
 
 from dotenv import dotenv_values
 
@@ -30,7 +31,7 @@ class EnvSecretProvider:
         # We want files to override the system environment to match previous behavior (load_dotenv(override=True)).
         # And later files override earlier files.
         for file_path in env_files:
-            if os.path.exists(file_path):
+            if Path(file_path).exists():
                 logger.info("Loading environment variables from: %s", file_path)
                 # dotenv_values returns a dict of variables defined in the file.
                 file_vars = dotenv_values(dotenv_path=file_path)

@@ -47,10 +47,9 @@ def test_mysql_handler_properties(mysql_env_vars):
 
 
 @pytest.mark.parametrize(
-    "test_id, context, expected_sql_parts, unexpected_sql_parts",
+    "context, expected_sql_parts, unexpected_sql_parts",
     [
         (
-            "basic_config_is_readonly",
             {
                 "connection_name": "mysql_test",
                 "secret_name": "mysql_creds",
@@ -64,7 +63,6 @@ def test_mysql_handler_properties(mysql_env_vars):
             [],  # No unexpected parts
         ),
         (
-            "read_write_config",
             {
                 "connection_name": "mysql_rw",
                 "secret_name": "mysql_creds",
@@ -75,7 +73,6 @@ def test_mysql_handler_properties(mysql_env_vars):
             ["READ_ONLY"],  # Should NOT contain the READ_ONLY flag
         ),
         (
-            "with_table_views",
             {
                 "connection_name": "mysql_views",
                 "secret_name": "mysql_creds",
@@ -92,7 +89,6 @@ def test_mysql_handler_properties(mysql_env_vars):
             [],
         ),
         (
-            "with_encryption",
             {"connection_name": "mysql_secure", "secret_name": "mysql_creds", "encryption_key": "my_mysql_key"},
             [
                 "CREATE OR REPLACE SECRET mysql_secure_secret",
@@ -101,8 +97,9 @@ def test_mysql_handler_properties(mysql_env_vars):
             [],
         ),
     ],
+    ids=["basic_config_is_readonly", "read_write_config", "with_table_views", "with_encryption"],
 )
-def test_mysql_render_sql(mysql_env_vars, test_id, context, expected_sql_parts, unexpected_sql_parts):
+def test_mysql_render_sql(mysql_env_vars, context, expected_sql_parts, unexpected_sql_parts):
     """
     Tests that the MySQLHandler's render_sql method correctly generates
     a CREATE SECRET statement followed by an ATTACH statement.

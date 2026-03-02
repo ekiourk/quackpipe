@@ -6,6 +6,7 @@ This module contains the implementation for the 'generate-sqlmesh-config' CLI co
 
 import argparse
 from argparse import _SubParsersAction
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -66,22 +67,27 @@ def _build_sqlmesh_dict(init_sql_block: str, gateway_name: str, state_db: str) -
 
 def handler(args: argparse.Namespace) -> None:
     """The main handler function for the generate-sqlmesh-config command."""
-    log = setup_cli_logging(args.verbose)
-    env_files = normalize_arg_to_list(args.env_file)
-    config_paths = normalize_arg_to_list(args.config)
+    import sys
 
-    configure_secret_provider(env_file=env_files)
-    log.info(f"Reading quackpipe configuration from: {config_paths}")
-    quackpipe_configs = get_configs(config_path=config_paths)
-    raw_sql = _generate_raw_sql(quackpipe_configs)
-    final_sql_with_placeholders = _replace_secrets_with_placeholders(raw_sql, quackpipe_configs)
-    sqlmesh_config_dict = _build_sqlmesh_dict(final_sql_with_placeholders, args.gateway_name, args.state_db)
+    log = setup_cli_logging(args.verbose)
     try:
-        with open(args.output, "w") as f:
+        env_files = normalize_arg_to_list(args.env_file)
+        config_paths = normalize_arg_to_list(args.config)
+
+        configure_secret_provider(env_file=env_files)
+        log.info(f"Reading quackpipe configuration from: {config_paths}")
+        quackpipe_configs = get_configs(config_path=config_paths)
+        raw_sql = _generate_raw_sql(quackpipe_configs)
+        final_sql_with_placeholders = _replace_secrets_with_placeholders(raw_sql, quackpipe_configs)
+        sqlmesh_config_dict = _build_sqlmesh_dict(final_sql_with_placeholders, args.gateway_name, args.state_db)
+
+        output_path = Path(args.output)
+        with output_path.open("w") as f:
             yaml.dump(sqlmesh_config_dict, f, sort_keys=False, default_flow_style=False, indent=2)
-        print(f"✅ Successfully generated SQLMesh config at: {args.output}")
+        log.info(f"✅ Successfully generated SQLMesh config at: {args.output}")
     except Exception as e:
-        print(f"❌ Failed to write output file: {e}")
+        log.error(f"❌ Failed to generate SQLMesh config: {e}")
+        sys.exit(1)
 
 
 def register_command(subparsers: SubParsersAction) -> None:

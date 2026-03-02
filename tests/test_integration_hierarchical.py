@@ -13,13 +13,13 @@ def test_session_multiple_configs_integration(tmp_path):
         "sources": {"source1": {"type": "sqlite", "path": ":memory:"}, "source2": {"type": "sqlite", "path": "base.db"}}
     }
     f1 = tmp_path / "base.yml"
-    with open(f1, "w") as f:
+    with f1.open("w") as f:
         yaml.dump(base_config, f)
 
     # 2. Override config
     override_config = {"sources": {"source2": {"path": "override.db"}}}
     f2 = tmp_path / "override.yml"
-    with open(f2, "w") as f:
+    with f2.open("w") as f:
         yaml.dump(override_config, f)
 
     # 3. Check source2 (overridden)
@@ -38,18 +38,18 @@ def test_session_multiple_env_files_integration(tmp_path):
     """
     # 1. Base env
     f1 = tmp_path / ".env.base"
-    with open(f1, "w") as f:
+    with f1.open("w") as f:
         f.write("MY_SECRET_HOST=base_host\nMY_SECRET_USER=base_user\n")
 
     # 2. Override env
     f2 = tmp_path / ".env.dev"
-    with open(f2, "w") as f:
+    with f2.open("w") as f:
         f.write("MY_SECRET_HOST=dev_host\n")
 
     # 3. Config using this secret
     config_data = {"sources": {"my_source": {"type": "postgres", "secret_name": "my_secret"}}}
     config_file = tmp_path / "config.yml"
-    with open(config_file, "w") as f:
+    with config_file.open("w") as f:
         yaml.dump(config_data, f)
 
     # 4. Check params

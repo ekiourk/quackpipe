@@ -53,16 +53,25 @@ def handler(args: argparse.Namespace) -> None:
             # Just do the basic semantic validation (without secrets)
             parse_config_from_yaml(merged_config, resolve_secrets=False)
 
-        print(f"✅ Configuration from '{config_paths}' is valid.")
+        log.info(f"✅ Configuration from '{config_paths}' is valid.")
 
     except ValidationError as e:
-        print("❌ Configuration is invalid.")
-        print(f"   Reason: {e.message}")
+        import sys
+
+        log.error("❌ Configuration is invalid.")
+        log.error(f"   Reason: {e.message}")
+        sys.exit(1)
     except ConfigError as e:
-        print("❌ Configuration is invalid.")
-        print(f"   Reason: {e}")
+        import sys
+
+        log.error("❌ Configuration is invalid.")
+        log.error(f"   Reason: {e}")
+        sys.exit(1)
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+        import sys
+
+        log.error(f"An unexpected error occurred: {e}")
+        sys.exit(1)
 
 
 def register_command(subparsers: SubParsersAction) -> None:

@@ -30,7 +30,13 @@ def main() -> None:
 
     # Parse the arguments and call the handler function assigned by the subparser
     args = parser.parse_args()
-    args.func(args)
+    try:
+        args.func(args)
+    except Exception as e:
+        import sys
+
+        print(f"An unexpected error occurred: {e}", file=sys.stderr)  # noqa: T201
+        sys.exit(1)
 
 
 if __name__ == "__main__":

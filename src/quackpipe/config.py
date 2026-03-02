@@ -7,10 +7,8 @@ import os
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Any, cast
-
-if TYPE_CHECKING:
-    from .sources.base import BaseSourceHandler
+from pathlib import Path
+from typing import Any, cast
 
 import yaml
 from jsonschema import validate
@@ -36,8 +34,8 @@ def validate_config(config_data: dict[str, Any]) -> None:
     Raises:
         ValidationError: If the configuration is invalid.
     """
-    schema_path = os.path.join(os.path.dirname(__file__), "config.schema.yml")
-    with open(schema_path) as f:
+    schema_path = Path(__file__).parent / "config.schema.yml"
+    with schema_path.open() as f:
         schema = yaml.safe_load(f)
     validate(instance=config_data, schema=schema)
 
@@ -105,13 +103,10 @@ def get_config_yaml(path: str | list[str] | None) -> dict[str, Any] | None:
 
     Returns the merged configuration dictionary, or None if no valid config is found.
     """
-    config_paths = []
+    config_paths: list[str] = []
 
-    if path:
-        if isinstance(path, str):
-            config_paths = [path]
-        elif isinstance(path, list):
-            config_paths = path
+    if path is not None:
+        config_paths = [str(path)] if isinstance(path, str | Path) else [str(p) for p in path]
     else:
         env_paths = os.environ.get("QUACKPIPE_CONFIG_PATH")
         if env_paths:
@@ -123,7 +118,8 @@ def get_config_yaml(path: str | list[str] | None) -> dict[str, Any] | None:
     merged_config: dict[str, Any] = {}
     for p in config_paths:
         try:
-            with open(p) as f:
+            p_path = Path(p)
+            with p_path.open() as f:
                 current_config = yaml.safe_load(f) or {}
                 if not isinstance(current_config, dict):
                     raise ParsingError(
@@ -138,7 +134,7 @@ def get_config_yaml(path: str | list[str] | None) -> dict[str, Any] | None:
     return merged_config
 
 
-def parse_config_from_yaml(raw_config: dict[str, Any], resolve_secrets: bool = False) -> list[SourceConfig]:
+def parse_config_from_yaml(raw_config: dict[str, Any] | None, resolve_secrets: bool = False) -> list[SourceConfig]:
     """
     Parses a dictionary (from YAML) into a list of SourceConfig objects.
 
@@ -151,6 +147,8 @@ def parse_config_from_yaml(raw_config: dict[str, Any], resolve_secrets: bool = F
     Returns:
         A list of SourceConfig objects.
     """
+    if raw_config is None:
+        return []
 
     # We import here to avoid a circular import at the top level
     from jsonschema.exceptions import ValidationError
@@ -242,7 +240,7 @@ def get_global_statements(config_path: str | list[str] | None = None) -> dict[st
 
 
 # Lazy import of registry to avoid circular dependency
-def get_registry() -> dict[SourceType, type["BaseSourceHandler"]]:
+def get_registry() -> dict[SourceType, Any]:
     from quackpipe.sources import SOURCE_HANDLER_REGISTRY
 
-    return cast(dict[SourceType, type["BaseSourceHandler"]], SOURCE_HANDLER_REGISTRY)
+    return cast(dict[SourceType, Any], SOURCE_HANDLER_REGISTRY)

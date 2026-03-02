@@ -90,11 +90,11 @@ class SQLiteCatalogProvider(CatalogProvider):
     def required_plugins(self) -> list[str]:
         return self.handler.required_plugins  # type: ignore[no-any-return]
 
-    def render_catalog_setup_sql(self, duckdb_secret_name: str) -> str:
+    def render_catalog_setup_sql(self, _duckdb_secret_name: str) -> str:
         # SQLite needs no secret, so it returns an empty string.
         return ""
 
-    def get_ducklake_catalog_reference(self, duckdb_secret_name: str) -> str:
+    def get_ducklake_catalog_reference(self, _duckdb_secret_name: str) -> str:
         db_path = self.handler.context.get("path")
         if not db_path:
             raise ValueError("SQLite catalog requires a 'path' in its configuration.")

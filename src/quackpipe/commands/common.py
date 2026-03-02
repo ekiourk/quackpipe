@@ -5,8 +5,8 @@ This module contains common utilities shared across CLI command modules.
 """
 
 import logging
-import os
 import sys
+from pathlib import Path
 
 DEFAULT_CONFIG_NAME = "config.yml"
 
@@ -16,7 +16,7 @@ def get_default_config_path() -> str | None:
     Returns 'config.yml' if it exists in the current directory, otherwise None.
     This allows for a dynamic default value in the CLI.
     """
-    if os.path.exists(DEFAULT_CONFIG_NAME):
+    if Path(DEFAULT_CONFIG_NAME).exists():
         return DEFAULT_CONFIG_NAME
     return None
 

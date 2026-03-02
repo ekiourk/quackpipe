@@ -81,7 +81,7 @@ def test_move_data_to_s3(mock_session, mock_get_configs, mock_duckdb_connection,
         destination_name="s3_dest",
         table_name="output_table",
         configs=s3_configs,
-        format=format_type,
+        file_format=format_type,
     )
 
     # Assert
@@ -231,7 +231,7 @@ def test_full_workflow_with_move_data(mock_get_configs, mock_session, mock_duckd
         destination_name="s3_lake",
         table_name="users_backup",
         configs=all_configs,
-        format="parquet",
+        file_format="parquet",
     )
 
     # Assert

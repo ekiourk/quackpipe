@@ -12,18 +12,18 @@ from quackpipe.sources.ducklake import DuckLakeHandler
 
 
 @pytest.mark.parametrize(
-    "test_id, context, expected_plugins",
+    "context, expected_plugins",
     [
         (
-            "postgres_s3",
             {"catalog": {"type": "postgres"}, "storage": {"type": "s3"}},
             {"ducklake", "postgres", "httpfs"},
         ),
-        ("sqlite_local", {"catalog": {"type": "sqlite"}, "storage": {"type": "local"}}, {"ducklake", "sqlite"}),
-        ("postgres_local", {"catalog": {"type": "postgres"}, "storage": {"type": "local"}}, {"ducklake", "postgres"}),
+        ({"catalog": {"type": "sqlite"}, "storage": {"type": "local"}}, {"ducklake", "sqlite"}),
+        ({"catalog": {"type": "postgres"}, "storage": {"type": "local"}}, {"ducklake", "postgres"}),
     ],
+    ids=["postgres_s3", "sqlite_local", "postgres_local"],
 )
-def test_ducklake_handler_dynamic_plugins(test_id, context, expected_plugins):
+def test_ducklake_handler_dynamic_plugins(context, expected_plugins):
     """
     Verify that the handler dynamically reports its required plugins
     based on the configuration passed to its initializer.
@@ -151,26 +151,24 @@ def test_render_sql_with_encrypted_sqlite_catalog():
 
 
 @pytest.mark.parametrize(
-    "test_id, invalid_context, expected_message",
+    "invalid_context, expected_message",
     [
         (
-            "missing_catalog",
             {"connection_name": "test", "storage": {"type": "local", "path": "/tmp"}},
             "requires a 'catalog' section",
         ),
         (
-            "missing_storage",
             {"connection_name": "test", "catalog": {"type": "sqlite", "path": "/tmp/db"}},
             "requires a 'storage' section",
         ),
         (
-            "missing_path",
             {"connection_name": "test", "catalog": {"type": "sqlite", "path": "/tmp/db"}, "storage": {"type": "local"}},
             "Ducklake storage source requires 'path'",
         ),
     ],
+    ids=["missing_catalog", "missing_storage", "missing_path"],
 )
-def test_validation_raises_error_for_invalid_config(test_id, invalid_context, expected_message):
+def test_validation_raises_error_for_invalid_config(invalid_context, expected_message):
     """
     Tests that the DuckLake validation raises a ValidationError if the
     'catalog' or 'storage' sections (or path) are missing from the configuration.

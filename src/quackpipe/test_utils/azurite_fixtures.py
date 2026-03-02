@@ -63,6 +63,5 @@ def azurite_container_with_data(
     azurite_test_container_client.upload_blob(
         name="employees.parquet", data=io.BytesIO(parquet_data), length=len(parquet_data), overwrite=True
     )
-    print(f"Uploaded employees.parquet to Azurite container '{azurite_test_container_client.container_name}'.")
 
     return azurite_container

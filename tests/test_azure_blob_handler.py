@@ -195,5 +195,3 @@ def test_e2e_read_from_azure(azurite_container_with_data: AzuriteContainer, quac
         # Convert results to a set of names for order-agnostic comparison
         names = {row[1] for row in filtered_results}
         assert names == {"Alice", "Diana"}
-
-    print("\nIntegration test successful: Data read from Azure Blob Storage correctly.")

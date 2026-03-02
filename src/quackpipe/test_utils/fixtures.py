@@ -63,10 +63,10 @@ def sample_config_dict() -> dict[str, Any]:
 @pytest.fixture
 def sample_yaml_config(temp_dir: str, sample_config_dict: dict[str, Any]) -> str:
     """Create a temporary YAML config file."""
-    config_path = os.path.join(temp_dir, "test_config.yml")
-    with open(config_path, "w") as f:
+    config_path = Path(temp_dir) / "test_config.yml"
+    with config_path.open("w") as f:
         yaml.dump(sample_config_dict, f)
-    return config_path
+    return str(config_path)
 
 
 @pytest.fixture

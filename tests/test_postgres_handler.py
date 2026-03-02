@@ -47,10 +47,9 @@ def test_postgres_handler_properties(postgres_env_vars):
 
 
 @pytest.mark.parametrize(
-    "test_id, context, expected_sql_parts, unexpected_sql_parts",
+    "context, expected_sql_parts, unexpected_sql_parts",
     [
         (
-            "basic_config_is_readonly",
             {
                 "connection_name": "pg_test",
                 "secret_name": "pg_creds",
@@ -64,7 +63,6 @@ def test_postgres_handler_properties(postgres_env_vars):
             [],  # No unexpected parts
         ),
         (
-            "read_write_config",
             {
                 "connection_name": "pg_rw",
                 "secret_name": "pg_creds",
@@ -78,7 +76,6 @@ def test_postgres_handler_properties(postgres_env_vars):
             ["READ_ONLY"],  # Should NOT contain the READ_ONLY flag
         ),
         (
-            "with_table_views",
             {"connection_name": "pg_views", "secret_name": "pg_creds", "port": 5432, "tables": ["users", "products"]},
             [
                 "CREATE OR REPLACE SECRET pg_views_secret",
@@ -90,7 +87,6 @@ def test_postgres_handler_properties(postgres_env_vars):
             [],
         ),
         (
-            "with_encryption",
             {"connection_name": "pg_secure", "secret_name": "pg_creds", "encryption_key": "my_pg_key"},
             [
                 "CREATE OR REPLACE SECRET pg_secure_secret",
@@ -99,8 +95,9 @@ def test_postgres_handler_properties(postgres_env_vars):
             [],
         ),
     ],
+    ids=["basic_config_is_readonly", "read_write_config", "with_table_views", "with_encryption"],
 )
-def test_postgres_render_sql(postgres_env_vars, test_id, context, expected_sql_parts, unexpected_sql_parts):
+def test_postgres_render_sql(postgres_env_vars, context, expected_sql_parts, unexpected_sql_parts):
     """
     Tests that the PostgresHandler's render_sql method correctly generates
     a CREATE SECRET statement followed by an ATTACH statement.

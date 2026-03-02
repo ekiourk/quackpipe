@@ -22,7 +22,7 @@ def to_df(con: duckdb.DuckDBPyConnection, query: str) -> pd.DataFrame:
     return con.execute(query).fetchdf()
 
 
-def create_table_from_df(con: duckdb.DuckDBPyConnection, df: pd.DataFrame, table_name: str) -> None:
+def create_table_from_df(con: duckdb.DuckDBPyConnection, df: pd.DataFrame, table_name: str) -> None:  # noqa: ARG001
     """Creates a new table in DuckDB from a pandas DataFrame, replacing if it exists."""
     con.execute(f"CREATE OR REPLACE TABLE {table_name} AS SELECT * FROM df")
 
@@ -35,7 +35,7 @@ def move_data(
     configs: list[SourceConfig] | None = None,
     env_file: str | None = None,
     mode: str = "replace",
-    format: str = "parquet",
+    file_format: str = "parquet",
     primary_key: str | list[str] | None = None,
 ) -> None:
     """
@@ -51,7 +51,7 @@ def move_data(
         configs: A direct list of SourceConfig objects.
         env_file: Path to an env file to use.
         mode: Write mode. 'replace', 'append', or 'merge'.
-        format: The file format for file-based destinations (e.g., 'parquet', 'csv').
+        file_format: The file format for file-based destinations (e.g., 'parquet', 'csv').
         primary_key: The primary key(s) to use for 'merge' mode. Can be a string
             or a list of strings.
     """
@@ -105,8 +105,8 @@ def move_data(
             base_path = dest_config.config.get("path", f"s3://{destination_name}/")
             if not base_path.endswith("/"):
                 base_path += "/"
-            full_path = f"{base_path}{table_name}.{format}"
-            sql = f"COPY ({source_query}) TO '{full_path}' (FORMAT {format.upper()});"
+            full_path = f"{base_path}{table_name}.{file_format}"
+            sql = f"COPY ({source_query}) TO '{full_path}' (FORMAT {file_format.upper()});"
             con.execute(sql)
             logger.info("Data successfully copied to %s", full_path)
 

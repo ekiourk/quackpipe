@@ -8,9 +8,8 @@ This test file covers:
 - Error handling
 """
 
-import builtins
-import os
 import sys
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 import duckdb
@@ -217,8 +216,8 @@ def test_parse_config_invalid_type(temp_dir):
     """Test parsing YAML with invalid source type."""
     invalid_config = {"sources": {"bad_source": {"type": "invalid_type", "secret_name": "test"}}}
 
-    config_path = os.path.join(temp_dir, "invalid.yml")
-    with open(config_path, "w") as f:
+    config_path = Path(temp_dir) / "invalid.yml"
+    with config_path.open("w") as f:
         yaml.dump(invalid_config, f)
 
     with pytest.raises(ConfigError, match="Configuration is invalid"):
@@ -317,12 +316,14 @@ def test_session_with_configs(mock_connect, mock_duckdb_connection, monkeypatch,
 def test_session_no_config(monkeypatch):
     """Test session creation without config."""
     monkeypatch.delenv("QUACKPIPE_CONFIG_PATH", raising=False)
-    with pytest.raises(
-        ConfigError,
-        match="Must provide either a 'config_path', a 'configs' list, or set the 'QUACKPIPE_CONFIG_PATH' environment variable.",
+    with (
+        pytest.raises(
+            ConfigError,
+            match="Must provide either a 'config_path', a 'configs' list, or set the 'QUACKPIPE_CONFIG_PATH' environment variable.",
+        ),
+        session(),
     ):
-        with session():
-            pass
+        pass
 
 
 def test_session_with_invalid_source_filter(sample_yaml_config, env_secrets):
@@ -464,6 +465,8 @@ def test_execution_error_hierarchy():
 
 def test_source_connection_error_is_not_builtin():
     """Guard against SourceConnectionError accidentally matching builtins.ConnectionError."""
+    import builtins
+
     assert SourceConnectionError is not builtins.ConnectionError
     assert not issubclass(SourceConnectionError, builtins.ConnectionError)
 
@@ -510,8 +513,8 @@ def test_extension_error_raised_on_install_failure(mock_connect):
 )
 def test_config_parsing_counts(temp_dir, config_data, expected_count):
     """Test configuration parsing with different source counts."""
-    config_path = os.path.join(temp_dir, "test.yml")
-    with open(config_path, "w") as f:
+    config_path = Path(temp_dir) / "test.yml"
+    with config_path.open("w") as f:
         yaml.dump(config_data, f)
 
     configs = parse_config_from_yaml(get_config_yaml(config_path))
@@ -529,8 +532,8 @@ def test_large_config_handling(temp_dir):
     for i in range(50):
         large_config["sources"][f"source_{i}"] = {"type": "postgres", "secret_name": f"secret_{i}"}
 
-    config_path = os.path.join(temp_dir, "large.yml")
-    with open(config_path, "w") as f:
+    config_path = Path(temp_dir) / "large.yml"
+    with config_path.open("w") as f:
         yaml.dump(large_config, f)
 
     configs = parse_config_from_yaml(get_config_yaml(config_path))
@@ -580,9 +583,8 @@ def test_full_statement_execution_order(mock_get_configs, mock_get_global_statem
     mock_con.__enter__ = Mock(return_value=mock_con)
     mock_con.__exit__ = Mock(return_value=None)
 
-    with patch("duckdb.connect", return_value=mock_con):
-        with session(config_path="dummy.yml"):
-            pass
+    with patch("duckdb.connect", return_value=mock_con), session(config_path="dummy.yml"):
+        pass
 
     # Define the expected order of SQL execution
     expected_order = ["-- BEFORE-ALL", "-- BEFORE-SOURCE", "-- SOURCE-SPECIFIC SQL", "-- AFTER-SOURCE", "-- AFTER-ALL"]
