@@ -4,6 +4,7 @@ The core logic of quackpipe.
 
 import logging
 from collections.abc import Callable
+from contextlib import AbstractContextManager
 from functools import wraps
 from typing import Any
 
@@ -111,11 +112,11 @@ def session(
     configs: list[SourceConfig] | None = None,
     sources: list[str] | None = None,
     env_file: str | list[str] | None = None,
-) -> duckdb.DuckDBPyConnection:
+) -> AbstractContextManager[duckdb.DuckDBPyConnection]:
     """
     Creates and returns a pre-configured DuckDB connection.
 
-    The returned connection object is a context manager and can be used in a
+    The returned connection object acts as a context manager and can be used in a
     `with` statement, which will automatically handle closing the connection.
 
     Configuration can be provided via the `config_path` parameter, the
@@ -123,11 +124,11 @@ def session(
     `SourceConfig` objects to the `configs` parameter.
 
     Example:
-        # As a context manager
+        # Recommended: As a context manager
         with session(config_path="config.yml") as con:
             con.sql("SELECT * FROM my_table")
 
-        # As a direct function call
+        # Optional: As a direct function call
         con = session(config_path="config.yml")
         # Remember to close it yourself
         con.close()

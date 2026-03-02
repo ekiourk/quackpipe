@@ -33,7 +33,8 @@ def handler(args: argparse.Namespace) -> None:
             raise ConfigError("No config file found. Please specify one with -c/--config or set QUACKPIPE_CONFIG_PATH.")
 
         yaml_output = yaml.dump(merged_config, sort_keys=False)
-        log.info("Merged configuration:")
+        if args.verbose:
+            log.info("Merged configuration:")
         print(yaml_output)  # noqa: T201
 
     except ConfigError as e:

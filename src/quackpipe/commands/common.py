@@ -41,8 +41,8 @@ def setup_cli_logging(verbose_level: int = 0) -> logging.Logger:
     log = logging.getLogger("quackpipe")
     log.setLevel(level)
 
-    # Create a handler to write messages to the console (stdout)
-    handler = logging.StreamHandler(sys.stdout)
+    # Create a handler to write messages to the console (stderr)
+    handler = logging.StreamHandler(sys.stderr)
 
     # Create a formatter and add it to the handler
     formatter = logging.Formatter("%(asctime)s - %(message)s")

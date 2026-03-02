@@ -206,6 +206,11 @@ def test_parse_config_from_yaml(sample_yaml_config):
     assert s3_config.config["region"] == "us-east-1"
 
 
+def test_parse_config_from_yaml_with_none():
+    """parse_config_from_yaml(None) should return [] not raise."""
+    assert parse_config_from_yaml(None) == []
+
+
 def test_parse_config_from_yaml_not_found():
     """Test parsing non-existent YAML file."""
     with pytest.raises(ParsingError, match="Configuration file not found"):
@@ -316,20 +321,20 @@ def test_session_with_configs(mock_connect, mock_duckdb_connection, monkeypatch,
 def test_session_no_config(monkeypatch):
     """Test session creation without config."""
     monkeypatch.delenv("QUACKPIPE_CONFIG_PATH", raising=False)
-    with (
-        pytest.raises(
-            ConfigError,
-            match="Must provide either a 'config_path', a 'configs' list, or set the 'QUACKPIPE_CONFIG_PATH' environment variable.",
-        ),
-        session(),
+    # Using nested with here for clarity on what is expected to raise.
+    with pytest.raises(  # noqa: SIM117
+        ConfigError,
+        match="Must provide either a 'config_path', a 'configs' list, or set the 'QUACKPIPE_CONFIG_PATH' environment variable.",
     ):
-        pass
+        with session():
+            pass
 
 
 def test_session_with_invalid_source_filter(sample_yaml_config, env_secrets):
     """Test that session() raises ValidationError for non-existent source in filter."""
-    with pytest.raises(ValidationError, match="requested sources were not found"):
-        session(config_path=sample_yaml_config, sources=["invalid_source_name"])
+    with pytest.raises(ValidationError, match="requested sources were not found"):  # noqa: SIM117
+        with session(config_path=sample_yaml_config, sources=["invalid_source_name"]):
+            pass
 
 
 @patch("quackpipe.core._prepare_connection")

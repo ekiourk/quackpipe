@@ -153,8 +153,8 @@ def test_generate_sqlmesh_config_command(mock_path_open, mock_yaml_dump, mock_ge
 # ==================== TESTS FOR VALIDATE COMMAND ====================
 
 
-@patch("sys.stdout", new_callable=io.StringIO)
-def test_validate_command_valid_config(mock_stdout, tmpdir):
+@patch("sys.stderr", new_callable=io.StringIO)
+def test_validate_command_valid_config(mock_stderr, tmpdir):
     """Test the validate command with a valid config file."""
     config_data = {"sources": {"my_source": {"type": "sqlite", "path": "test.db"}}}
     config_path = Path(tmpdir) / "config.yml"
@@ -164,13 +164,13 @@ def test_validate_command_valid_config(mock_stdout, tmpdir):
     with patch.object(sys, "argv", ["quackpipe", "validate", "-v", "--config", str(config_path)]):
         main()
 
-    output = mock_stdout.getvalue()
+    output = mock_stderr.getvalue()
     assert f"Attempting to validate configuration from: ['{config_path}']" in output
     assert f"✅ Configuration from '['{config_path}']' is valid." in output
 
 
-@patch("sys.stdout", new_callable=io.StringIO)
-def test_validate_command_invalid_config(mock_stdout, tmpdir):
+@patch("sys.stderr", new_callable=io.StringIO)
+def test_validate_command_invalid_config(mock_stderr, tmpdir):
     """Test the validate command with an invalid config file."""
     config_data = {"sources": {"my_source": {"type": "sqlite"}}}  # Missing path
     config_path = Path(tmpdir) / "config.yml"
@@ -184,12 +184,12 @@ def test_validate_command_invalid_config(mock_stdout, tmpdir):
         main()
     assert e.value.code == 1
 
-    output = mock_stdout.getvalue()
+    output = mock_stderr.getvalue()
     assert f"Attempting to validate configuration from: ['{config_path}']" in output
 
 
-@patch("sys.stdout", new_callable=io.StringIO)
-def test_validate_command_no_file(mock_stdout):
+@patch("sys.stderr", new_callable=io.StringIO)
+def test_validate_command_no_file(mock_stderr):
     """Test the validate command with a non-existent config file."""
     config_path = "non_existent_config.yml"
     with (
@@ -199,12 +199,12 @@ def test_validate_command_no_file(mock_stdout):
         main()
     assert e.value.code == 1
 
-    output = mock_stdout.getvalue()
+    output = mock_stderr.getvalue()
     assert f"Attempting to validate configuration from: ['{config_path}']" in output
 
 
-@patch("sys.stdout", new_callable=io.StringIO)
-def test_validate_command_multiple_valid_configs(mock_stdout, tmpdir):
+@patch("sys.stderr", new_callable=io.StringIO)
+def test_validate_command_multiple_valid_configs(mock_stderr, tmpdir):
     """Test the validate command with multiple valid config files."""
     base_data = {"sources": {"my_source": {"type": "sqlite", "path": "base.db"}}}
     dev_data = {"sources": {"my_source": {"path": "dev.db"}}}
@@ -220,7 +220,7 @@ def test_validate_command_multiple_valid_configs(mock_stdout, tmpdir):
     with patch.object(sys, "argv", ["quackpipe", "validate", "-v", "--config", str(f1), str(f2)]):
         main()
 
-    output = mock_stdout.getvalue()
+    output = mock_stderr.getvalue()
     assert f"Attempting to validate configuration from: ['{f1}', '{f2}']" in output
     assert f"✅ Configuration from '['{f1}', '{f2}']' is valid." in output
 
@@ -238,15 +238,51 @@ def test_preview_config_command(capfd, tmpdir):
     with f2.open("w") as f:
         yaml.dump(dev_data, f)
 
+    # Test with default verbosity (pure YAML)
     with patch.object(sys, "argv", ["quackpipe", "preview-config", "--config", str(f1), str(f2)]):
         main()
 
-    out, _ = capfd.readouterr()
-    # The output is directly printed now.
+    out, err = capfd.readouterr()
+    # YAML should be on stdout
     parsed_output = yaml.safe_load(out)
-
     assert parsed_output["sources"]["my_source"]["type"] == "sqlite"
     assert parsed_output["sources"]["my_source"]["path"] == "dev.db"
+    # No "Merged configuration" on stdout or stderr (at default warning level)
+    assert "Merged configuration" not in out
+    assert "Merged configuration" not in err
+
+    # Test with verbose mode (banner on stderr)
+    with patch.object(sys, "argv", ["quackpipe", "preview-config", "-v", "--config", str(f1), str(f2)]):
+        main()
+
+    out, err = capfd.readouterr()
+    assert yaml.safe_load(out)["sources"]["my_source"]["path"] == "dev.db"
+    assert "Merged configuration" in err
+    assert "Merged configuration" not in out
+
+
+def test_preview_config_command_failure():
+    """Test the preview-config command with a missing config file."""
+    with (
+        pytest.raises(SystemExit) as e,
+        patch.object(sys, "argv", ["quackpipe", "preview-config", "--config", "nonexistent.yml"]),
+    ):
+        main()
+    assert e.value.code == 1
+
+
+@patch("quackpipe.commands.generate_sqlmesh_config.get_configs")
+def test_generate_sqlmesh_config_command_failure(mock_get_configs):
+    """Test the generate-sqlmesh-config command with a write error."""
+    mock_get_configs.return_value = []
+    # Mocking Path.open to raise an exception
+    with (
+        pytest.raises(SystemExit) as e,
+        patch("pathlib.Path.open", side_effect=PermissionError("denied")),
+        patch.object(sys, "argv", ["quackpipe", "generate-sqlmesh-config", "-o", "/root/denied.yml"]),
+    ):
+        main()
+    assert e.value.code == 1
 
 
 @patch("sys.stdout", new_callable=io.StringIO)

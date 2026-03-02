@@ -4,6 +4,7 @@ The Builder API for programmatically constructing a quackpipe session.
 
 from __future__ import annotations
 
+from contextlib import AbstractContextManager
 from typing import Any, Self
 
 import duckdb
@@ -107,7 +108,7 @@ class QuackpipeBuilder:
         """
         return self._sources
 
-    def session(self, **kwargs: Any) -> duckdb.DuckDBPyConnection:
+    def session(self, **kwargs: Any) -> AbstractContextManager[duckdb.DuckDBPyConnection]:
         """
         Builds and returns a pre-configured DuckDB connection.
 
@@ -118,7 +119,7 @@ class QuackpipeBuilder:
             **kwargs: Extra arguments passed to the core session manager (e.g., `sources`).
 
         Returns:
-            A configured DuckDB connection.
+            A configured DuckDB connection that acts as a context manager.
         """
         if not self._sources:
             raise ExecutionError("Cannot build a session with no sources defined.")
