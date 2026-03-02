@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 import pytest
 import yaml
@@ -8,8 +8,8 @@ from quackpipe.exceptions import ConfigError
 
 
 def run_validation_test(temp_dir, invalid_config, should_pass=False):
-    config_path = os.path.join(temp_dir, "config.yml")
-    with open(config_path, "w") as f:
+    config_path = Path(temp_dir) / "config.yml"
+    with config_path.open("w") as f:
         yaml.dump(invalid_config, f)
 
     if should_pass:

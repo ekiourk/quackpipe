@@ -1,10 +1,11 @@
 import datetime
+from typing import Any
 
 import pandas as pd
 
 
 # Helper functions for data generation
-def create_employee_data():
+def create_employee_data() -> dict[str, list[Any]]:
     """Generate sample employee data."""
     return {
         "id": [1, 2, 3, 4, 5],
@@ -15,7 +16,7 @@ def create_employee_data():
     }
 
 
-def create_monthly_data():
+def create_monthly_data() -> dict[str, list[Any]]:
     """Generate sample monthly financial data."""
     return {
         "month": ["2024-01", "2024-02", "2024-03"],
@@ -24,7 +25,7 @@ def create_monthly_data():
     }
 
 
-def create_vessel_definitions():
+def create_vessel_definitions() -> list[dict[str, Any]]:
     """Define vessel specifications for AIS data generation."""
     return [
         {
@@ -75,7 +76,12 @@ def create_vessel_definitions():
     ]
 
 
-def generate_synthetic_ais_data(vessels=None, hours=24, interval_minutes=5, base_time=None):
+def generate_synthetic_ais_data(
+    vessels: list[dict[str, Any]] | None = None,
+    hours: int = 24,
+    interval_minutes: int = 5,
+    base_time: datetime.datetime | None = None,
+) -> pd.DataFrame:
     """
     Generate synthetic AIS data.
 
@@ -127,9 +133,9 @@ def generate_synthetic_ais_data(vessels=None, hours=24, interval_minutes=5, base
     return pd.DataFrame(synthetic_records)
 
 
-def create_ais_summary(ais_df, vessels):
+def create_ais_summary(ais_df: pd.DataFrame, vessels: list[dict[str, Any]]) -> dict[str, Any]:
     """Create a summary of AIS data."""
-    vessel_type_counts = {}
+    vessel_type_counts: dict[str, int] = {}
     type_names = {70: "cargo", 80: "tanker", 30: "fishing", 50: "pilot", 60: "ferry"}
 
     for vessel in vessels:

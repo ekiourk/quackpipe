@@ -7,10 +7,10 @@ def test_multiple_env_files(tmp_path):
     f1 = tmp_path / ".env.base"
     f2 = tmp_path / ".env.dev"
 
-    with open(f1, "w") as f:
+    with f1.open("w") as f:
         f.write("MY_VAR=base_value\nSHARED_VAR=shared_base\n")
 
-    with open(f2, "w") as f:
+    with f2.open("w") as f:
         f.write("MY_VAR=dev_value\n")
 
     # Initialize provider with list
@@ -24,7 +24,7 @@ def test_multiple_env_files(tmp_path):
 
 def test_single_env_file_compat(tmp_path):
     f1 = tmp_path / ".env"
-    with open(f1, "w") as f:
+    with f1.open("w") as f:
         f.write("FOO=bar\n")
 
     provider = EnvSecretProvider(env_file=str(f1))
@@ -42,7 +42,7 @@ def test_missing_env_file_warning(caplog):
 
 def test_env_loading_no_side_effects(tmp_path):
     f = tmp_path / ".env.test"
-    with open(f, "w") as file:
+    with f.open("w") as file:
         file.write("SIDE_EFFECT_VAR=should_not_leak\n")
 
     # Ensure variable is not in os.environ initially
@@ -65,7 +65,7 @@ def test_env_loading_overrides_system(tmp_path, monkeypatch):
     monkeypatch.setenv("TEST_VAR", "system_value")
 
     f = tmp_path / ".env.override"
-    with open(f, "w") as file:
+    with f.open("w") as file:
         file.write("TEST_VAR=file_value\n")
 
     provider = EnvSecretProvider(env_file=str(f))

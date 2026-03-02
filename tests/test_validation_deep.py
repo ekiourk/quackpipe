@@ -2,6 +2,8 @@
 Tests for deep validation (resolve_secrets=True) in quackpipe.
 """
 
+from pathlib import Path
+
 import pytest
 import yaml
 
@@ -15,7 +17,7 @@ def simple_pg_config(tmp_path):
     """A config with a postgres source using a secret."""
     config = {"sources": {"pg_test": {"type": "postgres", "secret_name": "my_pg_secret"}}}
     path = tmp_path / "deep_val.yml"
-    with open(path, "w") as f:
+    with path.open("w") as f:
         yaml.dump(config, f)
     return str(path)
 
@@ -24,7 +26,7 @@ def test_inline_postgres_validation_passes(tmp_path):
     """Verify that inline postgres config (no secrets) passes validation."""
     config = {"sources": {"pg_inline": {"type": "postgres", "host": "localhost", "database": "test_db"}}}
     path = tmp_path / "inline_val.yml"
-    with open(path, "w") as f:
+    with path.open("w") as f:
         yaml.dump(config, f)
 
     # Should not raise
@@ -33,7 +35,7 @@ def test_inline_postgres_validation_passes(tmp_path):
 
 def test_deep_validation_fails_when_secret_missing(simple_pg_config):
     """When resolve_secrets=True, it should fail if env vars are missing."""
-    with open(simple_pg_config) as f:
+    with Path(simple_pg_config).open() as f:
         raw_config = yaml.safe_load(f)
 
     # Ensure environment is clean for this secret
@@ -45,7 +47,7 @@ def test_deep_validation_fails_when_secret_missing(simple_pg_config):
 
 def test_deep_validation_passes_when_secret_present(simple_pg_config, monkeypatch):
     """When resolve_secrets=True, it should pass if env vars are present."""
-    with open(simple_pg_config) as f:
+    with Path(simple_pg_config).open() as f:
         raw_config = yaml.safe_load(f)
 
     # Set required secrets
@@ -61,7 +63,7 @@ def test_deep_validation_passes_when_secret_present(simple_pg_config, monkeypatc
 
 def test_static_validation_ignores_missing_secrets(simple_pg_config):
     """When resolve_secrets=False (default), missing env vars are ignored."""
-    with open(simple_pg_config) as f:
+    with Path(simple_pg_config).open() as f:
         raw_config = yaml.safe_load(f)
 
     configure_secret_provider(env_file=None)

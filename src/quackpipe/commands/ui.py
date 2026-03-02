@@ -4,14 +4,22 @@ src/quackpipe/commands/ui.py
 This module contains the implementation for the 'ui' CLI command.
 """
 
+import argparse
+import contextlib
 from argparse import _SubParsersAction
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    SubParsersAction = _SubParsersAction[argparse.ArgumentParser]
+else:
+    SubParsersAction = _SubParsersAction
 
 from .. import ConfigError
 from ..core import session
 from .common import get_default_config_path, normalize_arg_to_list, setup_cli_logging
 
 
-def handler(args):
+def handler(args: argparse.Namespace) -> None:
     """The main handler function for the ui command."""
     log = setup_cli_logging(args.verbose)
 
@@ -35,28 +43,28 @@ def handler(args):
             log.warning(f"✅ DuckDB UI is running at: http://localhost:{args.port}")
             log.info("All sources from your config are attached and ready to query.")
 
-            try:
+            with contextlib.suppress(KeyboardInterrupt):
                 # Wait for user input to keep the server alive.
                 input("Press Enter or Ctrl+C to exit and shut down the UI server...")
-            except KeyboardInterrupt:
-                # Handle Ctrl+C gracefully by just printing a newline and proceeding.
-                print()  # Move to the next line after the ^C character
-                pass
 
+            print()  # noqa: T201
             log.info("Stopping DuckDB UI server...")
             con.execute("CALL stop_ui_server();")
 
     except Exception as e:
+        import sys
+
         log_msg = f"❌ Failed to start UI session: {e}"
         if isinstance(e, ConfigError):
             log.warning(log_msg)
         else:
             log.error(log_msg, exc_info=True)
+        sys.exit(1)
     finally:
         log.info("Shutting down.")
 
 
-def register_command(subparsers: _SubParsersAction):
+def register_command(subparsers: SubParsersAction) -> None:
     """Registers the command and its arguments to the main CLI parser."""
     parser_ui = subparsers.add_parser("ui", help="Launch an interactive DuckDB UI with pre-configured sources.")
     parser_ui.add_argument(

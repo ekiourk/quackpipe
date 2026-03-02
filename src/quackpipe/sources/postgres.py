@@ -3,8 +3,9 @@
 from typing import Any
 
 from quackpipe.secrets import fetch_secret_bundle
-from quackpipe.sources.base import BaseSourceHandler
 from quackpipe.validation_utils import get_merged_params, validate_required_fields
+
+from .base import BaseSourceHandler
 
 
 class PostgresHandler(BaseSourceHandler):
@@ -13,13 +14,15 @@ class PostgresHandler(BaseSourceHandler):
     This handler uses the recommended CREATE SECRET + ATTACH pattern.
     """
 
-    def __init__(self, context: dict[str, Any]):
+    context: dict[str, Any]
+
+    def __init__(self, context: dict[str, Any]) -> None:
         super().__init__(context)
         secrets = fetch_secret_bundle(self.context.get("secret_name"))
         self.context = {**self.context, **secrets}
 
     @property
-    def source_type(self):
+    def source_type(self) -> str:
         return "postgres"
 
     @property
@@ -27,7 +30,7 @@ class PostgresHandler(BaseSourceHandler):
         return ["postgres"]
 
     @classmethod
-    def validate(cls, config: dict[str, Any], secret_name: str | None = None, resolve_secrets: bool = False):
+    def validate(cls, config: dict[str, Any], secret_name: str | None = None, resolve_secrets: bool = False) -> None:
         """Validates Postgres configuration parameters."""
         params = get_merged_params(config, secret_name, resolve_secrets)
         validate_required_fields(params, ["host", "database"], "postgres", secret_name, resolve_secrets)

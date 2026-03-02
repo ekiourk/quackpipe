@@ -12,7 +12,7 @@ from . import __version__
 from .commands import generate_sqlmesh_config, preview_config, ui, validate
 
 
-def main():
+def main() -> None:
     """Main function to parse arguments and dispatch commands."""
     parser = argparse.ArgumentParser(description="quackpipe: A DuckDB ETL Helper CLI.")
 
@@ -30,7 +30,13 @@ def main():
 
     # Parse the arguments and call the handler function assigned by the subparser
     args = parser.parse_args()
-    args.func(args)
+    try:
+        args.func(args)
+    except Exception as e:
+        import sys
+
+        print(f"An unexpected error occurred: {e}", file=sys.stderr)  # noqa: T201
+        sys.exit(1)
 
 
 if __name__ == "__main__":

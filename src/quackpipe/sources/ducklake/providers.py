@@ -62,17 +62,17 @@ class PostgresCatalogProvider(CatalogProvider):
 
     handler: PostgresHandler
 
-    def __init__(self, context: dict[str, Any]):
+    def __init__(self, context: dict[str, Any]) -> None:
         # Composition: Create an instance of the handler to delegate to.
         self.handler = PostgresHandler(context)
 
     @property
     def required_plugins(self) -> list[str]:
-        return self.handler.required_plugins
+        return self.handler.required_plugins  # type: ignore[no-any-return]
 
     def render_catalog_setup_sql(self, duckdb_secret_name: str) -> str:
         # Delegate the call to the handler's internal method.
-        return self.handler.render_create_secret_sql(duckdb_secret_name)
+        return self.handler.render_create_secret_sql(duckdb_secret_name)  # type: ignore[no-any-return]
 
     def get_ducklake_catalog_reference(self, duckdb_secret_name: str) -> str:
         return f"postgres:{duckdb_secret_name}"
@@ -81,18 +81,20 @@ class PostgresCatalogProvider(CatalogProvider):
 class SQLiteCatalogProvider(CatalogProvider):
     """A CatalogProvider that uses a SQLiteHandler internally."""
 
-    def __init__(self, context: dict[str, Any]):
+    handler: SQLiteHandler
+
+    def __init__(self, context: dict[str, Any]) -> None:
         self.handler = SQLiteHandler(context)
 
     @property
     def required_plugins(self) -> list[str]:
-        return self.handler.required_plugins
+        return self.handler.required_plugins  # type: ignore[no-any-return]
 
-    def render_catalog_setup_sql(self, duckdb_secret_name: str) -> str:
+    def render_catalog_setup_sql(self, _duckdb_secret_name: str) -> str:
         # SQLite needs no secret, so it returns an empty string.
         return ""
 
-    def get_ducklake_catalog_reference(self, duckdb_secret_name: str) -> str:
+    def get_ducklake_catalog_reference(self, _duckdb_secret_name: str) -> str:
         db_path = self.handler.context.get("path")
         if not db_path:
             raise ValueError("SQLite catalog requires a 'path' in its configuration.")
@@ -104,15 +106,15 @@ class S3StorageProvider(StorageProvider):
 
     handler: S3Handler
 
-    def __init__(self, context: dict[str, Any]):
+    def __init__(self, context: dict[str, Any]) -> None:
         self.handler = S3Handler(context)
 
     @property
     def required_plugins(self) -> list[str]:
-        return self.handler.required_plugins
+        return self.handler.required_plugins  # type: ignore[no-any-return]
 
     def render_storage_setup_sql(self, duckdb_secret_name: str) -> str:
         # For S3, the setup is to create a secret if one is named.
         if self.handler.context.get("secret_name"):
-            return self.handler.render_create_secret_sql(duckdb_secret_name)
+            return self.handler.render_create_secret_sql(duckdb_secret_name)  # type: ignore[no-any-return]
         return ""

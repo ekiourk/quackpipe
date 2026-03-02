@@ -8,9 +8,8 @@ This test file covers:
 - Error handling
 """
 
-import builtins
-import os
 import sys
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 import duckdb
@@ -96,7 +95,7 @@ def test_builder_add_source():
     builder = QuackpipeBuilder()
 
     result = builder.add_source(
-        name="test_pg", type=SourceType.POSTGRES, config={"port": 5432}, secret_name="pg_secret"
+        name="test_pg", source_type=SourceType.POSTGRES, config={"port": 5432}, secret_name="pg_secret"
     )
 
     # Should return self for chaining
@@ -137,7 +136,7 @@ def test_builder_chaining():
     """Test builder method chaining."""
     builder = QuackpipeBuilder()
 
-    result = builder.add_source("pg1", SourceType.POSTGRES, secret_name="pg_secret").add_source_config(
+    result = builder.add_source("pg1", source_type=SourceType.POSTGRES, secret_name="pg_secret").add_source_config(
         SourceConfig("s3_1", SourceType.S3, secret_name="s3_secret")
     )
 
@@ -166,7 +165,7 @@ def test_builder_session_empty():
 def test_builder_session_success(mock_session):
     """Test successful builder session creation."""
     builder = QuackpipeBuilder()
-    builder.add_source("test", SourceType.POSTGRES, secret_name="dummy")
+    builder.add_source("test", source_type=SourceType.POSTGRES, secret_name="dummy")
 
     builder.session()
 
@@ -179,13 +178,13 @@ def test_postgres_validation():
 
     # Fails without host/database OR secret_name
     with pytest.raises(ValidationError, match="requires 'host', 'database'"):
-        builder.add_source("pg", SourceType.POSTGRES, config={})
+        builder.add_source("pg", source_type=SourceType.POSTGRES, config={})
 
     # Passes with secret_name
-    builder.add_source("pg_ok", SourceType.POSTGRES, secret_name="my_secret")
+    builder.add_source("pg_ok", source_type=SourceType.POSTGRES, secret_name="my_secret")
 
     # Passes with host/database
-    builder.add_source("pg_ok2", SourceType.POSTGRES, config={"host": "localhost", "database": "db"})
+    builder.add_source("pg_ok2", source_type=SourceType.POSTGRES, config={"host": "localhost", "database": "db"})
 
 
 # ==================== CORE FUNCTIONALITY TESTS ====================
@@ -207,6 +206,11 @@ def test_parse_config_from_yaml(sample_yaml_config):
     assert s3_config.config["region"] == "us-east-1"
 
 
+def test_parse_config_from_yaml_with_none():
+    """parse_config_from_yaml(None) should return [] not raise."""
+    assert parse_config_from_yaml(None) == []
+
+
 def test_parse_config_from_yaml_not_found():
     """Test parsing non-existent YAML file."""
     with pytest.raises(ParsingError, match="Configuration file not found"):
@@ -217,8 +221,8 @@ def test_parse_config_invalid_type(temp_dir):
     """Test parsing YAML with invalid source type."""
     invalid_config = {"sources": {"bad_source": {"type": "invalid_type", "secret_name": "test"}}}
 
-    config_path = os.path.join(temp_dir, "invalid.yml")
-    with open(config_path, "w") as f:
+    config_path = Path(temp_dir) / "invalid.yml"
+    with config_path.open("w") as f:
         yaml.dump(invalid_config, f)
 
     with pytest.raises(ConfigError, match="Configuration is invalid"):
@@ -317,7 +321,8 @@ def test_session_with_configs(mock_connect, mock_duckdb_connection, monkeypatch,
 def test_session_no_config(monkeypatch):
     """Test session creation without config."""
     monkeypatch.delenv("QUACKPIPE_CONFIG_PATH", raising=False)
-    with pytest.raises(
+    # Using nested with here for clarity on what is expected to raise.
+    with pytest.raises(  # noqa: SIM117
         ConfigError,
         match="Must provide either a 'config_path', a 'configs' list, or set the 'QUACKPIPE_CONFIG_PATH' environment variable.",
     ):
@@ -327,8 +332,9 @@ def test_session_no_config(monkeypatch):
 
 def test_session_with_invalid_source_filter(sample_yaml_config, env_secrets):
     """Test that session() raises ValidationError for non-existent source in filter."""
-    with pytest.raises(ValidationError, match="requested sources were not found"):
-        session(config_path=sample_yaml_config, sources=["invalid_source_name"])
+    with pytest.raises(ValidationError, match="requested sources were not found"):  # noqa: SIM117
+        with session(config_path=sample_yaml_config, sources=["invalid_source_name"]):
+            pass
 
 
 @patch("quackpipe.core._prepare_connection")
@@ -464,6 +470,8 @@ def test_execution_error_hierarchy():
 
 def test_source_connection_error_is_not_builtin():
     """Guard against SourceConnectionError accidentally matching builtins.ConnectionError."""
+    import builtins
+
     assert SourceConnectionError is not builtins.ConnectionError
     assert not issubclass(SourceConnectionError, builtins.ConnectionError)
 
@@ -510,8 +518,8 @@ def test_extension_error_raised_on_install_failure(mock_connect):
 )
 def test_config_parsing_counts(temp_dir, config_data, expected_count):
     """Test configuration parsing with different source counts."""
-    config_path = os.path.join(temp_dir, "test.yml")
-    with open(config_path, "w") as f:
+    config_path = Path(temp_dir) / "test.yml"
+    with config_path.open("w") as f:
         yaml.dump(config_data, f)
 
     configs = parse_config_from_yaml(get_config_yaml(config_path))
@@ -529,8 +537,8 @@ def test_large_config_handling(temp_dir):
     for i in range(50):
         large_config["sources"][f"source_{i}"] = {"type": "postgres", "secret_name": f"secret_{i}"}
 
-    config_path = os.path.join(temp_dir, "large.yml")
-    with open(config_path, "w") as f:
+    config_path = Path(temp_dir) / "large.yml"
+    with config_path.open("w") as f:
         yaml.dump(large_config, f)
 
     configs = parse_config_from_yaml(get_config_yaml(config_path))
@@ -547,7 +555,7 @@ def test_empty_secret_bundle_handling():
 def test_builder_with_none_config():
     """Test builder with None config parameter."""
     builder = QuackpipeBuilder()
-    builder.add_source("test", SourceType.POSTGRES, config=None, secret_name="dummy")
+    builder.add_source("test", source_type=SourceType.POSTGRES, config=None, secret_name="dummy")
 
     assert builder._sources[0].config == {}
 
@@ -580,9 +588,8 @@ def test_full_statement_execution_order(mock_get_configs, mock_get_global_statem
     mock_con.__enter__ = Mock(return_value=mock_con)
     mock_con.__exit__ = Mock(return_value=None)
 
-    with patch("duckdb.connect", return_value=mock_con):
-        with session(config_path="dummy.yml"):
-            pass
+    with patch("duckdb.connect", return_value=mock_con), session(config_path="dummy.yml"):
+        pass
 
     # Define the expected order of SQL execution
     expected_order = ["-- BEFORE-ALL", "-- BEFORE-SOURCE", "-- SOURCE-SPECIFIC SQL", "-- AFTER-SOURCE", "-- AFTER-ALL"]

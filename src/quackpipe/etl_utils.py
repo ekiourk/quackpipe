@@ -3,6 +3,7 @@ High-level utility functions for common ETL operations.
 """
 
 import logging
+from typing import cast
 
 import duckdb
 import pandas as pd
@@ -21,7 +22,7 @@ def to_df(con: duckdb.DuckDBPyConnection, query: str) -> pd.DataFrame:
     return con.execute(query).fetchdf()
 
 
-def create_table_from_df(con: duckdb.DuckDBPyConnection, df: pd.DataFrame, table_name: str):
+def create_table_from_df(con: duckdb.DuckDBPyConnection, df: pd.DataFrame, table_name: str) -> None:  # noqa: ARG001
     """Creates a new table in DuckDB from a pandas DataFrame, replacing if it exists."""
     con.execute(f"CREATE OR REPLACE TABLE {table_name} AS SELECT * FROM df")
 
@@ -34,9 +35,9 @@ def move_data(
     configs: list[SourceConfig] | None = None,
     env_file: str | None = None,
     mode: str = "replace",
-    format: str = "parquet",
+    file_format: str = "parquet",
     primary_key: str | list[str] | None = None,
-):
+) -> None:
     """
     A self-contained utility to move data from a source query to a destination.
     This function creates and manages its own quackpipe session.
@@ -50,7 +51,7 @@ def move_data(
         configs: A direct list of SourceConfig objects.
         env_file: Path to an env file to use.
         mode: Write mode. 'replace', 'append', or 'merge'.
-        format: The file format for file-based destinations (e.g., 'parquet', 'csv').
+        file_format: The file format for file-based destinations (e.g., 'parquet', 'csv').
         primary_key: The primary key(s) to use for 'merge' mode. Can be a string
             or a list of strings.
     """
@@ -76,6 +77,10 @@ def move_data(
     except StopIteration as e:
         raise ValueError(f"Destination '{destination_name}' not found in the provided configuration.") from e
 
+    # Hoist 'merge' mode validation
+    if mode == "merge" and primary_key is None:
+        raise ValidationError("Primary key(s) must be provided for 'merge' mode.")
+
     # Helper function to generate MERGE SQL
     def _generate_merge_sql(target_table: str, source_q: str, pk: str | list[str]) -> str:
         if not pk:
@@ -100,8 +105,8 @@ def move_data(
             base_path = dest_config.config.get("path", f"s3://{destination_name}/")
             if not base_path.endswith("/"):
                 base_path += "/"
-            full_path = f"{base_path}{table_name}.{format}"
-            sql = f"COPY ({source_query}) TO '{full_path}' (FORMAT {format.upper()});"
+            full_path = f"{base_path}{table_name}.{file_format}"
+            sql = f"COPY ({source_query}) TO '{full_path}' (FORMAT {file_format.upper()});"
             con.execute(sql)
             logger.info("Data successfully copied to %s", full_path)
 
@@ -112,7 +117,7 @@ def move_data(
             elif mode == "append":
                 sql = f"INSERT INTO {full_table_name} ({source_query});"
             elif mode == "merge":
-                sql = _generate_merge_sql(full_table_name, source_query, primary_key)
+                sql = _generate_merge_sql(full_table_name, source_query, cast(str | list[str], primary_key))
             else:
                 raise ValidationError(f"Invalid mode '{mode}'. Use 'replace', 'append' or 'merge'.")
             con.execute(sql)
@@ -133,7 +138,7 @@ def move_data(
             elif mode == "append":
                 sql = f"INSERT INTO {full_table_name} ({source_query});"
             elif mode == "merge":
-                sql = _generate_merge_sql(full_table_name, source_query, primary_key)
+                sql = _generate_merge_sql(full_table_name, source_query, cast(str | list[str], primary_key))
             else:
                 raise ValidationError(f"Invalid mode '{mode}'. Use 'replace', 'append' or 'merge'.")
             con.execute(sql)
@@ -145,7 +150,7 @@ def move_data(
             elif mode == "append":
                 sql = f"INSERT INTO {table_name} ({source_query});"
             elif mode == "merge":
-                sql = _generate_merge_sql(table_name, source_query, primary_key)
+                sql = _generate_merge_sql(table_name, source_query, cast(str | list[str], primary_key))
             else:
                 raise ValidationError(f"Invalid mode '{mode}'. Use 'replace', 'append' or 'merge'.")
             con.execute(sql)

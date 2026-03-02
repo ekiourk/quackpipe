@@ -166,7 +166,7 @@ def test_render_sql_raises_error_for_invalid_provider():
     """
     builder = QuackpipeBuilder()
     with pytest.raises(ValidationError, match="Unsupported Azure provider type: 'invalid_method'"):
-        builder.add_source(name="azure_bad", type="azure", config={"provider": "invalid_method"})
+        builder.add_source(name="azure_bad", source_type="azure", config={"provider": "invalid_method"})
 
 
 # ==================== END-TO-END INTEGRATION TEST ====================
@@ -195,5 +195,3 @@ def test_e2e_read_from_azure(azurite_container_with_data: AzuriteContainer, quac
         # Convert results to a set of names for order-agnostic comparison
         names = {row[1] for row in filtered_results}
         assert names == {"Alice", "Diana"}
-
-    print("\nIntegration test successful: Data read from Azure Blob Storage correctly.")

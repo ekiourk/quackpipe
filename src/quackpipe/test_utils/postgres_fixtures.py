@@ -32,13 +32,15 @@ def postgres_container() -> Generator[PostgresContainer, Any, None]:
 
 
 @pytest.fixture(scope="module")
-def postgres_engine(postgres_container):
+def postgres_engine(postgres_container: PostgresContainer) -> Any:
     """Returns a SQLAlchemy engine for the PostgreSQL container."""
     return create_engine(postgres_container.get_connection_url())
 
 
 @pytest.fixture(scope="module")
-def postgres_container_with_data(postgres_container, quackpipe_with_pg_source) -> PostgresContainer:
+def postgres_container_with_data(
+    postgres_container: PostgresContainer, quackpipe_with_pg_source: QuackpipeBuilder
+) -> PostgresContainer:
     """
     Starts a PostgreSQL container and populates it with sample data for testing
     using a temporary Quackpipe connection.
@@ -91,13 +93,13 @@ def postgres_container_with_data(postgres_container, quackpipe_with_pg_source) -
 
 
 @pytest.fixture(scope="module")
-def quackpipe_with_pg_source(postgres_container) -> QuackpipeBuilder:
+def quackpipe_with_pg_source(postgres_container: PostgresContainer) -> QuackpipeBuilder:
     """
     Provides a Quackpipe builder with a read-write connection to the PostgreSQL source.
     """
     builder = QuackpipeBuilder().add_source(
         name=POSTGRES_SOURCE_NAME,
-        type=SourceType.POSTGRES,
+        source_type=SourceType.POSTGRES,
         config={
             "database": "test",
             "user": "test",

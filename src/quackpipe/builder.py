@@ -4,9 +4,12 @@ The Builder API for programmatically constructing a quackpipe session.
 
 from __future__ import annotations
 
+from contextlib import AbstractContextManager
 from typing import Any, Self
 
-from .config import SourceConfig, SourceType
+import duckdb
+
+from .config import SourceConfig, SourceParams, SourceType
 from .core import session as core_session  # Avoid circular import
 from .exceptions import ExecutionError
 from .sources import SOURCE_HANDLER_REGISTRY
@@ -15,41 +18,51 @@ from .sources import SOURCE_HANDLER_REGISTRY
 class QuackpipeBuilder:
     """A fluent builder for creating a quackpipe session without a YAML file."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._sources: list[SourceConfig] = []
 
     def add_source(
-        self, name: str, type: SourceType | str, config: dict[str, Any] = None, secret_name: str = None
+        self,
+        name: str,
+        source_type: SourceType | str,
+        config: dict[str, Any] | None = None,
+        secret_name: str | None = None,
     ) -> Self:
         """
         Adds a data source to the configuration by specifying its components.
 
+        Unknown source types (strings not in the SourceType enum) are allowed
+        to support custom DuckDB extensions, but will skip semantic validation.
+
         Args:
             name: The name for the data source (e.g., 'pg_main').
-            type: The type of the source, using the SourceType enum or its string value.
+            source_type: The type of the source, using the SourceType enum or its string value.
             config: A dictionary of non-secret parameters.
             secret_name: The logical name of the secret bundle.
 
         Returns:
             The builder instance for chaining.
         """
-        if isinstance(type, str):
+        final_type: SourceType | str
+        if isinstance(source_type, str):
             try:
-                type = SourceType(type)
+                final_type = SourceType(source_type)
             except ValueError:
-                # If it's not a valid enum value, we keep it as a string
-                # so that SourceConfig or others can handle it (or fail later)
-                pass
+                # Keep as string to allow for custom/future source types
+                final_type = source_type
+        else:
+            final_type = source_type
 
-        config = config or {}
+        clean_config = config or {}
         # Perform semantic validation if a handler exists for this type
-        HandlerClass = SOURCE_HANDLER_REGISTRY.get(type)
-        if HandlerClass:
-            # We don't resolve secrets at 'add_source' time by default,
-            # as the environment might not be set yet.
-            HandlerClass.validate(config, secret_name, resolve_secrets=False)
+        if isinstance(final_type, SourceType):
+            HandlerClass: Any = SOURCE_HANDLER_REGISTRY.get(final_type)
+            if HandlerClass:
+                # We don't resolve secrets at 'add_source' time by default,
+                # as the environment might not be set yet.
+                HandlerClass.validate(clean_config, secret_name, resolve_secrets=False)
 
-        source = SourceConfig(name=name, type=type, config=config, secret_name=secret_name)
+        source = SourceConfig(name=name, type=final_type, config=SourceParams(clean_config), secret_name=secret_name)
         self._sources.append(source)
         return self
 
@@ -95,13 +108,18 @@ class QuackpipeBuilder:
         """
         return self._sources
 
-    def session(self, **kwargs):
+    def session(self, **kwargs: Any) -> AbstractContextManager[duckdb.DuckDBPyConnection]:
         """
-        Builds and enters the session context manager. Can accept the same arguments
-        as the core session function, like `sources=['source_a']`.
+        Builds and returns a pre-configured DuckDB connection.
+
+        The returned connection object acts as a context manager and can be used
+        in a `with` statement to ensure it is automatically closed.
+
+        Args:
+            **kwargs: Extra arguments passed to the core session manager (e.g., `sources`).
 
         Returns:
-            A context manager yielding a configured DuckDB connection.
+            A configured DuckDB connection that acts as a context manager.
         """
         if not self._sources:
             raise ExecutionError("Cannot build a session with no sources defined.")

@@ -4,6 +4,7 @@ Handles secret management for quackpipe.
 
 import logging
 import os
+from pathlib import Path
 
 from dotenv import dotenv_values
 
@@ -16,7 +17,7 @@ class EnvSecretProvider:
     during initialization, it loads them in order.
     """
 
-    def __init__(self, env_file: str | list[str] | None = None):
+    def __init__(self, env_file: str | list[str] | None = None) -> None:
         # Start with a copy of the system environment
         self.env_vars = os.environ.copy()
 
@@ -30,7 +31,7 @@ class EnvSecretProvider:
         # We want files to override the system environment to match previous behavior (load_dotenv(override=True)).
         # And later files override earlier files.
         for file_path in env_files:
-            if os.path.exists(file_path):
+            if Path(file_path).exists():
                 logger.info("Loading environment variables from: %s", file_path)
                 # dotenv_values returns a dict of variables defined in the file.
                 file_vars = dotenv_values(dotenv_path=file_path)
@@ -71,7 +72,7 @@ def _get_provider() -> EnvSecretProvider:
     return _provider
 
 
-def configure_secret_provider(env_file: str | list[str] | None = None):
+def configure_secret_provider(env_file: str | list[str] | None = None) -> None:
     """
     Initializes or re-initializes the secret provider, optionally loading
     environment file(s).
@@ -107,7 +108,7 @@ def fetch_secret_bundle(name: str) -> dict[str, str]:
         return _bundle_cache[name]
 
     raw_secrets = fetch_raw_secret_bundle(name)
-    normalized_secrets = {}
+    normalized_secrets: dict[str, str] = {}
     prefix = f"{name.upper()}_"
 
     for key, value in raw_secrets.items():
