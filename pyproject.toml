@@ -53,7 +53,7 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-quackpipe = ["*.yml"]
+quackpipe = ["*.yml", "py.typed"]
 
 [tool.ruff]
 src = ["src"]
