@@ -172,6 +172,27 @@ def test_builder_session_success(mock_session):
     mock_session.assert_called_once_with(configs=builder._sources)
 
 
+def test_builder_accepts_custom_source_type():
+    """Test that the builder accepts unknown source types for custom DuckDB extensions."""
+    builder = QuackpipeBuilder()
+    builder.add_source("custom", source_type="my_custom_extension", config={"path": "/data"})
+
+    assert len(builder._sources) == 1
+    source = builder._sources[0]
+    assert source.name == "custom"
+    assert source.type == "my_custom_extension"
+    assert source.config == {"path": "/data"}
+
+
+def test_builder_custom_type_skips_validation():
+    """Test that unknown source types skip semantic validation without error."""
+    builder = QuackpipeBuilder()
+    # This would fail validation if treated as a known type (e.g., postgres requires host/database).
+    # But custom types should skip validation entirely.
+    builder.add_source("custom", source_type="my_extension", config={})
+    assert builder._sources[0].type == "my_extension"
+
+
 def test_postgres_validation():
     """Test the new semantic validation for Postgres."""
     builder = QuackpipeBuilder()
@@ -217,8 +238,8 @@ def test_parse_config_from_yaml_not_found():
         parse_config_from_yaml(get_config_yaml("nonexistent.yml"))
 
 
-def test_parse_config_invalid_type(temp_dir):
-    """Test parsing YAML with invalid source type."""
+def test_parse_config_invalid_type_rejected_by_schema(temp_dir):
+    """Test that unknown source types in YAML are rejected by schema validation."""
     invalid_config = {"sources": {"bad_source": {"type": "invalid_type", "secret_name": "test"}}}
 
     config_path = Path(temp_dir) / "invalid.yml"
