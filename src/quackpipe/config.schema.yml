@@ -32,15 +32,6 @@ definitions:
     properties:
       type:
         type: string
-        enum:
-          - postgres
-          - mysql
-          - s3
-          - azure
-          - sqlite
-          - ducklake
-          - parquet
-          - csv
       before_source_statements:
         type: array
         items:
@@ -51,15 +42,47 @@ definitions:
         items:
           type: string
         description: "A list of custom SQL commands to run right after this source is initialized."
-    oneOf:
-      - $ref: "#/definitions/postgres"
-      - $ref: "#/definitions/mysql"
-      - $ref: "#/definitions/s3"
-      - $ref: "#/definitions/azure"
-      - $ref: "#/definitions/sqlite"
-      - $ref: "#/definitions/ducklake"
-      - $ref: "#/definitions/parquet"
-      - $ref: "#/definitions/csv"
+    allOf:
+      - if:
+          properties:
+            type: { enum: [postgres] }
+        then:
+          $ref: "#/definitions/postgres"
+      - if:
+          properties:
+            type: { enum: [mysql] }
+        then:
+          $ref: "#/definitions/mysql"
+      - if:
+          properties:
+            type: { enum: [s3] }
+        then:
+          $ref: "#/definitions/s3"
+      - if:
+          properties:
+            type: { enum: [azure] }
+        then:
+          $ref: "#/definitions/azure"
+      - if:
+          properties:
+            type: { enum: [sqlite] }
+        then:
+          $ref: "#/definitions/sqlite"
+      - if:
+          properties:
+            type: { enum: [ducklake] }
+        then:
+          $ref: "#/definitions/ducklake"
+      - if:
+          properties:
+            type: { enum: [parquet] }
+        then:
+          $ref: "#/definitions/parquet"
+      - if:
+          properties:
+            type: { enum: [csv] }
+        then:
+          $ref: "#/definitions/csv"
 
   postgres:
     type: object
