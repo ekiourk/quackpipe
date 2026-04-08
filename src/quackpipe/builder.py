@@ -4,7 +4,6 @@ The Builder API for programmatically constructing a quackpipe session.
 
 from __future__ import annotations
 
-from contextlib import AbstractContextManager
 from typing import Any, Self
 
 import duckdb
@@ -108,7 +107,7 @@ class QuackpipeBuilder:
         """
         return self._sources
 
-    def session(self, **kwargs: Any) -> AbstractContextManager[duckdb.DuckDBPyConnection]:
+    def session(self, **kwargs: Any) -> duckdb.DuckDBPyConnection:
         """
         Builds and returns a pre-configured DuckDB connection.
 

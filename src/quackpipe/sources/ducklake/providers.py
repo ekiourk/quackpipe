@@ -6,10 +6,10 @@ Source Handler and the specific requirements of the DuckLakeHandler.
 from abc import ABC, abstractmethod
 from typing import Any
 
-from quackpipe.sources.base import BaseSourceHandler
-from quackpipe.sources.postgres import PostgresHandler
-from quackpipe.sources.s3 import S3Handler
-from quackpipe.sources.sqlite import SQLiteHandler
+from ..base import BaseSourceHandler
+from ..postgres import PostgresHandler
+from ..s3 import S3Handler
+from ..sqlite import SQLiteHandler
 
 # --- Provider Interfaces ---
 
@@ -68,11 +68,11 @@ class PostgresCatalogProvider(CatalogProvider):
 
     @property
     def required_plugins(self) -> list[str]:
-        return self.handler.required_plugins  # type: ignore[no-any-return]
+        return self.handler.required_plugins
 
     def render_catalog_setup_sql(self, duckdb_secret_name: str) -> str:
         # Delegate the call to the handler's internal method.
-        return self.handler.render_create_secret_sql(duckdb_secret_name)  # type: ignore[no-any-return]
+        return self.handler.render_create_secret_sql(duckdb_secret_name)
 
     def get_ducklake_catalog_reference(self, duckdb_secret_name: str) -> str:
         return f"postgres:{duckdb_secret_name}"
@@ -88,7 +88,7 @@ class SQLiteCatalogProvider(CatalogProvider):
 
     @property
     def required_plugins(self) -> list[str]:
-        return self.handler.required_plugins  # type: ignore[no-any-return]
+        return self.handler.required_plugins
 
     def render_catalog_setup_sql(self, _duckdb_secret_name: str) -> str:
         # SQLite needs no secret, so it returns an empty string.
@@ -111,10 +111,10 @@ class S3StorageProvider(StorageProvider):
 
     @property
     def required_plugins(self) -> list[str]:
-        return self.handler.required_plugins  # type: ignore[no-any-return]
+        return self.handler.required_plugins
 
     def render_storage_setup_sql(self, duckdb_secret_name: str) -> str:
         # For S3, the setup is to create a secret if one is named.
         if self.handler.context.get("secret_name"):
-            return self.handler.render_create_secret_sql(duckdb_secret_name)  # type: ignore[no-any-return]
+            return self.handler.render_create_secret_sql(duckdb_secret_name)
         return ""

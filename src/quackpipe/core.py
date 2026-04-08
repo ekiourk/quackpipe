@@ -4,7 +4,6 @@ The core logic of quackpipe.
 
 import logging
 from collections.abc import Callable
-from contextlib import AbstractContextManager
 from functools import wraps
 from typing import Any
 
@@ -112,7 +111,7 @@ def session(
     configs: list[SourceConfig] | None = None,
     sources: list[str] | None = None,
     env_file: str | list[str] | None = None,
-) -> AbstractContextManager[duckdb.DuckDBPyConnection]:
+) -> duckdb.DuckDBPyConnection:
     """
     Creates and returns a pre-configured DuckDB connection.
 
