@@ -6,6 +6,7 @@ It discovers and registers commands from the 'commands' submodule.
 """
 
 import argparse
+import sys
 
 # Import the registration functions from each command module
 from . import __version__
@@ -33,8 +34,6 @@ def main() -> None:
     try:
         args.func(args)
     except Exception as e:
-        import sys
-
         print(f"An unexpected error occurred: {e}", file=sys.stderr)  # noqa: T201
         sys.exit(1)
 

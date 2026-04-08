@@ -3,7 +3,6 @@ High-level utility functions for common ETL operations.
 """
 
 import logging
-from typing import cast
 
 import duckdb
 import pandas as pd
@@ -77,9 +76,10 @@ def move_data(
     except StopIteration as e:
         raise ValueError(f"Destination '{destination_name}' not found in the provided configuration.") from e
 
-    # Hoist 'merge' mode validation
+    # Hoist 'merge' mode validation and narrow the type for downstream use
     if mode == "merge" and primary_key is None:
         raise ValidationError("Primary key(s) must be provided for 'merge' mode.")
+    pk: str | list[str] = primary_key if primary_key is not None else []
 
     # Helper function to generate MERGE SQL
     def _generate_merge_sql(target_table: str, source_q: str, pk: str | list[str]) -> str:
@@ -117,7 +117,7 @@ def move_data(
             elif mode == "append":
                 sql = f"INSERT INTO {full_table_name} ({source_query});"
             elif mode == "merge":
-                sql = _generate_merge_sql(full_table_name, source_query, cast(str | list[str], primary_key))
+                sql = _generate_merge_sql(full_table_name, source_query, pk)
             else:
                 raise ValidationError(f"Invalid mode '{mode}'. Use 'replace', 'append' or 'merge'.")
             con.execute(sql)
@@ -138,7 +138,7 @@ def move_data(
             elif mode == "append":
                 sql = f"INSERT INTO {full_table_name} ({source_query});"
             elif mode == "merge":
-                sql = _generate_merge_sql(full_table_name, source_query, cast(str | list[str], primary_key))
+                sql = _generate_merge_sql(full_table_name, source_query, pk)
             else:
                 raise ValidationError(f"Invalid mode '{mode}'. Use 'replace', 'append' or 'merge'.")
             con.execute(sql)
@@ -150,7 +150,7 @@ def move_data(
             elif mode == "append":
                 sql = f"INSERT INTO {table_name} ({source_query});"
             elif mode == "merge":
-                sql = _generate_merge_sql(table_name, source_query, cast(str | list[str], primary_key))
+                sql = _generate_merge_sql(table_name, source_query, pk)
             else:
                 raise ValidationError(f"Invalid mode '{mode}'. Use 'replace', 'append' or 'merge'.")
             con.execute(sql)

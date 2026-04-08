@@ -6,6 +6,7 @@ This module contains the implementation for the 'ui' CLI command.
 
 import argparse
 import contextlib
+import sys
 from argparse import _SubParsersAction
 from typing import TYPE_CHECKING
 
@@ -52,8 +53,6 @@ def handler(args: argparse.Namespace) -> None:
             con.execute("CALL stop_ui_server();")
 
     except Exception as e:
-        import sys
-
         log_msg = f"❌ Failed to start UI session: {e}"
         if isinstance(e, ConfigError):
             log.warning(log_msg)

@@ -14,8 +14,6 @@ class MySQLHandler(BaseSourceHandler):
     This handler uses the recommended CREATE SECRET + ATTACH pattern.
     """
 
-    context: dict[str, Any]
-
     def __init__(self, context: dict[str, Any]) -> None:
         super().__init__(context)
         secrets = fetch_secret_bundle(self.context.get("secret_name"))

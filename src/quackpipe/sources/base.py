@@ -12,8 +12,6 @@ class BaseSourceHandler(ABC):
     It is initialized with a context dictionary containing all its configuration.
     """
 
-    context: dict[str, Any]
-
     def __init__(self, context: dict[str, Any]) -> None:
         """
         Initializes the handler with its specific configuration context.

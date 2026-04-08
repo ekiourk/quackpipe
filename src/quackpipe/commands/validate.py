@@ -5,6 +5,7 @@ This module contains the implementation for the 'validate' CLI command.
 """
 
 import argparse
+import sys
 from argparse import _SubParsersAction
 from typing import TYPE_CHECKING
 
@@ -56,20 +57,14 @@ def handler(args: argparse.Namespace) -> None:
         log.info(f"✅ Configuration from '{config_paths}' is valid.")
 
     except ValidationError as e:
-        import sys
-
         log.error("❌ Configuration is invalid.")
         log.error(f"   Reason: {e.message}")
         sys.exit(1)
     except ConfigError as e:
-        import sys
-
         log.error("❌ Configuration is invalid.")
         log.error(f"   Reason: {e}")
         sys.exit(1)
     except Exception as e:
-        import sys
-
         log.error(f"An unexpected error occurred: {e}")
         sys.exit(1)
 

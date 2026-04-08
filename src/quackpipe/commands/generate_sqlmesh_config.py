@@ -5,6 +5,7 @@ This module contains the implementation for the 'generate-sqlmesh-config' CLI co
 """
 
 import argparse
+import sys
 from argparse import _SubParsersAction
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -67,8 +68,6 @@ def _build_sqlmesh_dict(init_sql_block: str, gateway_name: str, state_db: str) -
 
 def handler(args: argparse.Namespace) -> None:
     """The main handler function for the generate-sqlmesh-config command."""
-    import sys
-
     log = setup_cli_logging(args.verbose)
     try:
         env_files = normalize_arg_to_list(args.env_file)

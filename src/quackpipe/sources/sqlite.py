@@ -13,8 +13,6 @@ class SQLiteHandler(BaseSourceHandler):
     Handler for SQLite database connections using the 'sqlite' extension.
     """
 
-    context: dict[str, Any]
-
     def __init__(self, context: dict[str, Any]) -> None:
         super().__init__(context)
         secrets = fetch_secret_bundle(self.context.get("secret_name"))

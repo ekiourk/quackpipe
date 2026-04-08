@@ -5,6 +5,7 @@ This module contains the implementation for the 'preview-config' CLI command.
 """
 
 import argparse
+import sys
 from argparse import _SubParsersAction
 from typing import TYPE_CHECKING
 
@@ -23,8 +24,6 @@ from .common import get_default_config_path, normalize_arg_to_list, setup_cli_lo
 
 def handler(args: argparse.Namespace) -> None:
     """The main handler function for the preview-config command."""
-    import sys
-
     log = setup_cli_logging(args.verbose)
     config_paths = normalize_arg_to_list(args.config)
     try:
