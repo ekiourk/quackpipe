@@ -5,23 +5,23 @@ This module contains common utilities shared across CLI command modules.
 """
 
 import logging
-import os
 import sys
+from pathlib import Path
 
 DEFAULT_CONFIG_NAME = "config.yml"
 
 
-def get_default_config_path():
+def get_default_config_path() -> str | None:
     """
     Returns 'config.yml' if it exists in the current directory, otherwise None.
     This allows for a dynamic default value in the CLI.
     """
-    if os.path.exists(DEFAULT_CONFIG_NAME):
+    if Path(DEFAULT_CONFIG_NAME).exists():
         return DEFAULT_CONFIG_NAME
     return None
 
 
-def setup_cli_logging(verbose_level: int = 0):
+def setup_cli_logging(verbose_level: int = 0) -> logging.Logger:
     """
     Configures the root logger for quackpipe to ensure CLI output is visible.
 
@@ -41,8 +41,8 @@ def setup_cli_logging(verbose_level: int = 0):
     log = logging.getLogger("quackpipe")
     log.setLevel(level)
 
-    # Create a handler to write messages to the console (stdout)
-    handler = logging.StreamHandler(sys.stdout)
+    # Create a handler to write messages to the console (stderr)
+    handler = logging.StreamHandler(sys.stderr)
 
     # Create a formatter and add it to the handler
     formatter = logging.Formatter("%(asctime)s - %(message)s")

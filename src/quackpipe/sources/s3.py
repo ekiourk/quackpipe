@@ -3,7 +3,8 @@
 from typing import Any
 
 from quackpipe.secrets import fetch_secret_bundle
-from quackpipe.sources.base import BaseSourceHandler
+
+from .base import BaseSourceHandler
 
 
 class S3Handler(BaseSourceHandler):
@@ -12,11 +13,11 @@ class S3Handler(BaseSourceHandler):
     or automatic detection (IAM/env vars) via SET commands.
     """
 
-    def __init__(self, context: dict[str, Any]):
+    def __init__(self, context: dict[str, Any]) -> None:
         super().__init__(context)
 
     @property
-    def source_type(self):
+    def source_type(self) -> str:
         return "s3"
 
     @property
@@ -24,7 +25,7 @@ class S3Handler(BaseSourceHandler):
         return ["httpfs"]
 
     @classmethod
-    def validate(cls, config: dict[str, Any], secret_name: str | None = None, resolve_secrets: bool = False):
+    def validate(cls, config: dict[str, Any], secret_name: str | None = None, resolve_secrets: bool = False) -> None:
         """Validates S3 configuration."""
         # S3 is highly flexible (can use IAM roles), so we don't enforce fields by default.
         pass

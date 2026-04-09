@@ -22,10 +22,9 @@ def test_sqlite_handler_properties():
 
 
 @pytest.mark.parametrize(
-    "test_id, context, expected_sql, unexpected_sql_parts",
+    "context, expected_sql, unexpected_sql_parts",
     [
         (
-            "read_only_default",
             {
                 "connection_name": "analytics_db",
                 "path": "/data/analytics.db",
@@ -35,7 +34,6 @@ def test_sqlite_handler_properties():
             [],  # No unexpected parts
         ),
         (
-            "read_write_explicit",
             {
                 "connection_name": "main_db",
                 "path": "main.sqlite",
@@ -45,20 +43,19 @@ def test_sqlite_handler_properties():
             ["READ_ONLY"],  # Should NOT contain the READ_ONLY flag
         ),
         (
-            "read_only_explicit",
             {"connection_name": "archive", "path": "archive.db", "read_only": True},
             "ATTACH 'archive.db' AS archive (TYPE SQLITE, READ_ONLY);",
             [],
         ),
         (
-            "with_encryption",
             {"connection_name": "secure_db", "path": "secure.db", "encryption_key": "secret_key_123"},
             "ATTACH 'secure.db' AS secure_db (TYPE SQLITE, READ_ONLY, ENCRYPTION_KEY 'secret_key_123');",
             [],
         ),
     ],
+    ids=["basic_config_is_readonly", "read_write_config", "read_only_explicit", "with_encryption"],
 )
-def test_sqlite_render_sql(test_id, context, expected_sql, unexpected_sql_parts):
+def test_sqlite_render_sql(context, expected_sql, unexpected_sql_parts):
     """
     Tests that the SQLiteHandler's render_sql method correctly generates
     the ATTACH statement for various configurations.
@@ -106,4 +103,4 @@ def test_sqlite_render_sql_raises_error_if_path_is_missing():
     """
     builder = QuackpipeBuilder()
     with pytest.raises(ValidationError, match="Sqlite source requires 'path' in its configuration."):
-        builder.add_source(name="bad_config", type="sqlite", config={})
+        builder.add_source(name="bad_config", source_type="sqlite", config={})

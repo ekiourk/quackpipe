@@ -198,7 +198,7 @@ def test_ducklake_with_postgres_and_local_storage(quackpipe_config_files, postgr
     )
 
 
-def test_ducklake_with_sqlite_and_s3_storage(quackpipe_config_files, postgres_container, minio_container, tmp_path):
+def test_ducklake_with_sqlite_and_s3_storage(quackpipe_config_files, minio_container, tmp_path):
     catalog_dir = tmp_path / "catalog"
     catalog_dir.mkdir()
     catalog_db_path = catalog_dir / "lake_catalog.db"

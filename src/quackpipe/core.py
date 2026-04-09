@@ -3,7 +3,9 @@ The core logic of quackpipe.
 """
 
 import logging
+from collections.abc import Callable
 from functools import wraps
+from typing import Any
 
 import duckdb
 
@@ -18,10 +20,12 @@ from quackpipe.secrets import configure_secret_provider, fetch_secret_bundle
 # Import the registry of handlers
 from quackpipe.sources import SOURCE_HANDLER_REGISTRY
 
+__all__ = ["session", "with_session", "get_source_params", "SOURCE_HANDLER_REGISTRY"]
+
 logger = logging.getLogger(__name__)
 
 
-def _prepare_connection(con: duckdb.DuckDBPyConnection, configs: list[SourceConfig]):
+def _prepare_connection(con: duckdb.DuckDBPyConnection, configs: list[SourceConfig]) -> None:
     """Configures a DuckDB connection from a list of SourceConfig objects."""
     if not configs:
         return
@@ -111,7 +115,7 @@ def session(
     """
     Creates and returns a pre-configured DuckDB connection.
 
-    The returned connection object is a context manager and can be used in a
+    The returned connection object acts as a context manager and can be used in a
     `with` statement, which will automatically handle closing the connection.
 
     Configuration can be provided via the `config_path` parameter, the
@@ -119,11 +123,11 @@ def session(
     `SourceConfig` objects to the `configs` parameter.
 
     Example:
-        # As a context manager
+        # Recommended: As a context manager
         with session(config_path="config.yml") as con:
             con.sql("SELECT * FROM my_table")
 
-        # As a direct function call
+        # Optional: As a direct function call
         con = session(config_path="config.yml")
         # Remember to close it yourself
         con.close()
@@ -167,14 +171,14 @@ def session(
     return con
 
 
-def with_session(**session_kwargs):
+def with_session(**session_kwargs: Any) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """
     A decorator to inject a pre-configured DuckDB connection into a function.
     """
 
-    def decorator(func):
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             with session(**session_kwargs) as con:
                 return func(con, *args, **kwargs)
 

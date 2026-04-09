@@ -6,10 +6,10 @@ Source Handler and the specific requirements of the DuckLakeHandler.
 from abc import ABC, abstractmethod
 from typing import Any
 
-from quackpipe.sources.base import BaseSourceHandler
-from quackpipe.sources.postgres import PostgresHandler
-from quackpipe.sources.s3 import S3Handler
-from quackpipe.sources.sqlite import SQLiteHandler
+from ..base import BaseSourceHandler
+from ..postgres import PostgresHandler
+from ..s3 import S3Handler
+from ..sqlite import SQLiteHandler
 
 # --- Provider Interfaces ---
 
@@ -62,7 +62,7 @@ class PostgresCatalogProvider(CatalogProvider):
 
     handler: PostgresHandler
 
-    def __init__(self, context: dict[str, Any]):
+    def __init__(self, context: dict[str, Any]) -> None:
         # Composition: Create an instance of the handler to delegate to.
         self.handler = PostgresHandler(context)
 
@@ -81,18 +81,20 @@ class PostgresCatalogProvider(CatalogProvider):
 class SQLiteCatalogProvider(CatalogProvider):
     """A CatalogProvider that uses a SQLiteHandler internally."""
 
-    def __init__(self, context: dict[str, Any]):
+    handler: SQLiteHandler
+
+    def __init__(self, context: dict[str, Any]) -> None:
         self.handler = SQLiteHandler(context)
 
     @property
     def required_plugins(self) -> list[str]:
         return self.handler.required_plugins
 
-    def render_catalog_setup_sql(self, duckdb_secret_name: str) -> str:
+    def render_catalog_setup_sql(self, _duckdb_secret_name: str) -> str:
         # SQLite needs no secret, so it returns an empty string.
         return ""
 
-    def get_ducklake_catalog_reference(self, duckdb_secret_name: str) -> str:
+    def get_ducklake_catalog_reference(self, _duckdb_secret_name: str) -> str:
         db_path = self.handler.context.get("path")
         if not db_path:
             raise ValueError("SQLite catalog requires a 'path' in its configuration.")
@@ -104,7 +106,7 @@ class S3StorageProvider(StorageProvider):
 
     handler: S3Handler
 
-    def __init__(self, context: dict[str, Any]):
+    def __init__(self, context: dict[str, Any]) -> None:
         self.handler = S3Handler(context)
 
     @property

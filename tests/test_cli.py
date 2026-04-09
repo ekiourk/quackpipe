@@ -5,8 +5,8 @@ This file contains pytest tests for the CLI functions in cli.py.
 """
 
 import io
-import os
 import sys
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -86,8 +86,8 @@ def test_replace_secrets_with_placeholders(monkeypatch, test_id, raw_sql, config
 
 @patch("quackpipe.commands.generate_sqlmesh_config.get_configs")
 @patch("quackpipe.commands.generate_sqlmesh_config.yaml.dump")
-@patch("builtins.open")
-def test_generate_sqlmesh_config_command(mock_open, mock_yaml_dump, mock_get_configs, monkeypatch):
+@patch("pathlib.Path.open")
+def test_generate_sqlmesh_config_command(mock_path_open, mock_yaml_dump, mock_get_configs, monkeypatch):
     """
     Tests the end-to-end flow of the generate_sqlmesh_config function.
     """
@@ -153,110 +153,143 @@ def test_generate_sqlmesh_config_command(mock_open, mock_yaml_dump, mock_get_con
 # ==================== TESTS FOR VALIDATE COMMAND ====================
 
 
-@patch("sys.stdout", new_callable=io.StringIO)
-def test_validate_command_valid_config(mock_stdout, tmpdir):
+@patch("sys.stderr", new_callable=io.StringIO)
+def test_validate_command_valid_config(mock_stderr, tmpdir):
     """Test the validate command with a valid config file."""
     config_data = {"sources": {"my_source": {"type": "sqlite", "path": "test.db"}}}
-    config_path = os.path.join(tmpdir, "config.yml")
-    with open(config_path, "w") as f:
+    config_path = Path(tmpdir) / "config.yml"
+    with config_path.open("w") as f:
         yaml.dump(config_data, f)
 
-    with patch.object(sys, "argv", ["quackpipe", "validate", "-v", "--config", config_path]):
+    with patch.object(sys, "argv", ["quackpipe", "validate", "-v", "--config", str(config_path)]):
         main()
 
-    output = mock_stdout.getvalue()
+    output = mock_stderr.getvalue()
     assert f"Attempting to validate configuration from: ['{config_path}']" in output
     assert f"✅ Configuration from '['{config_path}']' is valid." in output
 
 
-@patch("sys.stdout", new_callable=io.StringIO)
-def test_validate_command_invalid_config(mock_stdout, tmpdir):
+@patch("sys.stderr", new_callable=io.StringIO)
+def test_validate_command_invalid_config(mock_stderr, tmpdir):
     """Test the validate command with an invalid config file."""
     config_data = {"sources": {"my_source": {"type": "sqlite"}}}  # Missing path
-    config_path = os.path.join(tmpdir, "config.yml")
-    with open(config_path, "w") as f:
+    config_path = Path(tmpdir) / "config.yml"
+    with config_path.open("w") as f:
         yaml.dump(config_data, f)
 
-    with patch.object(sys, "argv", ["quackpipe", "validate", "-v", "--config", config_path]):
+    with (
+        pytest.raises(SystemExit) as e,
+        patch.object(sys, "argv", ["quackpipe", "validate", "-v", "--config", str(config_path)]),
+    ):
         main()
+    assert e.value.code == 1
 
-    output = mock_stdout.getvalue()
+    output = mock_stderr.getvalue()
     assert f"Attempting to validate configuration from: ['{config_path}']" in output
-    assert "❌ Configuration is invalid." in output
-    assert "Reason:" in output
 
 
-@patch("sys.stdout", new_callable=io.StringIO)
-def test_validate_command_no_file(mock_stdout):
+@patch("sys.stderr", new_callable=io.StringIO)
+def test_validate_command_no_file(mock_stderr):
     """Test the validate command with a non-existent config file."""
     config_path = "non_existent_config.yml"
-    with patch.object(sys, "argv", ["quackpipe", "validate", "-v", "--config", config_path]):
+    with (
+        pytest.raises(SystemExit) as e,
+        patch.object(sys, "argv", ["quackpipe", "validate", "-v", "--config", config_path]),
+    ):
         main()
+    assert e.value.code == 1
 
-    output = mock_stdout.getvalue()
+    output = mock_stderr.getvalue()
     assert f"Attempting to validate configuration from: ['{config_path}']" in output
-    # The error is raised by get_config_yaml when it tries to open the file
-    assert f"Configuration file not found at '{config_path}'." in output
 
 
-@patch("sys.stdout", new_callable=io.StringIO)
-def test_validate_command_multiple_valid_configs(mock_stdout, tmpdir):
+@patch("sys.stderr", new_callable=io.StringIO)
+def test_validate_command_multiple_valid_configs(mock_stderr, tmpdir):
     """Test the validate command with multiple valid config files."""
     base_data = {"sources": {"my_source": {"type": "sqlite", "path": "base.db"}}}
     dev_data = {"sources": {"my_source": {"path": "dev.db"}}}
 
-    f1 = os.path.join(tmpdir, "base.yml")
-    f2 = os.path.join(tmpdir, "dev.yml")
+    f1 = Path(tmpdir) / "base.yml"
+    f2 = Path(tmpdir) / "dev.yml"
 
-    with open(f1, "w") as f:
+    with f1.open("w") as f:
         yaml.dump(base_data, f)
-    with open(f2, "w") as f:
+    with f2.open("w") as f:
         yaml.dump(dev_data, f)
 
-    with patch.object(sys, "argv", ["quackpipe", "validate", "-v", "--config", f1, f2]):
+    with patch.object(sys, "argv", ["quackpipe", "validate", "-v", "--config", str(f1), str(f2)]):
         main()
 
-    output = mock_stdout.getvalue()
+    output = mock_stderr.getvalue()
     assert f"Attempting to validate configuration from: ['{f1}', '{f2}']" in output
     assert f"✅ Configuration from '['{f1}', '{f2}']' is valid." in output
 
 
-@patch("sys.stdout", new_callable=io.StringIO)
-def test_preview_config_command(mock_stdout, tmpdir):
+def test_preview_config_command(capfd, tmpdir):
     """Test the preview-config command with multiple config files."""
     base_data = {"sources": {"my_source": {"type": "sqlite", "path": "base.db"}}}
     dev_data = {"sources": {"my_source": {"path": "dev.db"}}}
 
-    f1 = os.path.join(tmpdir, "base.yml")
-    f2 = os.path.join(tmpdir, "dev.yml")
+    f1 = Path(tmpdir) / "base.yml"
+    f2 = Path(tmpdir) / "dev.yml"
 
-    with open(f1, "w") as f:
+    with f1.open("w") as f:
         yaml.dump(base_data, f)
-    with open(f2, "w") as f:
+    with f2.open("w") as f:
         yaml.dump(dev_data, f)
 
-    with patch.object(sys, "argv", ["quackpipe", "preview-config", "--config", f1, f2]):
+    # Test with default verbosity (pure YAML)
+    with patch.object(sys, "argv", ["quackpipe", "preview-config", "--config", str(f1), str(f2)]):
         main()
 
-    output = mock_stdout.getvalue()
-    # Check that the output contains the merged YAML.
-    # yaml.dump output might vary slightly, so we parse it back to check structure.
-    # Note: the output might contain other print statements if not careful,
-    # but preview-config only prints the YAML or error.
-
-    parsed_output = yaml.safe_load(output)
-
+    out, err = capfd.readouterr()
+    # YAML should be on stdout
+    parsed_output = yaml.safe_load(out)
     assert parsed_output["sources"]["my_source"]["type"] == "sqlite"
-
     assert parsed_output["sources"]["my_source"]["path"] == "dev.db"
+    # No "Merged configuration" on stdout or stderr (at default warning level)
+    assert "Merged configuration" not in out
+    assert "Merged configuration" not in err
+
+    # Test with verbose mode (banner on stderr)
+    with patch.object(sys, "argv", ["quackpipe", "preview-config", "-v", "--config", str(f1), str(f2)]):
+        main()
+
+    out, err = capfd.readouterr()
+    assert yaml.safe_load(out)["sources"]["my_source"]["path"] == "dev.db"
+    assert "Merged configuration" in err
+    assert "Merged configuration" not in out
+
+
+def test_preview_config_command_failure():
+    """Test the preview-config command with a missing config file."""
+    with (
+        pytest.raises(SystemExit) as e,
+        patch.object(sys, "argv", ["quackpipe", "preview-config", "--config", "nonexistent.yml"]),
+    ):
+        main()
+    assert e.value.code == 1
+
+
+@patch("quackpipe.commands.generate_sqlmesh_config.get_configs")
+def test_generate_sqlmesh_config_command_failure(mock_get_configs):
+    """Test the generate-sqlmesh-config command with a write error."""
+    mock_get_configs.return_value = []
+    # Mocking Path.open to raise an exception
+    with (
+        pytest.raises(SystemExit) as e,
+        patch("pathlib.Path.open", side_effect=PermissionError("denied")),
+        patch.object(sys, "argv", ["quackpipe", "generate-sqlmesh-config", "-o", "/root/denied.yml"]),
+    ):
+        main()
+    assert e.value.code == 1
 
 
 @patch("sys.stdout", new_callable=io.StringIO)
 def test_version_flag(mock_stdout):
     """Test the --version flag."""
-    with pytest.raises(SystemExit) as e:
-        with patch.object(sys, "argv", ["quackpipe", "--version"]):
-            main()
+    with pytest.raises(SystemExit) as e, patch.object(sys, "argv", ["quackpipe", "--version"]):
+        main()
 
     assert e.value.code == 0
     output = mock_stdout.getvalue()

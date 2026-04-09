@@ -17,7 +17,7 @@ from quackpipe.etl_utils import move_data
 def test_e2e_postgres_to_ducklake(
     quackpipe_with_pg_source: QuackpipeBuilder,
     postgres_s3_ducklake_config: SourceConfig,
-    postgres_container_with_data: PostgresContainer,  # this will generate the data inside postgres
+    postgres_container_with_data: PostgresContainer,
     test_datasets: dict,
 ):
     """
@@ -33,7 +33,6 @@ def test_e2e_postgres_to_ducklake(
     # Move data from the pre-populated Postgres source to the DuckLake destination
     # Move the 'employees' table
     # the name of the source 'pg_source' should match the value of POSTGRES_SOURCE_NAME in the fixtures
-    print("Moving 'employees' table to DuckLake...")
     move_data(
         configs=builder.get_configs(),
         source_query="SELECT * FROM pg_source.company.employees",
@@ -43,7 +42,6 @@ def test_e2e_postgres_to_ducklake(
     )
 
     # Move the 'vessels' table
-    print("Moving 'vessels' table to DuckLake...")
     move_data(
         configs=builder.get_configs(),
         source_query="SELECT * FROM pg_source.public.vessels",
@@ -55,17 +53,11 @@ def test_e2e_postgres_to_ducklake(
     # ASSERT: Verify the data arrived correctly in the DuckLake
     with builder.session(sources=["my_datalake"]) as con:
         # Verify employees table
-        print("Verifying 'employees_archive' table...")
         employees_result_df = con.execute("SELECT * FROM my_datalake.employees_archive ORDER BY id;").fetchdf()
         expected_employees_df = test_datasets["employees"].sort_values(by="id").reset_index(drop=True)
         pd.testing.assert_frame_equal(expected_employees_df, employees_result_df)
-        print("'employees_archive' table verified successfully.")
 
         # Verify vessels table
-        print("Verifying 'vessels_archive' table...")
         vessels_result_df = con.execute("SELECT * FROM my_datalake.vessels_archive ORDER BY mmsi;").fetchdf()
         expected_vessels_df = test_datasets["vessels"].sort_values(by="mmsi").reset_index(drop=True)
         pd.testing.assert_frame_equal(expected_vessels_df, vessels_result_df)
-        print("'vessels_archive' table verified successfully.")
-
-    print("\nIntegration test successful: Data moved from Postgres to DuckLake correctly.")

@@ -30,10 +30,9 @@ def test_s3_handler_properties():
 
 
 @pytest.mark.parametrize(
-    "test_id, context, secret_bundle, expected_sql_parts",
+    "context, secret_bundle, expected_sql_parts",
     [
         (
-            "full_aws_config",
             {
                 "connection_name": "aws_explicit",
                 "secret_name": "aws_creds",  # The logical name for the secret bundle
@@ -56,7 +55,6 @@ def test_s3_handler_properties():
             ],
         ),
         (
-            "minio_config_with_bool",
             {
                 "connection_name": "minio_test",
                 "secret_name": "minio_creds",
@@ -76,7 +74,6 @@ def test_s3_handler_properties():
             ],
         ),
         (
-            "aws_with_hardening",
             {
                 "connection_name": "aws_scoped",
                 "secret_name": "aws_creds",
@@ -93,8 +90,9 @@ def test_s3_handler_properties():
             ],
         ),
     ],
+    ids=["full_aws_config", "minio_config_with_bool", "aws_with_hardening"],
 )
-def test_render_sql_with_secret_creation(monkeypatch, test_id, context, secret_bundle, expected_sql_parts):
+def test_render_sql_with_secret_creation(monkeypatch, context, secret_bundle, expected_sql_parts):
     """
     Tests that render_sql correctly generates a CREATE SECRET statement when a
     secret_name is provided, using environment variables for the credentials.
@@ -124,10 +122,9 @@ def test_render_sql_with_secret_creation(monkeypatch, test_id, context, secret_b
 
 
 @pytest.mark.parametrize(
-    "test_id, context, expected_sql",
+    "context, expected_sql",
     [
         (
-            "iam_role_with_region_and_endpoint",
             {
                 "connection_name": "iam_test",
                 "region": "us-west-2",
@@ -138,18 +135,17 @@ def test_render_sql_with_secret_creation(monkeypatch, test_id, context, secret_b
             "SET s3_region = 'us-west-2';\nSET s3_endpoint = 's3.us-west-2.amazonaws.com';\nSET s3_use_ssl = True;",
         ),
         (
-            "region_only",
             {"connection_name": "iam_test_minimal", "region": "eu-central-1"},
             "SET s3_region = 'eu-central-1';",
         ),
         (
-            "no_relevant_keys",
             {"connection_name": "iam_test_empty", "some_other_key": "value"},
             "",  # Expect an empty string if no relevant keys are present
         ),
     ],
+    ids=["iam_full", "iam_minimal", "iam_empty"],
 )
-def test_render_sql_with_set_commands(test_id, context, expected_sql):
+def test_render_sql_with_set_commands(context, expected_sql):
     """
     Tests that render_sql correctly generates SET commands when no secret_name
     is provided, for scenarios like IAM-based authentication.

@@ -32,7 +32,7 @@ class DuckLakeHandler(BaseSourceHandler):
         self.storage_provider: StorageProvider | None = self._get_storage_provider()
 
     @classmethod
-    def validate(cls, config: dict[str, Any], secret_name: str | None = None, resolve_secrets: bool = False):
+    def validate(cls, config: dict[str, Any], secret_name: str | None = None, resolve_secrets: bool = False) -> None:
         """Validates DuckLake configuration parameters."""
         params = get_merged_params(config, secret_name, resolve_secrets)
         catalog_config = params.get("catalog", {})

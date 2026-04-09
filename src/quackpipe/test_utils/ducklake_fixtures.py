@@ -15,7 +15,7 @@ def catalog_postgres_container() -> Generator[PostgresContainer, Any, None]:
 
 
 @pytest.fixture(scope="function")
-def postgres_s3_ducklake_config(catalog_postgres_container, minio_container) -> SourceConfig:
+def postgres_s3_ducklake_config(catalog_postgres_container: PostgresContainer, minio_container: Any) -> SourceConfig:
     return SourceConfig(
         name="my_datalake",
         type=SourceType.DUCKLAKE,
@@ -42,7 +42,7 @@ def postgres_s3_ducklake_config(catalog_postgres_container, minio_container) -> 
 
 
 @pytest.fixture(scope="function")
-def local_ducklake_config(tmp_path) -> SourceConfig:
+def local_ducklake_config(tmp_path: Any) -> SourceConfig:
     # Set up temporary paths for the database and storage
     catalog_dir = tmp_path / "catalog"
     catalog_dir.mkdir()

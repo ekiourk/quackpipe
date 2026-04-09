@@ -1,4 +1,6 @@
 import logging
+from collections.abc import Generator
+from typing import Any
 
 import pandas as pd
 import pytest
@@ -17,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
-def mysql_container():
+def mysql_container() -> Generator[MySqlContainer, Any, None]:
     container = MySqlContainer("mysql:8.3.0", dialect="pymysql")
     container.with_env("MYSQL_USER", "test")
     container.with_env("MYSQL_PASSWORD", "test")
@@ -29,13 +31,13 @@ def mysql_container():
 
 
 @pytest.fixture(scope="module")
-def mysql_engine(mysql_container):
+def mysql_engine(mysql_container: MySqlContainer) -> Any:
     """Returns a SQLAlchemy engine for the MySQL container."""
     return create_engine(mysql_container.get_connection_url())
 
 
 @pytest.fixture(scope="module")
-def mysql_container_with_data(mysql_container, mysql_engine):
+def mysql_container_with_data(mysql_container: MySqlContainer, mysql_engine: Any) -> MySqlContainer:
     """
     Starts a MySQL container with sample data for testing.
     Creates tables and populates them with synthetic data.
@@ -95,10 +97,10 @@ def mysql_container_with_data(mysql_container, mysql_engine):
 
 
 @pytest.fixture(scope="module")
-def quackpipe_with_mysql_source(mysql_container_with_data) -> QuackpipeBuilder:
+def quackpipe_with_mysql_source(mysql_container_with_data: MySqlContainer) -> QuackpipeBuilder:
     builder = QuackpipeBuilder().add_source(
         name="mysql_source",
-        type=SourceType.MYSQL,
+        source_type=SourceType.MYSQL,
         config={
             "database": "test",
             "user": "test",
