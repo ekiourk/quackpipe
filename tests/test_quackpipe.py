@@ -238,16 +238,19 @@ def test_parse_config_from_yaml_not_found():
         parse_config_from_yaml(get_config_yaml("nonexistent.yml"))
 
 
-def test_parse_config_invalid_type_rejected_by_schema(temp_dir):
-    """Test that unknown source types in YAML are rejected by schema validation."""
-    invalid_config = {"sources": {"bad_source": {"type": "invalid_type", "secret_name": "test"}}}
+def test_parse_config_custom_type_passthrough(temp_dir):
+    """Test that unknown source types in YAML pass through as strings."""
+    custom_config = {"sources": {"custom_src": {"type": "my_custom_extension", "path": "/data"}}}
 
-    config_path = Path(temp_dir) / "invalid.yml"
+    config_path = Path(temp_dir) / "custom.yml"
     with config_path.open("w") as f:
-        yaml.dump(invalid_config, f)
+        yaml.dump(custom_config, f)
 
-    with pytest.raises(ConfigError, match="Configuration is invalid"):
-        parse_config_from_yaml(get_config_yaml(config_path))
+    configs = parse_config_from_yaml(get_config_yaml(config_path))
+    assert len(configs) == 1
+    assert configs[0].name == "custom_src"
+    assert configs[0].type == "my_custom_extension"
+    assert configs[0].config["path"] == "/data"
 
 
 @patch("duckdb.connect")
