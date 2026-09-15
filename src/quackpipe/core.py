@@ -93,8 +93,13 @@ def _prepare_connection(con: duckdb.DuckDBPyConnection, configs: list[SourceConf
             logger.debug("Executing setup SQL for %s:\n%s", handler.source_type, setup_sql)
             try:
                 con.execute(setup_sql)
-            except (duckdb.ParserException, duckdb.IOException, duckdb.HTTPException) as e:
-                raise ExecutionError(f"Error executing setup SQL for {handler.source_type}: {e}") from e
+            except duckdb.Error as e:
+                translated = handler.translate_error(e)
+                if translated is not None:
+                    raise translated from e
+                if isinstance(e, duckdb.ParserException | duckdb.IOException | duckdb.HTTPException):
+                    raise ExecutionError(f"Error executing setup SQL for {handler.source_type}: {e}") from e
+                raise
 
         # Execute any additional custom SQL commands
         if handler.after_source_statements:
