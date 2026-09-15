@@ -57,8 +57,11 @@ jobs:
       - name: Install project dependencies (all extras)
         run: uv sync --all-extras --frozen
 
+      - name: Show effective DuckDB version
+        run: uv run --with "duckdb==${{ matrix.duckdb }}" python -c "import duckdb; print('duckdb', duckdb.__version__)"
+
       - name: Run tests with coverage
-        run: uv run --with "duckdb==${{ matrix.duckdb }}" pytest --cov=quackpipe --cov-branch --cov-report=term --cov-report=xml
+        run: uv run --with "duckdb==${{ matrix.duckdb }}" python -m pytest --cov=quackpipe --cov-branch --cov-report=term --cov-report=xml
 
       - name: Upload coverage reports to Codecov
         if: matrix.duckdb == '1.5.5'
@@ -89,8 +92,11 @@ jobs:
       - name: Install project dependencies (all extras)
         run: uv sync --all-extras --frozen
 
+      - name: Show effective DuckDB version
+        run: uv run --prerelease=allow --with "duckdb>=2.0.0.dev0" python -c "import duckdb; print('duckdb', duckdb.__version__)"
+
       - name: Run tests
-        run: uv run --prerelease=allow --with "duckdb>=2.0.0.dev0" pytest
+        run: uv run --prerelease=allow --with "duckdb>=2.0.0.dev0" python -m pytest
 
   publish:
     name: Build and Publish to PyPI
