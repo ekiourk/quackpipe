@@ -70,12 +70,12 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
   test-duckdb-next:
-    # Early warning for the next DuckDB major. Informational only: a failure here
-    # does not block merging or publishing.
+    # Early warning for the next DuckDB major. Informational only: the test step
+    # may fail without failing the job, so the PR check stays green and the
+    # failures surface as a warning annotation instead.
     name: Pytest (DuckDB 2.0 pre-release, informational)
     runs-on: ubuntu-latest
     needs: lint
-    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v4
@@ -96,7 +96,13 @@ jobs:
         run: uv run --prerelease=allow --with "duckdb>=2.0.0.dev0" python -c "import duckdb; print('duckdb', duckdb.__version__)"
 
       - name: Run tests
+        id: tests
+        continue-on-error: true
         run: uv run --prerelease=allow --with "duckdb>=2.0.0.dev0" python -m pytest
+
+      - name: Report outcome
+        if: steps.tests.outcome == 'failure'
+        run: echo "::warning title=DuckDB 2.0 pre-release::Test suite fails against the DuckDB 2.0 pre-release. Informational only; see the 'Run tests' step above."
 
   publish:
     name: Build and Publish to PyPI
