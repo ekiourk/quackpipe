@@ -1,5 +1,6 @@
 import io
 import logging
+import os
 from collections.abc import Generator
 
 import pandas as pd
@@ -19,11 +20,24 @@ logger = logging.getLogger(__name__)
 
 TEST_BUCKET_NAME = "test-bucket"
 
+# MinIO Inc. stopped publishing container images in October 2025 and removed the
+# ``minio/minio`` repository from Docker Hub in September 2026. The tests use PGSTY
+# Silo, a maintained community fork that keeps the S3 API, the ``MINIO_*``
+# environment variables and the ``/minio/health/live`` endpoint that
+# ``testcontainers.minio.MinioContainer`` relies on.
+#
+# Override with ``QUACKPIPE_TEST_MINIO_IMAGE`` if this registry becomes unavailable.
+# Known-good alternatives at the time of writing:
+#   - quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+#   - ghcr.io/coollabsio/minio:RELEASE.2025-10-15T17-29-55Z
+DEFAULT_MINIO_IMAGE = "pgsty/silo:RELEASE.2026-09-03T13-18-01Z"
+MINIO_IMAGE = os.environ.get("QUACKPIPE_TEST_MINIO_IMAGE", DEFAULT_MINIO_IMAGE)
+
 
 @pytest.fixture(scope="module")
 def minio_container() -> Generator[MinioContainer, None, None]:
-    """Starts a MinIO container."""
-    with MinioContainer("minio/minio:RELEASE.2025-06-13T11-33-47Z") as minio:
+    """Starts an S3-compatible MinIO container (see ``MINIO_IMAGE``)."""
+    with MinioContainer(MINIO_IMAGE) as minio:
         # It's good practice to create the bucket ahead of time.
         minio.get_client().make_bucket(TEST_BUCKET_NAME)
         yield minio

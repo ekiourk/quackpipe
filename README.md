@@ -285,4 +285,11 @@ To set up the development environment for `quackpipe`, we recommend using [uv](h
     ```bash
     uv run pytest
     ```
+    The integration tests use [Testcontainers](https://testcontainers-python.readthedocs.io/) and need a running Docker daemon.
+
+    **S3 test image:** MinIO Inc. no longer publishes container images and removed `minio/minio` from Docker Hub. The S3 tests therefore run against [PGSTY Silo](https://github.com/pgsty/silo), a maintained, API-compatible MinIO fork, pinned in `src/quackpipe/test_utils/minio_fixtures.py`. To use a different image (for example a mirror inside your network), set:
+    ```bash
+    export QUACKPIPE_TEST_MINIO_IMAGE="quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z"
+    uv run pytest
+    ```
 
