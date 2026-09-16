@@ -94,10 +94,38 @@ sources:
     catalog:
       type: sqlite
       path: "/path/to/lake_catalog.db"
+      # automatic_migration: true   # one-off, see "Upgrading DuckDB with existing DuckLakes"
     storage:
       type: local
       path: "/path/to/lake_storage/"
 ```
+
+### Upgrading DuckDB with existing DuckLakes
+
+Quackpipe supports the DuckDB 1.4 LTS line and the current stable line, and its CI runs the test suite against both. The DuckLake **catalog format**, however, is tied to the DuckDB version you install: DuckDB 1.4 ships DuckLake 0.3, DuckDB 1.5.2 and later ship DuckLake 1.0. Upgrading quackpipe alone never touches a catalog. Upgrading DuckDB does.
+
+When a DuckDB 1.5+ session opens a lake created under DuckDB 1.4, quackpipe stops with a `DuckLakeMigrationError` instead of touching the catalog. To migrate, set the opt-in flag on the catalog for one run:
+
+```yaml
+sources:
+  my_lake:
+    type: ducklake
+    catalog:
+      type: postgres
+      secret_name: lake_catalog
+      automatic_migration: true   # remove again after the first successful session
+    storage:
+      type: s3
+      path: "s3://my-bucket/lake/"
+```
+
+Before you do, note that the migration is **one-way**: once migrated, clients still running DuckDB 1.4 can no longer open that lake. Data files are not modified; only the catalog is.
+
+1. Back up the catalog: copy the catalog file, or `pg_dump` the catalog database.
+2. Upgrade **every** client that uses the lake (services, notebooks, SQLMesh runs) to the same DuckDB version.
+3. Run one quackpipe session with `automatic_migration: true`, then remove the flag.
+
+If you need to stay on DuckDB 1.4 for now, pin it (`duckdb<1.5`) and leave the flag out; quackpipe keeps generating exactly the same SQL as before. Setting the flag on DuckDB older than 1.5.2 is rejected at validation time, because that DuckLake version does not know the option.
 
 ### Encrypted Databases
 

@@ -39,8 +39,11 @@ def assert_ducklake_works(**session_kwargs):
 
 def assert_merge_adjacent_files_works(**session_kwargs):
     with quackpipe.session(**session_kwargs) as con:
+        # assert_ducklake_works() already created this schema in the same lake.
+        # DuckLake 0.3 (DuckDB 1.4) silently accepted a duplicate CREATE SCHEMA;
+        # DuckLake 1.0 (DuckDB 1.5.2+) correctly rejects it.
         con.execute("""
-CREATE SCHEMA local_lake.test_schema;
+CREATE SCHEMA IF NOT EXISTS local_lake.test_schema;
 
 CREATE TABLE local_lake.test_schema.sales_data (
     sale_id INTEGER,
@@ -49,6 +52,10 @@ CREATE TABLE local_lake.test_schema.sales_data (
 );
 
 ALTER TABLE local_lake.test_schema.sales_data SET PARTITIONED BY (product_name, country);
+
+-- DuckLake 1.0 inlines small inserts into the catalog instead of writing Parquet
+-- files, which would leave nothing for merge_adjacent_files to merge.
+CALL local_lake.set_option('data_inlining_row_limit', 0, table_name => 'sales_data', schema => 'test_schema');
 
 INSERT INTO local_lake.test_schema.sales_data VALUES
     (1, 'Laptop', 'UK'),
@@ -85,10 +92,13 @@ INSERT INTO local_lake.test_schema.sales_data VALUES
         ORDER BY table_id, partition_spec;
         """).df()
 
-        assert len(list(duplicate["files_in_partition"])) == 1
-        # NOTE: This assertion relies on internal data file ID generation order.
-        # If DuckLake's internal ID logic changes, these specific IDs {1, 4} may need update.
-        assert set(list(duplicate["files_in_partition"])[0]) == {1, 4}
+        # Exactly one partition (Laptop/UK) received rows from both INSERTs, so it
+        # is the only one backed by two files. File IDs are not asserted: they depend
+        # on how many files earlier tables in the lake produced, which differs
+        # between DuckLake versions (1.0 inlines small tables).
+        assert len(duplicate) == 1
+        assert duplicate["partition_spec"][0] == "0=Laptop,1=UK"
+        assert len(list(duplicate["files_in_partition"])[0]) == 2
 
         files_list_before = con.execute(
             "SELECT * FROM ducklake_list_files('local_lake', 'sales_data', schema => 'test_schema');"

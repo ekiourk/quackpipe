@@ -68,3 +68,12 @@ class AccessDeniedError(ExecutionError):
     """Raised when a source is accessed in an unauthorized way (e.g. writing to read-only)."""
 
     default_message = "Access denied."
+
+
+class DuckLakeMigrationError(ExecutionError):
+    """
+    Raised when a DuckLake catalog was created by an older DuckLake version and the
+    installed DuckDB refuses to open it until the catalog schema is migrated.
+    """
+
+    default_message = "DuckLake catalog migration required."

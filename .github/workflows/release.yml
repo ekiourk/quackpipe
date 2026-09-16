@@ -31,7 +31,49 @@ jobs:
         run: uv run ruff check .
 
   test:
-    name: Pytest (with Testcontainers)
+    # quackpipe supports the DuckDB 1.4 LTS line and the current stable line.
+    # The lock file pins one version; `uv run --with` overlays the matrix version
+    # on top of it so the same lock is exercised against every supported DuckDB.
+    name: Pytest (DuckDB ${{ matrix.duckdb }})
+    runs-on: ubuntu-latest
+    needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        duckdb: ["1.4.5", "1.5.5"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install project dependencies (all extras)
+        run: uv sync --all-extras --frozen
+
+      - name: Show effective DuckDB version
+        run: uv run --with "duckdb==${{ matrix.duckdb }}" python -c "import duckdb; print('duckdb', duckdb.__version__)"
+
+      - name: Run tests with coverage
+        run: uv run --with "duckdb==${{ matrix.duckdb }}" python -m pytest --cov=quackpipe --cov-branch --cov-report=term --cov-report=xml
+
+      - name: Upload coverage reports to Codecov
+        if: matrix.duckdb == '1.5.5'
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  test-duckdb-next:
+    # Early warning for the next DuckDB major. Informational only: the test step
+    # may fail without failing the job, so the PR check stays green and the
+    # failures surface as a warning annotation instead.
+    name: Pytest (DuckDB 2.0 pre-release, informational)
     runs-on: ubuntu-latest
     needs: lint
 
@@ -50,13 +92,17 @@ jobs:
       - name: Install project dependencies (all extras)
         run: uv sync --all-extras --frozen
 
-      - name: Run tests with coverage
-        run: uv run pytest --cov=quackpipe --cov-branch --cov-report=term --cov-report=xml
+      - name: Show effective DuckDB version
+        run: uv run --prerelease=allow --with "duckdb>=2.0.0.dev0" python -c "import duckdb; print('duckdb', duckdb.__version__)"
 
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+      - name: Run tests
+        id: tests
+        continue-on-error: true
+        run: uv run --prerelease=allow --with "duckdb>=2.0.0.dev0" python -m pytest
+
+      - name: Report outcome
+        if: steps.tests.outcome == 'failure'
+        run: echo "::warning title=DuckDB 2.0 pre-release::Test suite fails against the DuckDB 2.0 pre-release. Informational only; see the 'Run tests' step above."
 
   publish:
     name: Build and Publish to PyPI

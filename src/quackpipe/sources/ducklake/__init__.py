@@ -1,10 +1,13 @@
 """Source Handler for DuckLake, combining a catalog and storage."""
 
+import re
 from typing import Any
+
+import duckdb
 
 from quackpipe.validation_utils import get_merged_params, validate_required_fields
 
-from ...exceptions import ConfigError, ValidationError
+from ...exceptions import ConfigError, DuckLakeMigrationError, QuackpipeError, ValidationError
 from ..base import BaseSourceHandler
 from ..s3 import S3Handler
 from .providers import (
@@ -14,6 +17,37 @@ from .providers import (
     SQLiteCatalogProvider,
     StorageProvider,
 )
+
+# DuckLake 1.0 (shipped with DuckDB 1.5.2) stopped migrating older catalogs
+# implicitly and introduced the AUTOMATIC_MIGRATION attach option. Older
+# DuckLake extensions reject the option as unknown.
+MIN_DUCKDB_FOR_AUTOMATIC_MIGRATION = (1, 5, 2)
+
+# Substring of the error DuckDB raises when the catalog was written by an older
+# DuckLake version than the loaded extension requires.
+CATALOG_VERSION_MISMATCH_MARKER = "DuckLake catalog version mismatch"
+
+
+def installed_duckdb_version() -> tuple[int, int, int]:
+    """Returns the installed DuckDB version as a (major, minor, patch) tuple."""
+    match = re.match(r"(\d+)\.(\d+)\.(\d+)", duckdb.__version__)
+    if not match:
+        return (0, 0, 0)
+    return (int(match.group(1)), int(match.group(2)), int(match.group(3)))
+
+
+def supports_automatic_migration() -> bool:
+    """Whether the installed DuckDB ships a DuckLake extension that accepts AUTOMATIC_MIGRATION."""
+    return installed_duckdb_version() >= MIN_DUCKDB_FOR_AUTOMATIC_MIGRATION
+
+
+def _automatic_migration_unsupported_message() -> str:
+    required = ".".join(str(part) for part in MIN_DUCKDB_FOR_AUTOMATIC_MIGRATION)
+    return (
+        f"'automatic_migration' requires DuckDB >= {required} (DuckLake 1.0), "
+        f"but the installed DuckDB is {duckdb.__version__}. Remove the option to keep "
+        "using the existing catalog with this DuckDB version."
+    )
 
 
 class DuckLakeHandler(BaseSourceHandler):
@@ -53,6 +87,9 @@ class DuckLakeHandler(BaseSourceHandler):
 
         if catalog_type == "sqlite":
             validate_required_fields(catalog_config, ["path"], "ducklake sqlite catalog", secret_name, resolve_secrets)
+
+        if catalog_config.get("automatic_migration") and not supports_automatic_migration():
+            raise ValidationError(_automatic_migration_unsupported_message())
 
     def _get_catalog_provider(self) -> CatalogProvider:
         """Factory function to create the catalog provider instance."""
@@ -136,8 +173,37 @@ class DuckLakeHandler(BaseSourceHandler):
         sql_statements.append("\n".join(ducklake_secret_parts))
 
         # --- Part 3: Generate the final ATTACH statement ---
-        attach_sql = f"ATTACH 'ducklake:{ducklake_secret_name}' AS {connection_name};"
+        attach_sql = f"ATTACH 'ducklake:{ducklake_secret_name}' AS {connection_name}{self._render_attach_options()};"
         sql_statements.append(attach_sql)
 
         # Filter out any empty strings from providers that don't produce SQL
         return "\n".join(filter(None, sql_statements))
+
+    def _render_attach_options(self) -> str:
+        """
+        Renders the optional ATTACH option list. Returns an empty string when no
+        option is configured so the emitted SQL is unchanged for existing configs
+        and stays valid on DuckDB versions that predate these options.
+        """
+        options = []
+        if self.catalog_config.get("automatic_migration"):
+            if not supports_automatic_migration():
+                raise ConfigError(_automatic_migration_unsupported_message())
+            options.append("AUTOMATIC_MIGRATION")
+        return f" ({', '.join(options)})" if options else ""
+
+    def translate_error(self, error: Exception) -> QuackpipeError | None:
+        """Turns DuckDB's catalog version mismatch into an actionable DuckLakeMigrationError."""
+        if CATALOG_VERSION_MISMATCH_MARKER not in str(error):
+            return None
+        connection_name = self.context.get("connection_name", "ducklake")
+        duckdb_message = str(error).strip().splitlines()[0]
+        return DuckLakeMigrationError(
+            f"The DuckLake catalog of source '{connection_name}' was created by an older DuckLake version "
+            f"and must be migrated before DuckDB {duckdb.__version__} can open it ({duckdb_message}). "
+            "Migration is one-way: clients running an older DuckDB will no longer be able to open this lake. "
+            "Before migrating: (1) back up the catalog (copy the catalog file, or dump the catalog database); "
+            "(2) upgrade every client that uses this lake to the same DuckDB version; "
+            f"(3) set 'automatic_migration: true' in the 'catalog' section of source '{connection_name}' "
+            "for one run, then remove it."
+        )

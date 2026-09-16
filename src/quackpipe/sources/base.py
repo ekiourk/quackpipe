@@ -5,6 +5,8 @@ Abstract Base Class for all Source Handlers.
 from abc import ABC, abstractmethod
 from typing import Any
 
+from ..exceptions import QuackpipeError
+
 
 class BaseSourceHandler(ABC):
     """
@@ -53,3 +55,14 @@ class BaseSourceHandler(ABC):
             The final, executable SQL string.
         """
         pass
+
+    def translate_error(self, error: Exception) -> QuackpipeError | None:  # noqa: ARG002
+        """
+        Gives the handler a chance to turn a raw DuckDB error raised while executing
+        its setup SQL into a more actionable quackpipe exception.
+
+        Returns:
+            A QuackpipeError to raise instead of the original error, or None to keep
+            the default error handling.
+        """
+        return None

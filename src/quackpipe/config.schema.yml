@@ -168,6 +168,10 @@ definitions:
           type:
             type: string
             enum: [ "postgres", "sqlite" ]
+          # Opt-in, one-way migration of a catalog created by an older DuckLake
+          # version (e.g. 0.3 from DuckDB 1.4) to the version the installed
+          # DuckDB requires. Needs DuckDB >= 1.5.2. See README "Upgrading DuckDB".
+          automatic_migration: { type: boolean }
         oneOf:
           - $ref: "#/definitions/postgres"
           - $ref: "#/definitions/sqlite"
