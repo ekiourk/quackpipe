@@ -161,7 +161,11 @@ def session(
 
     con = duckdb.connect(database=":memory:")
 
-    global_statements = get_global_statements(config_path) if config_path else {}
+    # Global statements live in the YAML, so apply them whenever the sources came
+    # from YAML too: either the explicit config_path or the QUACKPIPE_CONFIG_PATH
+    # fallback that get_configs() uses (see issue #17). Explicitly passed configs
+    # carry no YAML, so no global statements apply to them.
+    global_statements = get_global_statements(config_path) if not configs else {}
 
     # Execute before_all_statements
     for stmt in global_statements.get("before_all_statements", []):
