@@ -310,6 +310,43 @@ def test_session_with_env_var(mock_prepare, sample_yaml_config, env_secrets):
     assert not is_connection_open(con)
 
 
+def _write_config_with_global_statements(tmp_path):
+    """A minimal YAML with a sqlite source and inspectable global SET statements."""
+    config = {
+        "before_all_statements": ["SET memory_limit = '123MB'"],
+        "after_all_statements": ["SET threads = 1"],
+        "sources": {"local_db": {"type": "sqlite", "path": str(tmp_path / "local.sqlite")}},
+    }
+    path = tmp_path / "config.yml"
+    path.write_text(yaml.safe_dump(config))
+    return str(path)
+
+
+def test_session_applies_global_statements_from_env_var(tmp_path, monkeypatch):
+    """
+    Regression test for issue #17: before/after_all_statements must be applied when
+    the configuration is resolved through QUACKPIPE_CONFIG_PATH, exactly as when it
+    is passed via config_path.
+    """
+    monkeypatch.setenv("QUACKPIPE_CONFIG_PATH", _write_config_with_global_statements(tmp_path))
+
+    with session() as con:
+        assert con.execute("SELECT current_setting('memory_limit')").fetchone()[0] == "117.3 MiB"
+        assert con.execute("SELECT current_setting('threads')").fetchone()[0] == 1
+
+
+def test_session_with_explicit_configs_ignores_yaml_global_statements(tmp_path, monkeypatch):
+    """
+    Explicit `configs` carry no YAML, so global statements from a YAML that happens
+    to be referenced by QUACKPIPE_CONFIG_PATH must not leak into that session.
+    """
+    monkeypatch.setenv("QUACKPIPE_CONFIG_PATH", _write_config_with_global_statements(tmp_path))
+    direct_configs = [SourceConfig(name="direct", type=SourceType.SQLITE, config={"path": str(tmp_path / "d.sqlite")})]
+
+    with session(configs=direct_configs) as con:
+        assert con.execute("SELECT current_setting('memory_limit')").fetchone()[0] != "117.3 MiB"
+
+
 @patch("duckdb.connect")
 def test_session_with_configs(mock_connect, mock_duckdb_connection, monkeypatch, env_secrets):
     """Test session creation with direct configs."""
